@@ -10,6 +10,8 @@ static Thread g_idle_thread;
 static Thread* g_ready_queue[64];
 static usize g_queue_count = 0;
 
+extern "C" void context_switch(u64* old_stack, u64 new_stack);
+
 void scheduler_init() {
     g_idle_thread.id = 0;
     g_idle_thread.state = ThreadState::Ready;
@@ -19,19 +21,19 @@ void scheduler_init() {
 void schedule() {
     hal::ScopedLock lock(g_sched_lock);
 
-    if (g_queue_count == 0) {
-        // Switch to idle if nothing to run
-        return;
-    }
+    if (g_queue_count == 0) return;
 
-    // Round-robin: pick next and rotate
+    Thread* old = g_current_thread;
     Thread* next = g_ready_queue[0];
+
+    // Rotate queue
     for(usize i = 0; i < g_queue_count - 1; i++) {
         g_ready_queue[i] = g_ready_queue[i+1];
     }
     g_ready_queue[g_queue_count-1] = next;
 
-    // context_switch logic would trigger here
+    g_current_thread = next;
+    context_switch(&old->stack_pointer, next->stack_pointer);
 }
 
 void remove_from_ready_queue(Thread* t) {
@@ -57,8 +59,7 @@ void block_thread(Thread* t) {
     if (!t) return;
     t->state = ThreadState::Blocked;
     remove_from_ready_queue(t);
-    // Force a reschedule since current thread is now blocked
-    // schedule();
+    // In a real kernel, we would trigger a switch here
 }
 
 void wake_thread(Thread* t) {
