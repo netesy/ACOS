@@ -2,6 +2,7 @@
 #include <kernel/memory/heap.h>
 #include <libs/runtime/include/acos/runtime.h>
 #include <kernel/vfs/file.h>
+#include <kernel/net/socket.h>
 
 namespace acos::scheduler {
 
@@ -25,6 +26,10 @@ Process* Process::create() {
         p->files[i] = nullptr;
     }
 
+    for (usize i = 0; i < MAX_SOCKETS; i++) {
+        p->sockets[i] = nullptr;
+    }
+
     return p;
 }
 
@@ -41,6 +46,21 @@ i32 Process::register_file(acos::vfs::File* file) {
 acos::vfs::File* Process::get_file(i32 fd) {
     if (fd < 0 || static_cast<usize>(fd) >= MAX_FILES) return nullptr;
     return files[fd];
+}
+
+i32 Process::register_socket(acos::net::Socket* socket) {
+    for (usize i = 0; i < MAX_SOCKETS; i++) {
+        if (!sockets[i]) {
+            sockets[i] = socket;
+            return static_cast<i32>(i);
+        }
+    }
+    return -1;
+}
+
+acos::net::Socket* Process::get_socket(i32 handle) {
+    if (handle < 0 || static_cast<usize>(handle) >= MAX_SOCKETS) return nullptr;
+    return sockets[handle];
 }
 
 u64 Process::register_channel(acos::ipc::Channel* chan) {

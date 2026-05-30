@@ -7,12 +7,14 @@
 #include <kernel/memory/address_space.h>
 
 namespace acos::vfs { class File; }
+namespace acos::net { class Socket; }
 
 namespace acos::scheduler {
 
 struct Process {
     static constexpr usize MAX_HANDLES = 256;
     static constexpr usize MAX_FILES = 64;
+    static constexpr usize MAX_SOCKETS = 32;
 
     u64 id;
     memory::AddressSpace* address_space;
@@ -22,6 +24,7 @@ struct Process {
     acos::ipc::Notification* notifications[MAX_HANDLES];
 
     acos::vfs::File* files[MAX_FILES];
+    acos::net::Socket* sockets[MAX_SOCKETS];
 
     static Process* create();
 
@@ -31,6 +34,9 @@ struct Process {
 
     i32 register_file(acos::vfs::File* file);
     acos::vfs::File* get_file(i32 fd);
+
+    i32 register_socket(acos::net::Socket* socket);
+    acos::net::Socket* get_socket(i32 handle);
 
     acos::ipc::Channel* get_channel(u64 handle);
     acos::ipc::SharedRegion* get_region(u64 handle);

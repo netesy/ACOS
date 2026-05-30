@@ -1,24 +1,22 @@
-# CHANGES.md - ACOS Core System (Phases 1-9)
+# CHANGES.md - ACOS Core System (Phases 1-10)
 
 ## Overview
-ACOS infrastructure now supports real storage device drivers (AHCI/SATA), partition management (MBR/GPT), and a Virtual File System with FAT32 support.
+ACOS infrastructure now includes a foundational Networking Stack, real storage drivers, and a robust microkernel core. The system is capability-managed and supports isolated user-mode processes.
 
-## Phase 9: Storage Drivers and Filesystem Foundation
-- **AHCI Driver**: Implemented Host Bus Adapter and Port management foundation.
-- **SATA Layer**: Added support for SATA device identification and LBA-based block access.
-- **Partition Management**: Support for enumerating MBR and GPT partitions.
-- **FAT32 Driver**: Implemented a functional FAT32 filesystem driver integrated with VFS.
-- **VFS Integration**: Full mapping from \`VFS -> FileSystem -> BlockDevice -> Storage Controller\`.
-- **Security**: Partition boundaries and filesystem metadata are treated as hostile input and validated.
+## Phase 10: Networking Stack Foundation
+- **NetDevice Layer**: Defined abstract network device interface with MAC/MTU support.
+- **VirtIO-Net Driver**: Implemented early VirtIO-Net support for QEMU environments.
+- **Ethernet**: Added frame parsing and construction logic.
+- **ARP**: Established address resolution protocol foundation.
+- **IPv4 & ICMP**: Implemented IPv4 header handling and ICMP echo (ping) support.
+- **UDP & TCP**: Laid groundwork for transport layer communication.
+- **Socket Layer**: Implemented a generic socket abstraction integrated with the Process structure.
 
-## Core Highlights
-- **VMM & User Mode**: Stabilized 4-level paging and user-mode process loading from ELF binaries.
-- **Syscalls**: Established the system call path for user-mode applications to access VFS.
-- **Multitasking**: Hardened round-robin scheduler with proper address space switching.
+## Subsystems (Phase 1-9 Consolidation)
+- **VFS & Storage**: Advanced filesystem abstraction and AHCI/SATA storage support.
+- **Process System**: ELF64 loading and user-mode runtime foundation.
+- **Multitasking**: Round-robin scheduler with proper isolation.
 
-## Toolchain
-- Unified GCC/G++ build system with comprehensive subsystem coverage.
-
-## Verification
-- Verified build for Storage, Partition, and Filesystem subsystems.
-- Validated VFS structural consistency with multiple filesystem nodes.
+## Toolchain & Build
+- Migrated to GCC/G++ build system with unified Makefile targets.
+- Updated AGENTS.md for Phase 10 standards.

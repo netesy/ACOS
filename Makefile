@@ -3,8 +3,8 @@ CXX = g++
 AS = as
 LD = ld
 
-# UEFI Target (Using GCC/LD)
-UEFI_CFLAGS = -ffreestanding -fno-stack-protector -fshort-wchar -mno-red-zone -I. -Ilibs/runtime/include
+# UEFI Target
+UEFI_CFLAGS = -target x86_64-unknown-windows-coff -ffreestanding -fno-stack-protector -fshort-wchar -mno-red-zone -I. -Ilibs/runtime/include
 UEFI_LDFLAGS = -m i386pep --subsystem 10 --entry efi_main
 
 # Kernel Target
@@ -25,12 +25,29 @@ ARCH_DIR   = $(KERNEL_DIR)/arch/x86_64
 LOADER_DIR = $(KERNEL_DIR)/loader
 SYSCALL_DIR = $(KERNEL_DIR)/syscall
 SERVICE_DIR = $(KERNEL_DIR)/services
+STORAGE_DIR = $(KERNEL_DIR)/storage
+NET_DIR     = $(KERNEL_DIR)/net
+DRIVERS_DIR = $(KERNEL_DIR)/drivers
 
 # Sources
-BOOT_SRCS = \
-	$(BOOT_DIR)/main.cpp
+BOOT_SRCS = $(BOOT_DIR)/main.cpp
 
-KERNEL_SRCS = $(KERNEL_DIR)/storage/ahci.cpp $(KERNEL_DIR)/storage/partition.cpp $(KERNEL_DIR)/storage/filesystem_manager.cpp $(KERNEL_DIR)/storage/fat32.cpp $(KERNEL_DIR)/storage/ramdisk.cpp $(KERNEL_DIR)/storage/storage_manager.cpp \
+KERNEL_SRCS = \
+	$(NET_DIR)/net_device.cpp \
+	$(NET_DIR)/ethernet.cpp \
+	$(NET_DIR)/arp.cpp \
+	$(NET_DIR)/ipv4.cpp \
+	$(NET_DIR)/icmp.cpp \
+	$(NET_DIR)/udp.cpp \
+	$(NET_DIR)/tcp.cpp \
+	$(NET_DIR)/socket.cpp \
+	$(DRIVERS_DIR)/net/virtio_net.cpp \
+	$(STORAGE_DIR)/ahci.cpp \
+	$(STORAGE_DIR)/partition.cpp \
+	$(STORAGE_DIR)/filesystem_manager.cpp \
+	$(STORAGE_DIR)/fat32.cpp \
+	$(STORAGE_DIR)/ramdisk.cpp \
+	$(STORAGE_DIR)/storage_manager.cpp \
 	$(LOADER_DIR)/process_loader.cpp \
 	$(LOADER_DIR)/elf_loader.cpp \
 	$(LOADER_DIR)/elf.cpp \
@@ -50,7 +67,11 @@ KERNEL_SRCS = $(KERNEL_DIR)/storage/ahci.cpp $(KERNEL_DIR)/storage/partition.cpp
 	$(KERNEL_DIR)/ipc/channel.cpp \
 	$(KERNEL_DIR)/ipc/notification.cpp \
 	$(KERNEL_DIR)/ipc/shared_memory.cpp \
-	$(KERNEL_DIR)/vfs/vfs.cpp $(KERNEL_DIR)/vfs/dentry.cpp $(KERNEL_DIR)/vfs/file.cpp $(KERNEL_DIR)/vfs/mount.cpp $(KERNEL_DIR)/vfs/path.cpp \
+	$(KERNEL_DIR)/vfs/vfs.cpp \
+	$(KERNEL_DIR)/vfs/dentry.cpp \
+	$(KERNEL_DIR)/vfs/file.cpp \
+	$(KERNEL_DIR)/vfs/mount.cpp \
+	$(KERNEL_DIR)/vfs/path.cpp \
 	$(KERNEL_DIR)/main.cpp \
 	$(HAL_DIR)/serial.cpp \
 	$(HAL_DIR)/console.cpp \
@@ -64,42 +85,13 @@ KERNEL_ASM_SRCS = \
 BOOT_OBJS   = $(BOOT_SRCS:.cpp=.o)
 KERNEL_OBJS = $(KERNEL_SRCS:.cpp=.o) $(KERNEL_ASM_SRCS:.S=.o)
 
-# ----------------------------------------------------
-# Build Targets
-# ----------------------------------------------------
-
-all: image
-
-image: $(DISK_IMG)
+all: $(KERNEL_ELF)
 
 $(BOOT_EFI): $(BOOT_OBJS)
 	$(LD) $(UEFI_LDFLAGS) -o $@ $^
 
 $(KERNEL_ELF): $(KERNEL_OBJS)
 	$(CXX) $(KERNEL_LDFLAGS) -o $@ $^
-
-# ----------------------------------------------------
-# Disk Image Creation
-# ----------------------------------------------------
-
-$(DISK_IMG): $(BOOT_EFI) $(KERNEL_ELF)
-	@echo "[IMG] Creating FAT32 disk image..."
-	dd if=/dev/zero of=$(DISK_IMG) bs=1M count=64
-	# In many headless environments, mkfs.vfat might not be available or require root.
-	# Fallback or assumption that tools exist.
-	mkfs.vfat -F 32 $(DISK_IMG) || true
-
-	mmd -i $(DISK_IMG) ::/EFI || true
-	mmd -i $(DISK_IMG) ::/EFI/BOOT || true
-
-	mcopy -i $(DISK_IMG) $(BOOT_EFI) ::/EFI/BOOT/BOOTX64.EFI || true
-	mcopy -i $(DISK_IMG) $(KERNEL_ELF) ::/kernel.elf || true
-
-	@echo "[IMG] Done."
-
-# ----------------------------------------------------
-# Compilation Rules
-# ----------------------------------------------------
 
 %.o: %.cpp
 	$(CXX) $(KERNEL_CFLAGS) -c $< -o $@
@@ -110,34 +102,8 @@ $(DISK_IMG): $(BOOT_EFI) $(KERNEL_ELF)
 $(BOOT_DIR)/main.o: $(BOOT_DIR)/main.cpp
 	$(CXX) $(UEFI_CFLAGS) -c $< -o $@
 
-# ----------------------------------------------------
-# Run
-# ----------------------------------------------------
-
-run: $(DISK_IMG)
-	qemu-system-x86_64 \
-		-drive format=raw,file=$(DISK_IMG) \
-		-bios OVMF.fd
-
-# ----------------------------------------------------
-# Clean
-# ----------------------------------------------------
-
 clean:
-	rm -f $(BOOT_OBJS)
-	rm -f $(KERNEL_OBJS)
-	rm -f $(BOOT_EFI)
-	rm -f $(KERNEL_ELF)
-	rm -f $(DISK_IMG)
+	find . -name "*.o" -type f -delete
+	rm -f $(BOOT_EFI) $(KERNEL_ELF) $(DISK_IMG)
 
-# ----------------------------------------------------
-# MinGW Support
-# ----------------------------------------------------
-
-MINGW_CXX = x86_64-w64-mingw32-g++
-MINGW_AS  = x86_64-w64-mingw32-as
-
-mingw_all:
-	$(MAKE) CXX=$(MINGW_CXX) AS=$(MINGW_AS) all
-
-.PHONY: all image run clean mingw_all
+.PHONY: all clean
