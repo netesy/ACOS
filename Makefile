@@ -3,17 +3,17 @@
 CC = clang
 CXX = clang++
 AS = clang
+LD = ld
 
 # UEFI Target
-# Use a generic cross-compilation approach if specific UEFI target is tricky without lld
-UEFI_CFLAGS = -ffreestanding -fno-stack-protector -fshort-wchar -mno-red-zone -I. -Ilibs/runtime/include
-# Note: For real UEFI we need PE/COFF, but for this environment we might have to compromise if tools are missing
-# or assume the user will install lld. I will stick to the plan but maybe use a more standard target if lld is missing.
+UEFI_CFLAGS = -target x86_64-unknown-windows-coff -ffreestanding -fno-stack-protector -fshort-wchar -mno-red-zone -I. -Ilibs/runtime/include
+# Use ld with i386pep emulation for UEFI
+UEFI_LDFLAGS = -m i386pep --subsystem 10 --entry efi_main
 
 # Kernel Target
 KERNEL_CFLAGS = -fno-pic -target x86_64-pc-elf -ffreestanding -fno-stack-protector -fno-exceptions -fno-rtti -mno-red-zone -I. -Ilibs/runtime/include -std=c++23 -Wall -Wextra -Werror
 KERNEL_ASFLAGS = -target x86_64-pc-elf
-KERNEL_LDFLAGS = -static -Wl,-no-pie -no-pie -target x86_64-pc-elf -nostdlib -Wl,-Tlinker.ld
+KERNEL_LDFLAGS = -static -Wl,-no-pie -target x86_64-pc-elf -nostdlib -Wl,-Tlinker.ld
 
 # Directories
 BOOT_DIR = boot
@@ -33,13 +33,11 @@ OBJS = $(BOOT_SRCS:.cpp=.o) $(KERNEL_SRCS:.cpp=.o) $(KERNEL_ASM_SRCS:.S=.o)
 
 all: $(BOOT_EFI) $(KERNEL_ELF)
 
-# UEFI build might fail if lld is missing, but this is the correct way for Clang UEFI
 $(BOOT_EFI): $(BOOT_DIR)/main.o
-	@echo "Note: This requires lld to be installed for PE/COFF output"
-	$(CXX) -target x86_64-unknown-windows-coff -fuse-ld=lld -nostdlib -Wl,-entry:efi_main -Wl,-subsystem:efi_application -o $@ $^ || echo "UEFI Build failed - lld might be missing"
+	$(LD) $(UEFI_LDFLAGS) -o $@ $^
 
 $(BOOT_DIR)/main.o: $(BOOT_DIR)/main.cpp
-	$(CXX) -target x86_64-unknown-windows-coff $(UEFI_CFLAGS) -c -o $@ $<
+	$(CXX) $(UEFI_CFLAGS) -c -o $@ $<
 
 $(KERNEL_ELF): $(KERNEL_ASM_SRCS:.S=.o) $(KERNEL_SRCS:.cpp=.o)
 	$(CXX) $(KERNEL_LDFLAGS) -o $@ $^
@@ -54,3 +52,10 @@ clean:
 	rm -f $(OBJS) $(BOOT_EFI) $(KERNEL_ELF) acos.img
 
 .PHONY: all clean
+
+# MinGW Cross-Compilation Support (Optional)
+MINGW_CXX = x86_64-w64-mingw32-g++
+MINGW_AS  = x86_64-w64-mingw32-as
+
+mingw_all:
+	$(MAKE) CXX=$(MINGW_CXX) AS=$(MINGW_AS) all
