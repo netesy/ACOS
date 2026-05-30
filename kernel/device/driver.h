@@ -1,6 +1,5 @@
 #pragma once
 #include <acos/types.h>
-#include <kernel/device/device.h>
 
 namespace acos::device {
 
@@ -10,11 +9,28 @@ enum class DriverTier {
     Tier3  // Kernel
 };
 
+enum class DriverState {
+    Unloaded,
+    Loaded,
+    Running,
+    Failed,
+    Restarting
+};
+
+class Device;
+
 class Driver {
 public:
     virtual ~Driver() = default;
     virtual bool initialize() = 0;
     virtual bool probe(Device* dev) = 0;
+};
+
+struct DriverDescriptor {
+    u64 id;
+    DriverTier tier;
+    DriverState state;
+    Driver* instance;
 };
 
 } // namespace acos::device

@@ -1,6 +1,6 @@
 #include <kernel/ipc/channel.h>
 #include <kernel/scheduler/scheduler.h>
-// #include <libs/runtime/string.cpp> // For memcpy
+#include <acos/runtime.h> // For memcpy
 
 namespace acos::ipc {
 

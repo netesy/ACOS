@@ -4,6 +4,7 @@
 #include <kernel/ipc/channel.h>
 #include <kernel/ipc/shared_memory.h>
 #include <kernel/ipc/notification.h>
+#include <kernel/memory/address_space.h>
 
 namespace acos::scheduler {
 
@@ -11,16 +12,14 @@ struct Process {
     static constexpr usize MAX_HANDLES = 256;
 
     u64 id;
-    u64 address_space;
+    memory::AddressSpace* address_space;
 
-    // Handle tables
     acos::ipc::Channel* channels[MAX_HANDLES];
     acos::ipc::SharedRegion* regions[MAX_HANDLES];
     acos::ipc::Notification* notifications[MAX_HANDLES];
 
     static Process* create();
 
-    // Resource management
     u64 register_channel(acos::ipc::Channel* chan);
     u64 register_region(acos::ipc::SharedRegion* reg);
     u64 register_notification(acos::ipc::Notification* note);

@@ -1,19 +1,18 @@
 #include <kernel/scheduler/process.h>
-#include <acos/types.h>
+#include <kernel/memory/heap.h>
+#include <libs/runtime/include/acos/runtime.h>
 
 namespace acos::scheduler {
 
 static u64 g_next_process_id = 1;
 
 Process* Process::create() {
-    static Process g_process_pool[64];
-    static u64 g_pool_index = 0;
+    Process* p = reinterpret_cast<Process*>(acos::memory::kmalloc(sizeof(Process)));
+    if (!p) return nullptr;
 
-    if (g_pool_index >= 64) return nullptr;
-
-    Process* p = &g_process_pool[g_pool_index++];
     p->id = g_next_process_id++;
-    p->address_space = 0;
+    p->address_space = reinterpret_cast<memory::AddressSpace*>(acos::memory::kmalloc(sizeof(memory::AddressSpace)));
+    new (p->address_space) memory::AddressSpace();
 
     for (usize i = 0; i < MAX_HANDLES; i++) {
         p->channels[i] = nullptr;

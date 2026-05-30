@@ -1,29 +1,30 @@
-# CHANGES.md - ACOS Phase 1-6 Full Implementation
+# CHANGES.md - ACOS Core System (Phases 1-6)
 
 ## Overview
-Successfully implemented and hardened ACOS infrastructure from Phase 1 (Boot) through Phase 6 (Storage Foundation).
+ACOS core infrastructure is fully implemented, transitioning from a basic bootloader to a microkernel capable of managing isolated user-mode services and drivers.
 
-## Key Deliverables
+## New Subsystems
 
-### Phase 1 & 2: Boot & Memory
-- **ELF Loader**: Functional loader in \`boot/main.cpp\` for kernel segments.
-- **PMM**: Bitmap-based physical page allocator.
-- **VMM**: x86_64 4-level paging with identity mapping and kernel space support.
-- **Heap**: Thread-safe kernel bump allocator.
+### 1. Virtual Memory Management (Phase 5A)
+- **AddressSpace**: Manages per-process PML4 page tables.
+- **Paging**: 4-level x86_64 paging with user/kernel isolation.
+- **VMM**: Kernel-wide identity mapping and address space switching support.
 
-### Phase 3 & 4: Scheduling & IPC
-- **Multitasking**: Round-robin scheduler using assembly context switching (\`switch.S\`).
-- **IPC**: Hardened \`Channel\`, \`Notification\`, and \`SharedRegion\` primitives with true blocking and spinlocks.
+### 2. User Mode & Syscalls (Phase 5B)
+- **User Segments**: GDT updated with Ring 3 code/data segments and TSS for stack switching.
+- **Syscall Infrastructure**: implemented \`SYSCALL\` entry in assembly and C++ dispatcher for \`GET_PID\`, \`YIELD\`, and IPC.
+- **Loader**: Functional user process creation and initial stack setup.
 
-### Phase 5 & 6: Drivers & VFS
-- **Device Framework**: Registry for hardware devices and tiered drivers.
-- **VFS**: Virtual File System foundation with node and filesystem abstractions.
+### 3. Service & Driver Framework (Phase 6)
+- **Service Manager**: Registry and lifecycle management for system services (FS, Network, etc.).
+- **Driver Manager**: Infrastructure for tracking and managing driver states (Loaded, Running, Failed).
+- **Resource Integration**: Services and drivers are now first-class kernel resources.
 
-## Implementation Details
-- **Freestanding C++23**: No hosted dependencies; custom string and memory operations.
-- **Security**: Capability-ready handle tables and domain isolation established.
-- **Thread Safety**: SpinLock/ScopedLock implemented for all kernel critical sections.
+## Implementation Standards
+- **Freestanding C++23**: Pure kernel implementation with custom runtime support.
+- **Thread Safety**: SpinLocks applied to all shared kernel structures.
+- **Build System**: Makefile updated to support Linux/Windows cross-builds with unified targets.
 
 ## Verification
-- Clean build for both Linux and Windows (MinGW).
-- Linker warnings resolved (GNU-stack, relocation).
+- Clean build for kernel and bootloader.
+- Successful audit of core initialization sequence in \`kernelMain\`.

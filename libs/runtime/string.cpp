@@ -1,4 +1,4 @@
-#include <acos/types.h>
+#include <libs/runtime/include/acos/runtime.h>
 
 extern "C" void* memcpy(void* dest, const void* src, acos::usize n) {
     acos::u8* d = reinterpret_cast<acos::u8*>(dest);
