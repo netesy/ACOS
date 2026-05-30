@@ -1,5 +1,7 @@
 #include <kernel/scheduler/scheduler.h>
+#include <kernel/scheduler/process.h>
 #include <kernel/hal/spinlock.h>
+#include <kernel/memory/address_space.h>
 
 namespace acos::scheduler {
 
@@ -15,7 +17,21 @@ extern "C" void context_switch(u64* old_stack, u64 new_stack);
 void scheduler_init() {
     g_idle_thread.id = 0;
     g_idle_thread.state = ThreadState::Ready;
+    g_idle_thread.is_user = false;
+    g_idle_thread.parent = nullptr;
     g_current_thread = &g_idle_thread;
+}
+
+void switch_to(Thread* next) {
+    Thread* old = g_current_thread;
+    g_current_thread = next;
+
+    if (next->parent && next->parent->address_space) {
+        u64 cr3 = next->parent->address_space->pml4_phys();
+        __asm__ volatile("mov %0, %%cr3" : : "r"(cr3));
+    }
+
+    context_switch(&old->stack_pointer, next->stack_pointer);
 }
 
 void schedule() {
@@ -23,17 +39,13 @@ void schedule() {
 
     if (g_queue_count == 0) return;
 
-    Thread* old = g_current_thread;
     Thread* next = g_ready_queue[0];
-
-    // Rotate queue
     for(usize i = 0; i < g_queue_count - 1; i++) {
         g_ready_queue[i] = g_ready_queue[i+1];
     }
     g_ready_queue[g_queue_count-1] = next;
 
-    g_current_thread = next;
-    context_switch(&old->stack_pointer, next->stack_pointer);
+    switch_to(next);
 }
 
 void remove_from_ready_queue(Thread* t) {
@@ -59,7 +71,6 @@ void block_thread(Thread* t) {
     if (!t) return;
     t->state = ThreadState::Blocked;
     remove_from_ready_queue(t);
-    // In a real kernel, we would trigger a switch here
 }
 
 void wake_thread(Thread* t) {

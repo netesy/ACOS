@@ -14,14 +14,18 @@ enum class ThreadState {
 
 struct Process;
 
+struct ThreadContext {
+    u64 r15, r14, r13, r12, rbx, rbp;
+    u64 rip, cs, rflags, rsp, ss;
+};
+
 struct Thread {
     u64 id;
     u64 stack_top;
     u64 stack_pointer;
     ThreadState state;
     Process* parent;
-
-    // x86_64 context would go here or be managed by stack_pointer
+    bool is_user;
 };
 
 } // namespace acos::scheduler

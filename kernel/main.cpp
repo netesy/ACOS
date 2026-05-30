@@ -5,7 +5,7 @@
 #include <kernel/scheduler/process.h>
 #include <kernel/services/service_manager.h>
 #include <kernel/device/driver_manager.h>
-#include <kernel/process/loader.h>
+#include <kernel/loader/process_loader.h>
 
 namespace acos::hal {
     void serial_init();
@@ -24,12 +24,12 @@ namespace acos::memory {
 
 extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     acos::hal::serial_init();
-    acos::hal::serial_print("ACOS Kernel: Core Infrastructure Initializing...\n");
+    acos::hal::serial_print("ACOS Kernel: Core Infrastructure Initializing (GCC Build)...\n");
 
     if (bootInfo && bootInfo->framebuffer) {
         acos::hal::console_init(bootInfo->framebuffer);
         acos::hal::console_clear(0x001E3A5F);
-        acos::hal::console_print("ACOS Kernel v1.2 - Core Systems\n");
+        acos::hal::console_print("ACOS Kernel v1.2.1 - Core Systems\n");
     }
 
     acos::hal::gdt_init();
@@ -38,12 +38,14 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     acos::memory::vmm_init();
     acos::scheduler::scheduler_init();
 
-    acos::process::create_user_process("init", 0x400000);
+    // Phase 7 Verification: Create process from ELF (placeholder data)
+    acos::loader::create_process_from_elf("init", nullptr, 0);
+
     acos::services::ServiceManager::register_service(acos::services::ServiceId::Filesystem, 1);
     acos::device::DriverManager::register_driver(1, acos::device::DriverTier::Tier3, nullptr);
 
-    acos::hal::console_print("Core Infrastructure Audit: PASS\n");
-    acos::hal::serial_print("ACOS Kernel Phase 1-6 Success. Entering Idle...\n");
+    acos::hal::console_print("Core System Initialization: PASS\n");
+    acos::hal::serial_print("ACOS Kernel Phase 1-7 Success. Entering Idle Loop.\n");
 
     while (true) {
         __asm__("hlt");

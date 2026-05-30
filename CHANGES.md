@@ -1,30 +1,32 @@
-# CHANGES.md - ACOS Core System (Phases 1-6)
+# CHANGES.md - ACOS Core System (Phases 1-7)
 
 ## Overview
-ACOS core infrastructure is fully implemented, transitioning from a basic bootloader to a microkernel capable of managing isolated user-mode services and drivers.
+ACOS core infrastructure is fully implemented, transitioning from a basic bootloader to a microkernel capable of managing isolated user-mode services and drivers. The build system has been migrated to the GNU GCC/G++ toolchain.
 
-## New Subsystems
+## Phase 7: ELF Loader and Process Runtime
+- **ELF64 Support**: Implemented parsing and validation for 64-bit ELF binaries.
+- **Segment Loading**: Enabled mapping of ELF segments into user address spaces with appropriate permissions.
+- **Process Runtime**: Orchestrated process creation and initial thread setup from ELF data.
+- **User Stack**: Initialized user-mode stacks with future POSIX metadata support.
+
+## Key Subsystems
 
 ### 1. Virtual Memory Management (Phase 5A)
 - **AddressSpace**: Manages per-process PML4 page tables.
 - **Paging**: 4-level x86_64 paging with user/kernel isolation.
-- **VMM**: Kernel-wide identity mapping and address space switching support.
 
 ### 2. User Mode & Syscalls (Phase 5B)
-- **User Segments**: GDT updated with Ring 3 code/data segments and TSS for stack switching.
-- **Syscall Infrastructure**: implemented \`SYSCALL\` entry in assembly and C++ dispatcher for \`GET_PID\`, \`YIELD\`, and IPC.
-- **Loader**: Functional user process creation and initial stack setup.
+- **User Segments**: GDT updated with Ring 3 code/data segments.
+- **Syscall Infrastructure**: implemented \`SYSCALL\` entry in assembly and C++ dispatcher.
 
 ### 3. Service & Driver Framework (Phase 6)
-- **Service Manager**: Registry and lifecycle management for system services (FS, Network, etc.).
-- **Driver Manager**: Infrastructure for tracking and managing driver states (Loaded, Running, Failed).
-- **Resource Integration**: Services and drivers are now first-class kernel resources.
+- **Service Manager**: Registry and lifecycle management for system services.
+- **Driver Manager**: Infrastructure for tracking and managing driver states.
 
-## Implementation Standards
-- **Freestanding C++23**: Pure kernel implementation with custom runtime support.
-- **Thread Safety**: SpinLocks applied to all shared kernel structures.
-- **Build System**: Makefile updated to support Linux/Windows cross-builds with unified targets.
+## Toolchain Migration
+- Migrated Makefile from Clang/LLD to GCC/LD.
+- Resolved freestanding C++ runtime conflicts between libgcc/libstdc++ and custom ACOS headers.
 
 ## Verification
-- Clean build for kernel and bootloader.
+- Clean build for kernel and bootloader using \`gcc\` and \`ld\`.
 - Successful audit of core initialization sequence in \`kernelMain\`.

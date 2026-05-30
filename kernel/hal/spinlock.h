@@ -1,6 +1,5 @@
 #pragma once
 #include <acos/types.h>
-#include <stdatomic.h>
 
 namespace acos::hal {
 
