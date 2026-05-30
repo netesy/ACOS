@@ -26,7 +26,14 @@ struct TableHeader {
 struct SimpleTextOutputProtocol {
     void* reset;
     Status (*outputString)(SimpleTextOutputProtocol* self, const char16_t* string);
-    // ... more methods omitted for brevity
+    void* testString;
+    void* queryMode;
+    void* setMode;
+    void* setAttribute;
+    void* clearScreen;
+    void* setCursorPosition;
+    void* enableCursor;
+    void* mode;
 };
 
 struct MemoryDescriptor {
@@ -63,37 +70,103 @@ enum class MemoryType {
     MaxMemoryType
 };
 
+struct Time {
+    acos::u16 year;
+    acos::u8 month;
+    acos::u8 day;
+    acos::u8 hour;
+    acos::u8 minute;
+    acos::u8 second;
+    acos::u8 pad1;
+    acos::u32 nanosecond;
+    acos::i16 timeZone;
+    acos::u8 daylight;
+    acos::u8 pad2;
+};
+
+struct FileProtocol {
+    acos::u64 revision;
+    Status (*open)(FileProtocol* self, FileProtocol** newHandle, const char16_t* fileName, acos::u64 openMode, acos::u64 attributes);
+    Status (*close)(FileProtocol* self);
+    Status (*deleteFile)(FileProtocol* self);
+    Status (*read)(FileProtocol* self, acos::usize* bufferSize, void* buffer);
+    Status (*write)(FileProtocol* self, acos::usize* bufferSize, void* buffer);
+    Status (*getPosition)(FileProtocol* self, acos::u64* position);
+    Status (*setPosition)(FileProtocol* self, acos::u64 position);
+    Status (*getInfo)(FileProtocol* self, const Guid* informationType, acos::usize* bufferSize, void* buffer);
+    Status (*setInfo)(FileProtocol* self, const Guid* informationType, acos::usize* bufferSize, void* buffer);
+    Status (*flush)(FileProtocol* self);
+};
+
+struct SimpleFileSystemProtocol {
+    acos::u64 revision;
+    Status (*openVolume)(SimpleFileSystemProtocol* self, FileProtocol** root);
+};
+
+struct SystemTable;
+
 struct BootServices {
     TableHeader header;
-    void* raiseTPL;
-    void* restoreTPL;
+    Status (*raiseTPL)(acos::usize newTpl);
+    void (*restoreTPL)(acos::usize oldTpl);
     Status (*allocatePages)(AllocateType type, MemoryType memoryType, acos::usize pages, acos::u64* memory);
     Status (*freePages)(acos::u64 memory, acos::usize pages);
     Status (*getMemoryMap)(acos::usize* memoryMapSize, MemoryDescriptor* memoryMap, acos::usize* mapKey, acos::usize* descriptorSize, acos::u32* descriptorVersion);
     Status (*allocatePool)(MemoryType poolType, acos::usize size, void** buffer);
     Status (*freePool)(void* buffer);
-    // ... many methods omitted
-    void* createEvent;
-    void* setTimer;
-    void* waitForEvent;
-    void* signalEvent;
-    void* closeEvent;
-    void* checkEvent;
-    void* installProtocolInterface;
-    void* reinstallProtocolInterface;
-    void* uninstallProtocolInterface;
+    Status (*createEvent)(acos::u32 type, acos::usize notifyTpl, void* notifyFunction, void* notifyContext, Event* event);
+    Status (*setTimer)(Event event, int type, acos::u64 triggerTime);
+    Status (*waitForEvent)(acos::usize numberOfEvents, Event* event, acos::usize* index);
+    Status (*signalEvent)(Event event);
+    Status (*closeEvent)(Event event);
+    Status (*checkEvent)(Event event);
+    Status (*installProtocolInterface)(Handle* handle, const Guid* protocol, int interfaceType, void* interface);
+    Status (*reinstallProtocolInterface)(Handle handle, const Guid* protocol, void* oldInterface, void* newInterface);
+    Status (*uninstallProtocolInterface)(Handle handle, const Guid* protocol, void* interface);
     Status (*handleProtocol)(Handle handle, const Guid* protocol, void** interface);
     void* reserved;
-    void* registerProtocolNotify;
+    Status (*registerProtocolNotify)(const Guid* protocol, Event event, void** registration);
     Status (*locateHandle)(int searchType, const Guid* protocol, void* searchKey, acos::usize* bufferSize, Handle* buffer);
-    void* locateDevicePath;
-    void* installConfigurationTable;
-    void* loadImage;
-    void* startImage;
-    void* exit;
-    void* unloadImage;
+    Status (*locateDevicePath)(const Guid* protocol, void** devicePath, Handle* device);
+    Status (*installConfigurationTable)(const Guid* guid, void* table);
+    Status (*loadImage)(acos::u8 bootPolicy, Handle parentImageHandle, void* devicePath, void* sourceBuffer, acos::usize sourceSize, Handle* imageHandle);
+    Status (*startImage)(Handle imageHandle, acos::usize* exitDataSize, char16_t** exitData);
+    Status (*exit)(Handle imageHandle, Status exitStatus, acos::usize exitDataSize, char16_t* exitData);
+    Status (*unloadImage)(Handle imageHandle);
     Status (*exitBootServices)(Handle imageHandle, acos::usize mapKey);
-    // ... more methods
+    Status (*getNextMonotonicCount)(acos::u64* count);
+    Status (*stall)(acos::usize microseconds);
+    Status (*setWatchdogTimer)(acos::usize timeout, acos::u64 watchdogCode, acos::usize dataSize, char16_t* watchdogData);
+    Status (*connectController)(Handle controllerHandle, Handle* driverImageHandle, void* remainingDevicePath, acos::u8 recursive);
+    Status (*disconnectController)(Handle controllerHandle, Handle driverImageHandle, Handle childHandle);
+    Status (*openProtocol)(Handle handle, const Guid* protocol, void** interface, Handle agentHandle, Handle controllerHandle, acos::u32 attributes);
+    Status (*closeProtocol)(Handle handle, const Guid* protocol, Handle agentHandle, Handle controllerHandle);
+    Status (*openProtocolInformation)(Handle handle, const Guid* protocol, void** entryBuffer, acos::usize* entryCount);
+    Status (*protocolsPerHandle)(Handle handle, Guid*** protocolBuffer, acos::usize* protocolCount);
+    Status (*locateHandleBuffer)(int searchType, const Guid* protocol, void* searchKey, acos::usize* noHandles, Handle** buffer);
+    Status (*locateProtocol)(const Guid* protocol, void* registration, void** interface);
+    Status (*installMultipleProtocolInterfaces)(Handle* handle, ...);
+    Status (*uninstallMultipleProtocolInterfaces)(Handle handle, ...);
+    Status (*calculateCrc32)(void* data, acos::usize dataSize, acos::u32* crc32);
+    void (*copyMem)(void* destination, void* source, acos::usize length);
+    void (*setMem)(void* buffer, acos::usize length, acos::u8 value);
+    Status (*createEventEx)(acos::u32 type, acos::usize notifyTpl, void* notifyFunction, const void* notifyContext, const Guid* eventGroup, Event* event);
+};
+
+struct LoadedImageProtocol {
+    acos::u32 revision;
+    Handle parentHandle;
+    SystemTable* systemTable;
+    Handle deviceHandle;
+    void* filePath;
+    void* reserved;
+    acos::u32 loadOptionsSize;
+    void* loadOptions;
+    void* imageBase;
+    acos::u64 imageSize;
+    MemoryType imageCodeType;
+    MemoryType imageDataType;
+    void (*unload)(Handle imageHandle);
 };
 
 struct SystemTable {
@@ -112,13 +185,12 @@ struct SystemTable {
     void* configurationTable;
 };
 
-// Graphics Output Protocol
 struct GraphicsOutputModeInformation {
     acos::u32 version;
     acos::u32 horizontalResolution;
     acos::u32 verticalResolution;
     int pixelFormat;
-    acos::u32 pixelInformation[3]; // Simplified
+    acos::u32 pixelInformation[3];
     acos::u32 pixelsPerScanLine;
 };
 

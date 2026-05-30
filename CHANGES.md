@@ -39,3 +39,24 @@ Implemented the foundational components to boot ACOS on x86_64 UEFI.
 ```cmd
 tools\run_qemu.bat
 ```
+
+## Phase 2: Core Kernel Advancements
+
+### 1. Enhanced HAL
+- **efi.h**: Full UEFI protocol and service definitions.
+- **console.cpp**: Added bitmap font support (8x8) and `console_print` with basic overflow handling.
+
+### 2. Memory Management
+- **pmm.cpp**: Implemented Physical Memory Manager using a bitmap allocator.
+- Integrated PMM into `kernelMain` using `BootInfo` memory map.
+
+### 3. CPU Setup
+- **gdt.cpp**: Implemented Global Descriptor Table for x86_64.
+- **idt.cpp**: Implemented Interrupt Descriptor Table foundation.
+
+### 4. Scheduling
+- **scheduler.cpp**: Established minimal thread structure and scheduler initialization.
+
+### 5. Build Improvements
+- Makefile updated to include all new subsystems.
+- Linker script and boot assembly refined for Phase 2 entry.

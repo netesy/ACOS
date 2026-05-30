@@ -5,22 +5,41 @@ namespace acos::hal {
     void serial_print(const char* s);
     void console_init(FramebufferInfo* fb);
     void console_clear(u32 color);
+    void console_print(const char* s, u32 color = 0xFFFFFFFF);
+    void gdt_init();
+    void idt_init();
+}
+
+namespace acos::memory {
+    void pmm_init(BootInfo* bootInfo);
+}
+
+namespace acos::scheduler {
+    void scheduler_init();
 }
 
 extern "C" void kernelMain(acos::BootInfo* bootInfo) {
-    // 1. Initialize Serial
     acos::hal::serial_init();
-    acos::hal::serial_print("ACOS Kernel Booting...\n");
+    acos::hal::serial_print("ACOS Kernel Phase 2: Core Kernel Starting...\n");
 
-    // 2. Initialize Console
     if (bootInfo && bootInfo->framebuffer) {
         acos::hal::console_init(bootInfo->framebuffer);
-        acos::hal::console_clear(0x001E3A5F); // ACOS Blue
+        acos::hal::console_clear(0x001E3A5F);
+        acos::hal::console_print("ACOS Kernel Phase 2 - Core Kernel\n");
     }
 
-    acos::hal::serial_print("ACOS Kernel Phase 1 Success.\n");
+    acos::hal::gdt_init();
+    acos::hal::idt_init();
+    acos::hal::console_print("CPU Setup Complete.\n");
 
-    // 3. Halt for now
+    acos::memory::pmm_init(bootInfo);
+    acos::hal::console_print("Memory Management Operational.\n");
+
+    acos::scheduler::scheduler_init();
+    acos::hal::console_print("Scheduler Initialized.\n");
+
+    acos::hal::serial_print("ACOS Kernel Phase 2 Successful. Multitasking Ready.\n");
+
     while (true) {
         __asm__("hlt");
     }
