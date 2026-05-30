@@ -60,3 +60,21 @@ tools\run_qemu.bat
 ### 5. Build Improvements
 - Makefile updated to include all new subsystems.
 - Linker script and boot assembly refined for Phase 2 entry.
+
+## Phase 3: Process System
+
+### 1. Scheduler and Processes
+- **thread.h**: Defined Thread Control Block (TCB) with state management.
+- **process.h/cpp**: Implemented Process Control Block (PCB) and process creation logic.
+- **switch.S**: Implemented x86_64 context switching assembly.
+
+### 2. Security and Domains
+- **domain.h/cpp**: Implemented security Domains for isolating system, drivers, and applications.
+- Established default domain policies for I/O and network access.
+
+### 3. Capability Management
+- **capability.h/cpp**: Implemented core capability structures and transfer/revocation mechanisms.
+
+### 4. System Integration
+- Updated `kernelMain` to initialize the Process and Domain managers.
+- Verified compilation of the isolated process model.
