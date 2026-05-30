@@ -95,3 +95,20 @@ tools\run_qemu.bat
 - All IPC objects are managed as kernel resources with integer handles to prevent direct pointer access.
 - Fast-path IPC operations (enqueue/dequeue) are O(1) and avoid heap allocation.
 - Minimal `memcpy` and `memset` implemented for freestanding kernel environment.
+
+## Phase 4 & 5: IPC Hardening and Device Infrastructure
+
+### 1. IPC Audit and Hardening
+- **SpinLock**: Implemented `acos::hal::SpinLock` and `ScopedLock` for thread-safe kernel operations.
+- **Blocking IPC**: Refactored `Channel` and `Notification` to correctly interact with the scheduler. Blocked threads are now removed from the ready queue, and wakeups re-insert them.
+- **Wait Queues**: Added internal wait queues to IPC primitives to handle multiple concurrent waiters.
+- **Shared Memory**: Clarified `SharedRegion` as a physical memory tracking mechanism for future VMM mapping.
+
+### 2. Device Framework (Phase 5 Foundation)
+- **Device/Driver Base**: Defined core classes for hardware management.
+- **Device Registry**: Implemented basic tracking for discovered hardware.
+- **Driver Tiers**: Established infrastructure for Tier 1 (user-space) and Tier 3 (kernel) driver isolation.
+
+### 3. Build and Runtime
+- Unified Makefile with new subsystems.
+- Addressed linker warnings and sign-comparison errors.

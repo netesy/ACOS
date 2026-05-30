@@ -25,7 +25,7 @@ ARCH_DIR = $(KERNEL_DIR)/arch/x86_64
 BOOT_SRCS = $(BOOT_DIR)/main.cpp
 BOOT_EFI = acos_boot.efi
 
-KERNEL_SRCS = $(KERNEL_DIR)/ipc/notification.cpp $(KERNEL_DIR)/ipc/shared_memory.cpp libs/runtime/string.cpp $(KERNEL_DIR)/ipc/channel.cpp $(KERNEL_DIR)/capabilities/capability.cpp $(KERNEL_DIR)/security/domain.cpp $(KERNEL_DIR)/scheduler/process.cpp $(KERNEL_DIR)/scheduler/scheduler.cpp $(ARCH_DIR)/gdt.cpp $(ARCH_DIR)/idt.cpp $(KERNEL_DIR)/memory/pmm.cpp $(KERNEL_DIR)/main.cpp $(HAL_DIR)/serial.cpp $(HAL_DIR)/console.cpp
+KERNEL_SRCS = $(KERNEL_DIR)/device/device.cpp $(KERNEL_DIR)/device/tier1_driver.cpp $(KERNEL_DIR)/device/device_registry.cpp libs/runtime/string.cpp $(KERNEL_DIR)/ipc/notification.cpp $(KERNEL_DIR)/ipc/shared_memory.cpp libs/runtime/string.cpp $(KERNEL_DIR)/ipc/channel.cpp $(KERNEL_DIR)/capabilities/capability.cpp $(KERNEL_DIR)/security/domain.cpp $(KERNEL_DIR)/scheduler/process.cpp $(KERNEL_DIR)/scheduler/scheduler.cpp $(ARCH_DIR)/gdt.cpp $(ARCH_DIR)/idt.cpp $(KERNEL_DIR)/memory/pmm.cpp $(KERNEL_DIR)/main.cpp $(HAL_DIR)/serial.cpp $(HAL_DIR)/console.cpp
 KERNEL_ASM_SRCS = $(ARCH_DIR)/switch.S $(ARCH_DIR)/boot.S
 KERNEL_ELF = kernel.elf
 

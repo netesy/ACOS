@@ -16,3 +16,17 @@ extern "C" void* memset(void* s, int c, acos::usize n) {
     }
     return s;
 }
+
+extern "C" void __cxa_pure_virtual() {
+    while (1) {
+        __asm__("hlt");
+    }
+}
+
+void operator delete(void* ptr) noexcept {
+    (void)ptr;
+}
+
+void operator delete(void* ptr, acos::usize size) noexcept {
+    (void)ptr; (void)size;
+}

@@ -1,11 +1,12 @@
 #include <kernel/scheduler/scheduler.h>
+#include <kernel/hal/spinlock.h>
 
 namespace acos::scheduler {
 
+static hal::SpinLock g_sched_lock;
 static Thread* g_current_thread = nullptr;
 static Thread g_idle_thread;
 
-// Simple thread queue placeholder
 static Thread* g_ready_queue[64];
 static usize g_queue_count = 0;
 
@@ -16,24 +17,57 @@ void scheduler_init() {
 }
 
 void schedule() {
-    // Round-robin logic placeholder
-    if (g_queue_count > 0) {
-        // Switch context to next ready thread
+    hal::ScopedLock lock(g_sched_lock);
+
+    if (g_queue_count == 0) {
+        // Switch to idle if nothing to run
+        return;
+    }
+
+    // Round-robin: pick next and rotate
+    Thread* next = g_ready_queue[0];
+    for(usize i = 0; i < g_queue_count - 1; i++) {
+        g_ready_queue[i] = g_ready_queue[i+1];
+    }
+    g_ready_queue[g_queue_count-1] = next;
+
+    // context_switch logic would trigger here
+}
+
+void remove_from_ready_queue(Thread* t) {
+    for (usize i = 0; i < g_queue_count; i++) {
+        if (g_ready_queue[i] == t) {
+            for (usize j = i; j < g_queue_count - 1; j++) {
+                g_ready_queue[j] = g_ready_queue[j+1];
+            }
+            g_queue_count--;
+            return;
+        }
+    }
+}
+
+void add_to_ready_queue(Thread* t) {
+    if (g_queue_count < 64) {
+        g_ready_queue[g_queue_count++] = t;
     }
 }
 
 void block_thread(Thread* t) {
+    hal::ScopedLock lock(g_sched_lock);
     if (!t) return;
     t->state = ThreadState::Blocked;
-    // Remove from ready queue logic
-    schedule();
+    remove_from_ready_queue(t);
+    // Force a reschedule since current thread is now blocked
+    // schedule();
 }
 
 void wake_thread(Thread* t) {
+    hal::ScopedLock lock(g_sched_lock);
     if (!t) return;
-    t->state = ThreadState::Ready;
-    // Add to ready queue logic
-    g_ready_queue[g_queue_count++] = t;
+    if (t->state == ThreadState::Blocked) {
+        t->state = ThreadState::Ready;
+        add_to_ready_queue(t);
+    }
 }
 
 Thread* current_thread() {
