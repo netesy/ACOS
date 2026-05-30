@@ -1,26 +1,24 @@
-# CHANGES.md - ACOS Core System (Phases 1-8)
+# CHANGES.md - ACOS Core System (Phases 1-9)
 
 ## Overview
-ACOS infrastructure now includes a Virtual File System (VFS) and a Storage Framework. The system supports abstracted file operations across different filesystem implementations and a memory-backed RAM disk.
+ACOS infrastructure now supports real storage device drivers (AHCI/SATA), partition management (MBR/GPT), and a Virtual File System with FAT32 support.
 
-## Phase 8: VFS and Storage Framework
-- **VFS Architecture**: Implemented \`Inode\`, \`Dentry\`, and \`File\` abstractions.
-- **Mount System**: Global \`MountRegistry\` for managing multiple filesystems.
-- **Path Resolution**: Support for absolute path normalization and directory traversal foundation.
-- **File Descriptors**: Per-process descriptor tables for tracking open files.
-- **Storage Abstraction**: Defined \`BlockDevice\` interface and implemented a functional \`RamDisk\`.
-- **Security**: Files integrated as capability-managed resources with access right enforcement.
+## Phase 9: Storage Drivers and Filesystem Foundation
+- **AHCI Driver**: Implemented Host Bus Adapter and Port management foundation.
+- **SATA Layer**: Added support for SATA device identification and LBA-based block access.
+- **Partition Management**: Support for enumerating MBR and GPT partitions.
+- **FAT32 Driver**: Implemented a functional FAT32 filesystem driver integrated with VFS.
+- **VFS Integration**: Full mapping from \`VFS -> FileSystem -> BlockDevice -> Storage Controller\`.
+- **Security**: Partition boundaries and filesystem metadata are treated as hostile input and validated.
 
-## Subsystem Highlights
-- **VMM**: 4-level paging with isolated per-process address spaces.
-- **User Mode**: Ring 3 transition support via GDT/TSS and SYSCALL infrastructure.
-- **Process System**: ELF64 loading and runtime process initialization.
-- **IPC**: Hardened thread-safe communication primitives.
+## Core Highlights
+- **VMM & User Mode**: Stabilized 4-level paging and user-mode process loading from ELF binaries.
+- **Syscalls**: Established the system call path for user-mode applications to access VFS.
+- **Multitasking**: Hardened round-robin scheduler with proper address space switching.
 
-## Toolchain and build
-- Fully switched to GCC/G++ toolchain.
-- Makefile updated with comprehensive subsystem targets.
+## Toolchain
+- Unified GCC/G++ build system with comprehensive subsystem coverage.
 
 ## Verification
-- Verified build for VFS and Storage components.
-- Successful audit of kernel-to-user transition and IPC blocking logic.
+- Verified build for Storage, Partition, and Filesystem subsystems.
+- Validated VFS structural consistency with multiple filesystem nodes.

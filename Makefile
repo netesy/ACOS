@@ -30,7 +30,7 @@ SERVICE_DIR = $(KERNEL_DIR)/services
 BOOT_SRCS = \
 	$(BOOT_DIR)/main.cpp
 
-KERNEL_SRCS = $(KERNEL_DIR)/storage/ramdisk.cpp $(KERNEL_DIR)/storage/storage_manager.cpp \
+KERNEL_SRCS = $(KERNEL_DIR)/storage/ahci.cpp $(KERNEL_DIR)/storage/partition.cpp $(KERNEL_DIR)/storage/filesystem_manager.cpp $(KERNEL_DIR)/storage/fat32.cpp $(KERNEL_DIR)/storage/ramdisk.cpp $(KERNEL_DIR)/storage/storage_manager.cpp \
 	$(LOADER_DIR)/process_loader.cpp \
 	$(LOADER_DIR)/elf_loader.cpp \
 	$(LOADER_DIR)/elf.cpp \

@@ -7,6 +7,7 @@ class StorageManager {
 public:
     static void register_device(u64 id, BlockDevice* device);
     static BlockDevice* get_device(u64 id);
+    static void init();
 
 private:
     struct Entry {
