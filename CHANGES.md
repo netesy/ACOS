@@ -8,6 +8,7 @@ ACOS core infrastructure is fully implemented, transitioning from a basic bootlo
 - **Segment Loading**: Enabled mapping of ELF segments into user address spaces with appropriate permissions.
 - **Process Runtime**: Orchestrated process creation and initial thread setup from ELF data.
 - **User Stack**: Initialized user-mode stacks with future POSIX metadata support.
+- **Audit**: Verified context switching, address space isolation, and IPC signaling logic (see KERNEL_AUDIT.md).
 
 ## Key Subsystems
 
@@ -16,11 +17,11 @@ ACOS core infrastructure is fully implemented, transitioning from a basic bootlo
 - **Paging**: 4-level x86_64 paging with user/kernel isolation.
 
 ### 2. User Mode & Syscalls (Phase 5B)
-- **User Segments**: GDT updated with Ring 3 code/data segments.
-- **Syscall Infrastructure**: implemented \`SYSCALL\` entry in assembly and C++ dispatcher.
+- **User Segments**: GDT updated with Ring 3 code/data segments and TSS foundation.
+- **Syscall Infrastructure**: implemented \`SYSCALL\` entry in assembly and C++ dispatcher for kernel services.
 
 ### 3. Service & Driver Framework (Phase 6)
-- **Service Manager**: Registry and lifecycle management for system services.
+- **Service Manager**: Registry and lifecycle management for system services (FS, Network, etc.).
 - **Driver Manager**: Infrastructure for tracking and managing driver states.
 
 ## Toolchain Migration
