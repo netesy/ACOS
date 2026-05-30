@@ -30,7 +30,7 @@ SERVICE_DIR = $(KERNEL_DIR)/services
 BOOT_SRCS = \
 	$(BOOT_DIR)/main.cpp
 
-KERNEL_SRCS = \
+KERNEL_SRCS = $(KERNEL_DIR)/storage/ramdisk.cpp $(KERNEL_DIR)/storage/storage_manager.cpp \
 	$(LOADER_DIR)/process_loader.cpp \
 	$(LOADER_DIR)/elf_loader.cpp \
 	$(LOADER_DIR)/elf.cpp \
@@ -50,7 +50,7 @@ KERNEL_SRCS = \
 	$(KERNEL_DIR)/ipc/channel.cpp \
 	$(KERNEL_DIR)/ipc/notification.cpp \
 	$(KERNEL_DIR)/ipc/shared_memory.cpp \
-	$(KERNEL_DIR)/vfs/vfs.cpp \
+	$(KERNEL_DIR)/vfs/vfs.cpp $(KERNEL_DIR)/vfs/dentry.cpp $(KERNEL_DIR)/vfs/file.cpp $(KERNEL_DIR)/vfs/mount.cpp $(KERNEL_DIR)/vfs/path.cpp \
 	$(KERNEL_DIR)/main.cpp \
 	$(HAL_DIR)/serial.cpp \
 	$(HAL_DIR)/console.cpp \

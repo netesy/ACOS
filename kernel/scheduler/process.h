@@ -6,10 +6,13 @@
 #include <kernel/ipc/notification.h>
 #include <kernel/memory/address_space.h>
 
+namespace acos::vfs { class File; }
+
 namespace acos::scheduler {
 
 struct Process {
     static constexpr usize MAX_HANDLES = 256;
+    static constexpr usize MAX_FILES = 64;
 
     u64 id;
     memory::AddressSpace* address_space;
@@ -18,11 +21,16 @@ struct Process {
     acos::ipc::SharedRegion* regions[MAX_HANDLES];
     acos::ipc::Notification* notifications[MAX_HANDLES];
 
+    acos::vfs::File* files[MAX_FILES];
+
     static Process* create();
 
     u64 register_channel(acos::ipc::Channel* chan);
     u64 register_region(acos::ipc::SharedRegion* reg);
     u64 register_notification(acos::ipc::Notification* note);
+
+    i32 register_file(acos::vfs::File* file);
+    acos::vfs::File* get_file(i32 fd);
 
     acos::ipc::Channel* get_channel(u64 handle);
     acos::ipc::SharedRegion* get_region(u64 handle);

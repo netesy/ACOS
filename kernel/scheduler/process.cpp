@@ -1,6 +1,7 @@
 #include <kernel/scheduler/process.h>
 #include <kernel/memory/heap.h>
 #include <libs/runtime/include/acos/runtime.h>
+#include <kernel/vfs/file.h>
 
 namespace acos::scheduler {
 
@@ -20,7 +21,26 @@ Process* Process::create() {
         p->notifications[i] = nullptr;
     }
 
+    for (usize i = 0; i < MAX_FILES; i++) {
+        p->files[i] = nullptr;
+    }
+
     return p;
+}
+
+i32 Process::register_file(acos::vfs::File* file) {
+    for (usize i = 0; i < MAX_FILES; i++) {
+        if (!files[i]) {
+            files[i] = file;
+            return static_cast<i32>(i);
+        }
+    }
+    return -1;
+}
+
+acos::vfs::File* Process::get_file(i32 fd) {
+    if (fd < 0 || static_cast<usize>(fd) >= MAX_FILES) return nullptr;
+    return files[fd];
 }
 
 u64 Process::register_channel(acos::ipc::Channel* chan) {

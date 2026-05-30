@@ -9,21 +9,18 @@ enum class NodeType {
     Device
 };
 
-struct Node {
-    char name[256];
-    NodeType type;
-    u64 size;
+class File;
+class FileSystem;
+struct Inode;
+class Dentry;
 
-    virtual i32 read(u64 offset, usize size, void* buffer) = 0;
-    virtual i32 write(u64 offset, usize size, const void* buffer) = 0;
-};
-
-class FileSystem {
+class VFS {
 public:
-    virtual Node* open(const char* path) = 0;
-    virtual bool mount(const char* target) = 0;
+    static i32 open(const char* path, u64 flags);
+    static i32 close(u64 fd);
+    static i32 read(u64 fd, void* buffer, usize size);
+    static i32 write(u64 fd, const void* buffer, usize size);
+    static bool mount(const char* path, FileSystem* fs);
 };
-
-void vfs_init();
 
 } // namespace acos::vfs

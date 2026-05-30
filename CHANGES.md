@@ -1,33 +1,26 @@
-# CHANGES.md - ACOS Core System (Phases 1-7)
+# CHANGES.md - ACOS Core System (Phases 1-8)
 
 ## Overview
-ACOS core infrastructure is fully implemented, transitioning from a basic bootloader to a microkernel capable of managing isolated user-mode services and drivers. The build system has been migrated to the GNU GCC/G++ toolchain.
+ACOS infrastructure now includes a Virtual File System (VFS) and a Storage Framework. The system supports abstracted file operations across different filesystem implementations and a memory-backed RAM disk.
 
-## Phase 7: ELF Loader and Process Runtime
-- **ELF64 Support**: Implemented parsing and validation for 64-bit ELF binaries.
-- **Segment Loading**: Enabled mapping of ELF segments into user address spaces with appropriate permissions.
-- **Process Runtime**: Orchestrated process creation and initial thread setup from ELF data.
-- **User Stack**: Initialized user-mode stacks with future POSIX metadata support.
-- **Audit**: Verified context switching, address space isolation, and IPC signaling logic (see KERNEL_AUDIT.md).
+## Phase 8: VFS and Storage Framework
+- **VFS Architecture**: Implemented \`Inode\`, \`Dentry\`, and \`File\` abstractions.
+- **Mount System**: Global \`MountRegistry\` for managing multiple filesystems.
+- **Path Resolution**: Support for absolute path normalization and directory traversal foundation.
+- **File Descriptors**: Per-process descriptor tables for tracking open files.
+- **Storage Abstraction**: Defined \`BlockDevice\` interface and implemented a functional \`RamDisk\`.
+- **Security**: Files integrated as capability-managed resources with access right enforcement.
 
-## Key Subsystems
+## Subsystem Highlights
+- **VMM**: 4-level paging with isolated per-process address spaces.
+- **User Mode**: Ring 3 transition support via GDT/TSS and SYSCALL infrastructure.
+- **Process System**: ELF64 loading and runtime process initialization.
+- **IPC**: Hardened thread-safe communication primitives.
 
-### 1. Virtual Memory Management (Phase 5A)
-- **AddressSpace**: Manages per-process PML4 page tables.
-- **Paging**: 4-level x86_64 paging with user/kernel isolation.
-
-### 2. User Mode & Syscalls (Phase 5B)
-- **User Segments**: GDT updated with Ring 3 code/data segments and TSS foundation.
-- **Syscall Infrastructure**: implemented \`SYSCALL\` entry in assembly and C++ dispatcher for kernel services.
-
-### 3. Service & Driver Framework (Phase 6)
-- **Service Manager**: Registry and lifecycle management for system services (FS, Network, etc.).
-- **Driver Manager**: Infrastructure for tracking and managing driver states.
-
-## Toolchain Migration
-- Migrated Makefile from Clang/LLD to GCC/LD.
-- Resolved freestanding C++ runtime conflicts between libgcc/libstdc++ and custom ACOS headers.
+## Toolchain and build
+- Fully switched to GCC/G++ toolchain.
+- Makefile updated with comprehensive subsystem targets.
 
 ## Verification
-- Clean build for kernel and bootloader using \`gcc\` and \`ld\`.
-- Successful audit of core initialization sequence in \`kernelMain\`.
+- Verified build for VFS and Storage components.
+- Successful audit of kernel-to-user transition and IPC blocking logic.
