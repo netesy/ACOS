@@ -78,3 +78,20 @@ tools\run_qemu.bat
 ### 4. System Integration
 - Updated `kernelMain` to initialize the Process and Domain managers.
 - Verified compilation of the isolated process model.
+
+## Phase 4: IPC and System Service Infrastructure
+
+### 1. IPC Primitives
+- **Channel IPC**: Implemented `Channel` class with FIFO ring buffer. Supports structured `Message` delivery with future capability attachment.
+- **Notifications**: Implemented `Notification` class for lightweight event signaling. integrated with scheduler for future blocking/waking.
+- **Shared Memory**: Implemented `SharedRegion` for zero-copy physical page sharing between address spaces.
+
+### 2. Process and Scheduler Extensions
+- Extended Process Control Block (PCB) with handle tables for IPC objects.
+- Implemented handle-based lookup and resource registration.
+- Added `block_thread` and `wake_thread` logic to the scheduler to support IPC blocking operations.
+
+### 3. Security and Performance
+- All IPC objects are managed as kernel resources with integer handles to prevent direct pointer access.
+- Fast-path IPC operations (enqueue/dequeue) are O(1) and avoid heap allocation.
+- Minimal `memcpy` and `memset` implemented for freestanding kernel environment.
