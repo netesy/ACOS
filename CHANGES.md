@@ -31,3 +31,21 @@ ACOS core infrastructure is complete. The system now includes a foundational Gra
 - **Input Routing**: Added an Input Router to deliver keyboard and mouse events to focused windows.
 - **Graphics IPC**: Defined specialized IPC channels (Graphics, Window, Surface) for client-server communication.
 - **Security**: Graphical resources are managed via capabilities (CREATE_WINDOW, etc.), ensuring isolation between applications.
+
+## Phase 13: Desktop Shell and Native GUI Framework
+- **GUI Toolkit**: Implemented a native, lightweight GUI toolkit in `userland/gui/`.
+  - Base `Widget` class with event handling and drawing abstractions.
+  - Basic widgets: `Button`, `Label`, `TextBox`, `ListView`, and `WindowWidget`.
+  - Layout system with support for Vertical and Horizontal stacking.
+  - Theme system for consistent visual styling across applications.
+- **Desktop Shell**: Created the ACOS desktop environment in `userland/shell/`.
+  - `Taskbar` for running applications and system status.
+  - `Launcher` for application discovery and startup.
+  - `NotificationCenter` for system and application notifications.
+  - `SessionManager` to manage user session lifecycles.
+- **System Applications**: Developed core native applications using the GUI toolkit.
+  - `Terminal`: Basic command-line interface.
+  - `File Manager`: VFS-integrated directory and file browser.
+  - `Settings`: Interface for system and theme configuration.
+  - `System Monitor`: Real-time display of system resources (CPU, Memory, Processes).
+- **Security**: Established application isolation; apps communicate through the toolkit and window system, maintaining kernel and display server security boundaries.

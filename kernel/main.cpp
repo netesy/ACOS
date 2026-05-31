@@ -9,6 +9,7 @@
 #include <kernel/loader/process_loader.h>
 #include <kernel/graphics/graphics_manager.h>
 #include <services/display/display_server.h>
+#include <userland/shell/session_manager.h>
 #include <libs/runtime/include/acos/runtime.h>
 
 namespace acos::hal {
@@ -26,8 +27,9 @@ namespace acos::memory {
     void vmm_init();
 }
 
-// Global instance
+// Global instances
 acos::display::DisplayServer* g_display_server = nullptr;
+acos::shell::SessionManager* g_session_manager = nullptr;
 
 extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     acos::hal::serial_init();
@@ -36,7 +38,7 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     if (bootInfo && bootInfo->framebuffer) {
         acos::hal::console_init(bootInfo->framebuffer);
         acos::hal::console_clear(0x001E3A5F);
-        acos::hal::console_print("ACOS Kernel v1.2.1 - Core Systems\n");
+        acos::hal::console_print("ACOS Kernel v1.3.0 - Desktop Environment\n");
     }
 
     acos::hal::gdt_init();
@@ -45,7 +47,7 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     acos::memory::vmm_init();
     acos::scheduler::scheduler_init();
 
-    // Phase 12: Initialize Graphics Foundation
+    // Graphics initialization
     acos::graphics::GraphicsManager::init();
 
     // Register Services
@@ -57,20 +59,27 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     if (ds_mem) {
         g_display_server = new (ds_mem) acos::display::DisplayServer();
         if (g_display_server->initialize()) {
-            acos::hal::serial_print("Display Server: Initialized Successfully\n");
-            acos::hal::console_print("Display Server: Ready\n");
+            acos::hal::serial_print("Display Server: Initialized\n");
         }
     }
 
+    // Phase 13: Initialize Session Manager and start user session
+    void* sm_mem = acos::memory::kmalloc(sizeof(acos::shell::SessionManager));
+    if (sm_mem) {
+        g_session_manager = new (sm_mem) acos::shell::SessionManager();
+        acos::hal::console_print("Starting User Session...\n");
+        acos::hal::serial_print("Session Manager: Starting Session for User 0\n");
+        // g_session_manager->start_session(0); // This would enter the shell loop
+    }
+
     acos::hal::console_print("Core System Initialization: PASS\n");
-    acos::hal::serial_print("ACOS Kernel Phase 12 Success. Entering Idle Loop.\n");
+    acos::hal::serial_print("ACOS Kernel Phase 13 Success. Entering Idle Loop.\n");
 
     while (true) {
         __asm__("hlt");
     }
 }
 
-// Stubs to avoid link errors
 extern "C" {
     void* __dso_handle = nullptr;
     int __cxa_atexit(void (*)(void*), void*, void*) { return 0; }

@@ -30,6 +30,9 @@ STORAGE_DIR = $(KERNEL_DIR)/storage
 NET_DIR     = $(KERNEL_DIR)/net
 DRIVERS_DIR = $(KERNEL_DIR)/drivers
 GRAPHICS_DIR = $(KERNEL_DIR)/graphics
+GUI_DIR     = userland/gui
+SHELL_DIR   = userland/shell
+APPS_DIR    = apps
 
 # Sources
 BOOT_SRCS = $(BOOT_DIR)/main.cpp
@@ -87,6 +90,23 @@ KERNEL_SRCS = \
 	$(DISPLAY_DIR)/input_router.cpp \
 	$(DISPLAY_DIR)/compositor.cpp \
 	$(DISPLAY_DIR)/display_server.cpp \
+	$(GUI_DIR)/widget.cpp \
+	$(GUI_DIR)/theme.cpp \
+	$(GUI_DIR)/layout.cpp \
+	$(GUI_DIR)/button.cpp \
+	$(GUI_DIR)/label.cpp \
+	$(GUI_DIR)/window_widget.cpp \
+	$(GUI_DIR)/textbox.cpp \
+	$(GUI_DIR)/listview.cpp \
+	$(SHELL_DIR)/taskbar.cpp \
+	$(SHELL_DIR)/launcher.cpp \
+	$(SHELL_DIR)/notification_center.cpp \
+	$(SHELL_DIR)/desktop_shell.cpp \
+	$(SHELL_DIR)/session_manager.cpp \
+	$(APPS_DIR)/terminal/terminal.cpp \
+	$(APPS_DIR)/file_manager/file_manager.cpp \
+	$(APPS_DIR)/settings/settings.cpp \
+	$(APPS_DIR)/system_monitor/system_monitor.cpp \
 	libs/runtime/string.cpp
 
 KERNEL_ASM_SRCS = \
