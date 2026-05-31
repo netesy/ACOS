@@ -13,10 +13,10 @@ void Taskbar::draw(u32* buffer, u32 pitch) {
             buffer[y * pitch + x] = gui::g_current_theme.widget_bg;
         }
     }
+    m_volume.draw(buffer, pitch);
 }
 
 void Taskbar::update_clock() {
-    // In a real implementation, get system time
 }
 
 } // namespace acos::shell

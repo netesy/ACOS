@@ -1,18 +1,16 @@
 #pragma once
 #include <userland/gui/widget.h>
-#include "volume_indicator.h"
 
 namespace acos::shell {
 
-class Taskbar : public gui::Widget {
+class VolumeIndicator : public gui::Widget {
 public:
-    Taskbar();
+    VolumeIndicator();
     void draw(u32* buffer, u32 pitch) override;
-    void update_clock();
+    void set_volume(u32 vol) { m_volume = vol; }
 
 private:
-    char m_clock_str[16];
-    VolumeIndicator m_volume;
+    u32 m_volume;
 };
 
 } // namespace acos::shell

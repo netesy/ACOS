@@ -8,9 +8,13 @@
 #include <kernel/device/driver_manager.h>
 #include <kernel/loader/process_loader.h>
 #include <kernel/graphics/graphics_manager.h>
+#include <kernel/audio/audio_manager.h>
 #include <services/display/display_server.h>
+#include <services/audio/audio_server.h>
 #include <userland/shell/session_manager.h>
 #include <libs/runtime/include/acos/runtime.h>
+#include <drivers/audio/virtio_sound/virtio_sound.h>
+#include <drivers/audio/hda/hda.h>
 
 namespace acos::hal {
     void serial_init();
@@ -29,6 +33,7 @@ namespace acos::memory {
 
 // Global instances
 acos::display::DisplayServer* g_display_server = nullptr;
+acos::audio::AudioServer* g_audio_server = nullptr;
 acos::shell::SessionManager* g_session_manager = nullptr;
 
 extern "C" void kernelMain(acos::BootInfo* bootInfo) {
@@ -38,7 +43,7 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     if (bootInfo && bootInfo->framebuffer) {
         acos::hal::console_init(bootInfo->framebuffer);
         acos::hal::console_clear(0x001E3A5F);
-        acos::hal::console_print("ACOS Kernel v1.3.0 - Desktop Environment\n");
+        acos::hal::console_print("ACOS Kernel v1.4.0 - Multimedia Ready\n");
     }
 
     acos::hal::gdt_init();
@@ -47,12 +52,14 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     acos::memory::vmm_init();
     acos::scheduler::scheduler_init();
 
-    // Graphics initialization
+    // Graphics and Audio initialization
     acos::graphics::GraphicsManager::init();
+    acos::audio::AudioManager::init();
 
     // Register Services
     acos::services::ServiceManager::register_service(acos::services::ServiceId::Filesystem, 1);
     acos::services::ServiceManager::register_service(acos::services::ServiceId::Graphics, 2);
+    acos::services::ServiceManager::register_service(acos::services::ServiceId::Audio, 3);
 
     // Initialize Display Server
     void* ds_mem = acos::memory::kmalloc(sizeof(acos::display::DisplayServer));
@@ -63,23 +70,47 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
         }
     }
 
-    // Phase 13: Initialize Session Manager and start user session
+    // Initialize Audio Subsystem and Drivers
+    // Use kmalloc for drivers to avoid static initializer issues in kernelMain
+    void* virtio_mem = acos::memory::kmalloc(sizeof(acos::drivers::audio::VirtIOSound));
+    if (virtio_mem) {
+        acos::drivers::audio::VirtIOSound* virtio_snd = new (virtio_mem) acos::drivers::audio::VirtIOSound();
+        if (virtio_snd->initialize()) {
+            acos::audio::AudioDevice* dev = (acos::audio::AudioDevice*)acos::memory::kmalloc(sizeof(acos::audio::AudioDevice));
+            if (dev) {
+                new (dev) acos::audio::AudioDevice(1, "VirtIO Sound Card", virtio_snd);
+                acos::audio::AudioManager::register_device(dev);
+                acos::hal::serial_print("Audio Manager: Registered VirtIO Sound Device\n");
+            }
+        }
+    }
+
+    // Initialize Audio Server
+    void* as_mem = acos::memory::kmalloc(sizeof(acos::audio::AudioServer));
+    if (as_mem) {
+        g_audio_server = new (as_mem) acos::audio::AudioServer();
+        if (g_audio_server->initialize()) {
+            acos::hal::serial_print("Audio Server: Initialized\n");
+        }
+    }
+
+    // Start Session
     void* sm_mem = acos::memory::kmalloc(sizeof(acos::shell::SessionManager));
     if (sm_mem) {
         g_session_manager = new (sm_mem) acos::shell::SessionManager();
-        acos::hal::console_print("Starting User Session...\n");
+        acos::hal::console_print("Starting Multimedia User Session...\n");
         acos::hal::serial_print("Session Manager: Starting Session for User 0\n");
-        // g_session_manager->start_session(0); // This would enter the shell loop
     }
 
     acos::hal::console_print("Core System Initialization: PASS\n");
-    acos::hal::serial_print("ACOS Kernel Phase 13 Success. Entering Idle Loop.\n");
+    acos::hal::serial_print("ACOS Kernel Phase 14 Success. Entering Idle Loop.\n");
 
     while (true) {
         __asm__("hlt");
     }
 }
 
+// Stubs to avoid link errors
 extern "C" {
     void* __dso_handle = nullptr;
     int __cxa_atexit(void (*)(void*), void*, void*) { return 0; }

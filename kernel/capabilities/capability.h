@@ -9,7 +9,8 @@ enum class CapabilityType {
     Process,
     Socket,
     Channel,
-    Graphics
+    Graphics,
+    Audio
 };
 
 /**
@@ -21,6 +22,17 @@ namespace GraphicsRights {
     static constexpr u64 DISPLAY_CONTROL = 1 << 2;
     static constexpr u64 INPUT_CAPTURE   = 1 << 3;
     static constexpr u64 SESSION_ADMIN   = 1 << 4;
+}
+
+/**
+ * Audio Capability Rights
+ */
+namespace AudioRights {
+    static constexpr u64 PLAYBACK       = 1 << 0;
+    static constexpr u64 RECORD         = 1 << 1;
+    static constexpr u64 ADMIN          = 1 << 2;
+    static constexpr u64 DEVICE_CONTROL = 1 << 3;
+    static constexpr u64 STREAM_CREATE  = 1 << 4;
 }
 
 struct Capability {

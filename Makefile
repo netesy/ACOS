@@ -26,10 +26,13 @@ LOADER_DIR = $(KERNEL_DIR)/loader
 SYSCALL_DIR = $(KERNEL_DIR)/syscall
 SERVICE_DIR = $(KERNEL_DIR)/services
 DISPLAY_DIR = services/display
+AUDIO_DIR   = services/audio
 STORAGE_DIR = $(KERNEL_DIR)/storage
 NET_DIR     = $(KERNEL_DIR)/net
 DRIVERS_DIR = $(KERNEL_DIR)/drivers
 GRAPHICS_DIR = $(KERNEL_DIR)/graphics
+K_AUDIO_DIR = $(KERNEL_DIR)/audio
+D_AUDIO_DIR = drivers/audio
 GUI_DIR     = userland/gui
 SHELL_DIR   = userland/shell
 APPS_DIR    = apps
@@ -103,10 +106,20 @@ KERNEL_SRCS = \
 	$(SHELL_DIR)/notification_center.cpp \
 	$(SHELL_DIR)/desktop_shell.cpp \
 	$(SHELL_DIR)/session_manager.cpp \
+	$(SHELL_DIR)/volume_indicator.cpp \
 	$(APPS_DIR)/terminal/terminal.cpp \
 	$(APPS_DIR)/file_manager/file_manager.cpp \
 	$(APPS_DIR)/settings/settings.cpp \
+	$(APPS_DIR)/settings/audio_settings.cpp \
 	$(APPS_DIR)/system_monitor/system_monitor.cpp \
+	$(K_AUDIO_DIR)/audio_manager.cpp \
+	$(K_AUDIO_DIR)/audio_device.cpp \
+	$(D_AUDIO_DIR)/virtio_sound/virtio_sound.cpp \
+	$(D_AUDIO_DIR)/hda/hda.cpp \
+	$(AUDIO_DIR)/audio_server.cpp \
+	$(AUDIO_DIR)/audio_stream.cpp \
+	$(AUDIO_DIR)/audio_mixer.cpp \
+	$(AUDIO_DIR)/audio_session.cpp \
 	libs/runtime/string.cpp
 
 KERNEL_ASM_SRCS = \
