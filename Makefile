@@ -12,6 +12,10 @@ KERNEL_CFLAGS = -nostdinc++ -fno-pic -ffreestanding -fno-stack-protector -fno-ex
 KERNEL_ASFLAGS =
 KERNEL_LDFLAGS = -static -z noexecstack -nostdlib -T linker.ld
 
+# Userland PIE Build Flags
+USER_CFLAGS = $(KERNEL_CFLAGS) -fPIE
+USER_LDFLAGS = -pie -nostdlib
+
 # Shared Library Build Flags
 SHARED_CFLAGS = $(KERNEL_CFLAGS) -fPIC
 SHARED_LDFLAGS = -shared -nostdlib
@@ -150,10 +154,12 @@ KERNEL_SRCS = \
 	$(RTLD_DIR)/library_manager.cpp \
 	$(RTLD_DIR)/symbol_resolver.cpp \
 	$(RTLD_DIR)/relocation.cpp \
+	$(RTLD_DIR)/loader_cache.cpp \
 	$(LIBDL_DIR)/dlopen.cpp \
 	$(LIBDL_DIR)/dlsym.cpp \
 	$(LIBDL_DIR)/dlclose.cpp \
-	$(LIBDL_DIR)/dlerror.cpp
+	$(LIBDL_DIR)/dlerror.cpp \
+	libs/runtime/string.cpp
 
 KERNEL_ASM_SRCS = \
 	$(ARCH_DIR)/switch.S \
@@ -180,14 +186,8 @@ $(KERNEL_ELF): $(KERNEL_OBJS)
 $(BOOT_DIR)/main.o: $(BOOT_DIR)/main.cpp
 	$(CXX) $(UEFI_CFLAGS) -c $< -o $@
 
-# Shared libraries stubs for build verification
-libs/shared/libc.so: $(LIBC_DIR)/string/string.cpp
-	mkdir -p libs/shared
-	$(CXX) $(SHARED_CFLAGS) $(SHARED_LDFLAGS) -o $@ $^
-
 clean:
 	find . -name "*.o" -type f -delete
 	rm -f $(BOOT_EFI) $(KERNEL_ELF) $(DISK_IMG)
-	rm -rf libs/shared
 
 .PHONY: all clean

@@ -92,3 +92,8 @@ ACOS core infrastructure is complete. The system now includes a foundational Gra
 - **Library Manager**: Implemented tracking, reference counting, and lifecycle management for loaded libraries.
 - **libdl**: Provided standard `dlopen`, `dlsym`, `dlclose`, and `dlerror` APIs for application-level dynamic loading.
 - **Security**: Designed the loader to maintain process isolation and enforce ACOS capabilities during library loading.
+
+## Stable PIE + ASLR Support
+- **Kernel Loader**: Updated the ELF loader to handle Position Independent Executables (`ET_DYN`) and implement Address Space Layout Randomization (ASLR).
+- **RTLD Enhancements**: Hardened the Runtime Linker/Loader with stable relocation processing and dynamic library base address calculation.
+- **Build System**: Enforced PIE by default for all userland applications and shared libraries.

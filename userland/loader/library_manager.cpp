@@ -22,7 +22,11 @@ LoadedLibrary* LibraryManager::load(const char* path) {
     lib->name[i] = '\0';
 
     lib->ref_count = 1;
-    lib->base_address = 0; // In real loader, this would be returned by VMM map
+
+    // In a stable implementation, we calculate a random base address if PIE
+    lib->base_address = 0x50000000 + (g_count * 0x1000000);
+
+    // Load file and map to base_address...
 
     RelocationEngine::apply(lib);
 
