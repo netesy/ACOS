@@ -36,6 +36,7 @@ D_AUDIO_DIR = drivers/audio
 GUI_DIR     = userland/gui
 SHELL_DIR   = userland/shell
 POSIX_DIR   = userland/posix/libposix
+PKG_DIR     = userland/pkg
 LIBC_DIR    = libc
 APPS_DIR    = apps
 
@@ -132,7 +133,15 @@ KERNEL_SRCS = \
 	$(LIBC_DIR)/string/string.cpp \
 	$(LIBC_DIR)/memory/malloc.cpp \
 	$(LIBC_DIR)/stdio/stdio.cpp \
-	$(LIBC_DIR)/stdlib/stdlib.cpp
+	$(LIBC_DIR)/stdlib/stdlib.cpp \
+	$(PKG_DIR)/pkg.cpp \
+	$(PKG_DIR)/package_database.cpp \
+	$(PKG_DIR)/repository.cpp \
+	$(PKG_DIR)/dependency_solver.cpp \
+	$(PKG_DIR)/package_manager.cpp \
+	$(PKG_DIR)/signature.cpp \
+	$(APPS_DIR)/package_manager/main.cpp \
+	$(APPS_DIR)/package_store/package_store.cpp
 
 KERNEL_ASM_SRCS = \
 	$(ARCH_DIR)/switch.S \

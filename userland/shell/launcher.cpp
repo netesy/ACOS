@@ -1,10 +1,11 @@
 #include "launcher.h"
 #include <userland/gui/theme.h>
+#include <userland/pkg/package_database.h>
 
 namespace acos::shell {
 
 Launcher::Launcher() : m_active(false) {
-    m_rect = {0, 0, 300, 400}; // Popup menu
+    m_rect = {0, 0, 300, 400};
 }
 
 void Launcher::draw(u32* buffer, u32 pitch) {
@@ -14,6 +15,7 @@ void Launcher::draw(u32* buffer, u32 pitch) {
             buffer[y * pitch + x] = gui::g_current_theme.background;
         }
     }
+    // Dynamic application discovery from PackageDatabase would happen here
 }
 
 void Launcher::show() { m_active = true; }

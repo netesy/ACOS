@@ -74,3 +74,12 @@ ACOS core infrastructure is complete. The system now includes a foundational Gra
 - **Memory API**: Added `mmap` and `munmap` support mapping to ACOS address space management.
 - **Libc Foundation**: Developed a native `libc` providing essential string, memory, and stdio functions.
 - **Security**: Ensured all POSIX wrappers respect ACOS capabilities, domains, and security boundaries.
+
+## Phase 16: Package Manager and Application Distribution System
+- **ACPK Format**: Defined the ACOS Package (ACPK) format for secure application distribution.
+- **Package Manager**: Implemented the core `PackageManager` in `userland/pkg/` for `install`, `remove`, and `upgrade` operations.
+- **Dependency Solver**: Created a `DependencySolver` to resolve version constraints and manage package inter-dependencies.
+- **Package Database**: Established a tracking system for installed packages and system-wide package metadata.
+- **Repository System**: Developed support for local and remote package repositories with priority management.
+- **Security**: Integrated cryptographic verification using SHA-256 and Ed25519 stubs for package and repository signatures.
+- **GUI Integration**: Developed the `Package Store` application and integrated dynamic application discovery into the `Launcher`.
