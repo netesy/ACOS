@@ -97,3 +97,21 @@ ACOS core infrastructure is complete. The system now includes a foundational Gra
 - **Kernel Loader**: Updated the ELF loader to handle Position Independent Executables (`ET_DYN`) and implement Address Space Layout Randomization (ASLR).
 - **RTLD Enhancements**: Hardened the Runtime Linker/Loader with stable relocation processing and dynamic library base address calculation.
 - **Build System**: Enforced PIE by default for all userland applications and shared libraries.
+
+## Phase 18: Linux Compatibility Layer (LCL)
+- **Architecture**: Established the Linux Compatibility Layer (LCL) as a translation subsystem between Linux ABI/Syscalls and ACOS internals.
+- **Syscall Translation**: Implemented a dispatcher for Linux syscalls, mapping them to native ACOS system calls.
+- **Process & Thread Model**: Developed wrappers for Linux processes and threads, including stubs for `clone()` and TLS support.
+- **ELF Support**: Extended ELF loading to recognize Linux 64-bit binaries and set up the appropriate execution context (auxiliary vectors, stack layout).
+- **Filesystem**: Added path translation stubs to support standard Linux paths like `/proc`, `/dev`, and `/tmp`.
+- **Errno Translation**: Provided a comprehensive mapping between Linux error codes and ACOS error states.
+- **Security**: Designed the layer to maintain all ACOS security boundaries, ensuring Linux applications remain subject to capability-based access control.
+
+## Phase 18: Linux Compatibility Layer (LCL)
+- **Architecture**: Established the Linux Compatibility Layer (LCL) as a translation subsystem between Linux ABI/Syscalls and ACOS internals.
+- **Syscall Translation**: Implemented a dispatcher for Linux syscalls, mapping them to native ACOS system calls (read, write, open, close, etc.).
+- **Process & Thread Model**: Developed wrappers for Linux processes and threads, including stubs for `clone()` and TLS support.
+- **ELF Support**: Extended ELF loading to recognize Linux 64-bit binaries and set up the appropriate execution context.
+- **Filesystem**: Added path translation to support standard Linux paths like `/proc`, `/dev`, and `/tmp`.
+- **Errno Translation**: Provided a comprehensive mapping between Linux error codes and ACOS error states.
+- **Security**: Designed the layer to maintain all ACOS security boundaries, ensuring Linux applications remain subject to capability-based access control.

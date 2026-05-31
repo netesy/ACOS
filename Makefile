@@ -47,6 +47,7 @@ POSIX_DIR   = userland/posix/libposix
 PKG_DIR     = userland/pkg
 RTLD_DIR    = userland/loader
 LIBDL_DIR   = userland/libdl
+COMPAT_LINUX_DIR = compat/linux
 LIBC_DIR    = libc
 APPS_DIR    = apps
 
@@ -159,6 +160,15 @@ KERNEL_SRCS = \
 	$(LIBDL_DIR)/dlsym.cpp \
 	$(LIBDL_DIR)/dlclose.cpp \
 	$(LIBDL_DIR)/dlerror.cpp \
+	$(COMPAT_LINUX_DIR)/linux_loader.cpp \
+	$(COMPAT_LINUX_DIR)/linux_process.cpp \
+	$(COMPAT_LINUX_DIR)/linux_syscalls.cpp \
+	$(COMPAT_LINUX_DIR)/linux_signal.cpp \
+	$(COMPAT_LINUX_DIR)/linux_thread.cpp \
+	$(COMPAT_LINUX_DIR)/linux_fs.cpp \
+	$(COMPAT_LINUX_DIR)/linux_socket.cpp \
+	$(COMPAT_LINUX_DIR)/linux_errno.cpp \
+	$(COMPAT_LINUX_DIR)/abi_translation.cpp \
 	libs/runtime/string.cpp
 
 KERNEL_ASM_SRCS = \
