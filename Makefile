@@ -8,7 +8,7 @@ UEFI_CFLAGS = -target x86_64-unknown-windows-coff -ffreestanding -fno-stack-prot
 UEFI_LDFLAGS = -m i386pep --subsystem 10 --entry efi_main
 
 # Kernel Target
-KERNEL_CFLAGS = -nostdinc++ -fno-pic -ffreestanding -fno-stack-protector -fno-exceptions -fno-rtti -mno-red-zone -I. -Ilibs/runtime/include -std=c++23 -Wall -Wextra -Werror
+KERNEL_CFLAGS = -nostdinc++ -fno-pic -ffreestanding -fno-stack-protector -fno-exceptions -fno-rtti -mno-red-zone -I. -Ilibs/runtime/include -Iuserland/posix/include -std=c++23 -Wall -Wextra -Werror
 KERNEL_ASFLAGS =
 KERNEL_LDFLAGS = -static -z noexecstack -nostdlib -T linker.ld
 
@@ -35,6 +35,8 @@ K_AUDIO_DIR = $(KERNEL_DIR)/audio
 D_AUDIO_DIR = drivers/audio
 GUI_DIR     = userland/gui
 SHELL_DIR   = userland/shell
+POSIX_DIR   = userland/posix/libposix
+LIBC_DIR    = libc
 APPS_DIR    = apps
 
 # Sources
@@ -120,7 +122,17 @@ KERNEL_SRCS = \
 	$(AUDIO_DIR)/audio_stream.cpp \
 	$(AUDIO_DIR)/audio_mixer.cpp \
 	$(AUDIO_DIR)/audio_session.cpp \
-	libs/runtime/string.cpp
+	$(POSIX_DIR)/posix.cpp \
+	$(POSIX_DIR)/file.cpp \
+	$(POSIX_DIR)/process.cpp \
+	$(POSIX_DIR)/socket.cpp \
+	$(POSIX_DIR)/thread.cpp \
+	$(POSIX_DIR)/signal.cpp \
+	$(POSIX_DIR)/time.cpp \
+	$(LIBC_DIR)/string/string.cpp \
+	$(LIBC_DIR)/memory/malloc.cpp \
+	$(LIBC_DIR)/stdio/stdio.cpp \
+	$(LIBC_DIR)/stdlib/stdlib.cpp
 
 KERNEL_ASM_SRCS = \
 	$(ARCH_DIR)/switch.S \

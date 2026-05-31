@@ -63,3 +63,14 @@ ACOS core infrastructure is complete. The system now includes a foundational Gra
   - Added Audio Settings to the Settings application.
   - Implemented a Volume Indicator in the Taskbar for quick volume control and status.
 - **Performance**: Architecture supports shared-memory ring buffers for low-latency audio processing.
+
+## Phase 15: POSIX Compatibility Layer
+- **POSIX Runtime**: Implemented `libposix` providing source compatibility for POSIX-compliant applications.
+- **Process API**: Added support for `execve`, `waitpid`, `getpid`, etc., mapping to the ACOS Process Manager.
+- **File API**: Integrated `open`, `read`, `write`, and `lseek` with the ACOS VFS.
+- **Socket API**: Mapped POSIX socket calls to the ACOS Networking Stack, maintaining capability enforcement.
+- **Thread API**: Provided `pthread_create` and `pthread_join` as wrappers for the native ACOS threading model.
+- **Signal API**: Implemented basic signal handling (`SIGINT`, `SIGKILL`, etc.) using ACOS event delivery.
+- **Memory API**: Added `mmap` and `munmap` support mapping to ACOS address space management.
+- **Libc Foundation**: Developed a native `libc` providing essential string, memory, and stdio functions.
+- **Security**: Ensured all POSIX wrappers respect ACOS capabilities, domains, and security boundaries.
