@@ -83,3 +83,12 @@ ACOS core infrastructure is complete. The system now includes a foundational Gra
 - **Repository System**: Developed support for local and remote package repositories with priority management.
 - **Security**: Integrated cryptographic verification using SHA-256 and Ed25519 stubs for package and repository signatures.
 - **GUI Integration**: Developed the `Package Store` application and integrated dynamic application discovery into the `Launcher`.
+
+## Phase 17: Dynamic Linking and Shared Library Infrastructure
+- **RTLD**: Implemented the foundation for the Runtime Linker/Loader (`userland/loader/`).
+- **Shared Libraries**: Established architecture for `.so` files with support for Position Independent Code (`-fPIC`).
+- **Symbol Resolution**: Added a `SymbolResolver` to manage global and local symbol lookups at runtime.
+- **Relocation Engine**: Developed support for x86_64 dynamic relocations including `R_X86_64_RELATIVE` and GOT/PLT entries.
+- **Library Manager**: Implemented tracking, reference counting, and lifecycle management for loaded libraries.
+- **libdl**: Provided standard `dlopen`, `dlsym`, `dlclose`, and `dlerror` APIs for application-level dynamic loading.
+- **Security**: Designed the loader to maintain process isolation and enforce ACOS capabilities during library loading.

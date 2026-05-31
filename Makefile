@@ -12,6 +12,10 @@ KERNEL_CFLAGS = -nostdinc++ -fno-pic -ffreestanding -fno-stack-protector -fno-ex
 KERNEL_ASFLAGS =
 KERNEL_LDFLAGS = -static -z noexecstack -nostdlib -T linker.ld
 
+# Shared Library Build Flags
+SHARED_CFLAGS = $(KERNEL_CFLAGS) -fPIC
+SHARED_LDFLAGS = -shared -nostdlib
+
 # Files
 BOOT_EFI   = acos_boot.efi
 KERNEL_ELF = kernel.elf
@@ -37,6 +41,8 @@ GUI_DIR     = userland/gui
 SHELL_DIR   = userland/shell
 POSIX_DIR   = userland/posix/libposix
 PKG_DIR     = userland/pkg
+RTLD_DIR    = userland/loader
+LIBDL_DIR   = userland/libdl
 LIBC_DIR    = libc
 APPS_DIR    = apps
 
@@ -140,8 +146,14 @@ KERNEL_SRCS = \
 	$(PKG_DIR)/dependency_solver.cpp \
 	$(PKG_DIR)/package_manager.cpp \
 	$(PKG_DIR)/signature.cpp \
-	$(APPS_DIR)/package_manager/main.cpp \
-	$(APPS_DIR)/package_store/package_store.cpp
+	$(RTLD_DIR)/rtld.cpp \
+	$(RTLD_DIR)/library_manager.cpp \
+	$(RTLD_DIR)/symbol_resolver.cpp \
+	$(RTLD_DIR)/relocation.cpp \
+	$(LIBDL_DIR)/dlopen.cpp \
+	$(LIBDL_DIR)/dlsym.cpp \
+	$(LIBDL_DIR)/dlclose.cpp \
+	$(LIBDL_DIR)/dlerror.cpp
 
 KERNEL_ASM_SRCS = \
 	$(ARCH_DIR)/switch.S \
@@ -168,8 +180,14 @@ $(KERNEL_ELF): $(KERNEL_OBJS)
 $(BOOT_DIR)/main.o: $(BOOT_DIR)/main.cpp
 	$(CXX) $(UEFI_CFLAGS) -c $< -o $@
 
+# Shared libraries stubs for build verification
+libs/shared/libc.so: $(LIBC_DIR)/string/string.cpp
+	mkdir -p libs/shared
+	$(CXX) $(SHARED_CFLAGS) $(SHARED_LDFLAGS) -o $@ $^
+
 clean:
 	find . -name "*.o" -type f -delete
 	rm -f $(BOOT_EFI) $(KERNEL_ELF) $(DISK_IMG)
+	rm -rf libs/shared
 
 .PHONY: all clean
