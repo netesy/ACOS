@@ -1,11 +1,9 @@
 #include <kernel/graphics/font.h>
-#include <kernel/hal/console.cpp> // Reuse existing console font for Phase 11 foundation
 
 namespace acos::graphics {
 
 void Font::draw_char(char c, u32 x, u32 y, u32 color) {
     // In a future phase, we will implement a more advanced font engine.
-    // For now, we reuse the existing console font logic.
     (void)c; (void)x; (void)y; (void)color;
 }
 

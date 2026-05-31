@@ -8,8 +8,20 @@ enum class CapabilityType {
     Device,
     Process,
     Socket,
-    Channel
+    Channel,
+    Graphics
 };
+
+/**
+ * Graphics Capability Rights
+ */
+namespace GraphicsRights {
+    static constexpr u64 CREATE_WINDOW   = 1 << 0;
+    static constexpr u64 CREATE_SURFACE  = 1 << 1;
+    static constexpr u64 DISPLAY_CONTROL = 1 << 2;
+    static constexpr u64 INPUT_CAPTURE   = 1 << 3;
+    static constexpr u64 SESSION_ADMIN   = 1 << 4;
+}
 
 struct Capability {
     u64 id;

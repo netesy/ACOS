@@ -9,8 +9,9 @@
 namespace acos::syscall {
 
 extern "C" u64 syscall_dispatch(u64 num, u64 arg1, u64 arg2, u64 arg3, u64 arg4, u64 arg5) {
+    (void)arg4; (void)arg5;
     auto* current_thr = scheduler::current_thread();
-    if (!current_thr && num != static_cast<u64>(SyscallNum::Yield)) {
+    if (!current_thr && static_cast<SyscallNum>(num) != SyscallNum::Yield) {
         return static_cast<u64>(-1);
     }
 
@@ -34,22 +35,20 @@ extern "C" u64 syscall_dispatch(u64 num, u64 arg1, u64 arg2, u64 arg3, u64 arg4,
         // IPC: Channel Operations
         case SyscallNum::ChannelSend: {
             u64 handle = arg1;
-            const void* data = reinterpret_cast<const void*>(arg2);
-            usize size = arg3;
-            if (!current) return static_cast<u64>(-1);
+            const ipc::Message* msg_ptr = reinterpret_cast<const ipc::Message*>(arg2);
+            if (!current || !msg_ptr) return static_cast<u64>(-1);
             auto* chan = current->get_channel(handle);
             if (!chan) return static_cast<u64>(-2);
-            return static_cast<u64>(chan->send(data, size));
+            return static_cast<u64>(chan->send(*msg_ptr));
         }
 
         case SyscallNum::ChannelReceive: {
             u64 handle = arg1;
-            void* buffer = reinterpret_cast<void*>(arg2);
-            usize size = arg3;
-            if (!current) return static_cast<u64>(-1);
+            ipc::Message* msg_ptr = reinterpret_cast<ipc::Message*>(arg2);
+            if (!current || !msg_ptr) return static_cast<u64>(-1);
             auto* chan = current->get_channel(handle);
             if (!chan) return static_cast<u64>(-2);
-            return static_cast<u64>(chan->receive(buffer, size));
+            return static_cast<u64>(chan->receive(*msg_ptr));
         }
 
         // IPC: Notification Operations

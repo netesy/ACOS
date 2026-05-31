@@ -1,5 +1,6 @@
 #pragma once
 #include <acos/types.h>
+#include <kernel/net/net_device.h>
 
 namespace acos::net {
 

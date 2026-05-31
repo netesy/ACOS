@@ -25,9 +25,11 @@ ARCH_DIR   = $(KERNEL_DIR)/arch/x86_64
 LOADER_DIR = $(KERNEL_DIR)/loader
 SYSCALL_DIR = $(KERNEL_DIR)/syscall
 SERVICE_DIR = $(KERNEL_DIR)/services
+DISPLAY_DIR = services/display
 STORAGE_DIR = $(KERNEL_DIR)/storage
 NET_DIR     = $(KERNEL_DIR)/net
 DRIVERS_DIR = $(KERNEL_DIR)/drivers
+GRAPHICS_DIR = $(KERNEL_DIR)/graphics
 
 # Sources
 BOOT_SRCS = $(BOOT_DIR)/main.cpp
@@ -75,6 +77,16 @@ KERNEL_SRCS = \
 	$(KERNEL_DIR)/main.cpp \
 	$(HAL_DIR)/serial.cpp \
 	$(HAL_DIR)/console.cpp \
+	$(GRAPHICS_DIR)/graphics_manager.cpp \
+	$(GRAPHICS_DIR)/framebuffer.cpp \
+	$(GRAPHICS_DIR)/renderer.cpp \
+	$(GRAPHICS_DIR)/surface.cpp \
+	$(GRAPHICS_DIR)/font.cpp \
+	$(DISPLAY_DIR)/window.cpp \
+	$(DISPLAY_DIR)/surface_manager.cpp \
+	$(DISPLAY_DIR)/input_router.cpp \
+	$(DISPLAY_DIR)/compositor.cpp \
+	$(DISPLAY_DIR)/display_server.cpp \
 	libs/runtime/string.cpp
 
 KERNEL_ASM_SRCS = \
