@@ -1,9 +1,4 @@
 #include "linux_signal.h"
-
 namespace acos::compat::linux {
-
-void LinuxSignal::deliver_signal(u64 pid, i32 sig) {
-    (void)pid; (void)sig;
+void LinuxSignal::deliver(u64 p, i32 s) { (void)p; (void)s; }
 }
-
-} // namespace acos::compat::linux

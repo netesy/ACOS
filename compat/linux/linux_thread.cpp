@@ -1,10 +1,4 @@
 #include "linux_thread.h"
-
 namespace acos::compat::linux {
-
-void LinuxThread::setup_tls(u64 addr) {
-    (void)addr;
-    // Set FS/GS base for x86_64
+void LinuxThread::setup_tls(u64 a) { (void)a; }
 }
-
-} // namespace acos::compat::linux
