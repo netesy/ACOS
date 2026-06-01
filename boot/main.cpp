@@ -91,13 +91,13 @@ efi::GraphicsOutputProtocol* locate_graphics_output(efi::SystemTable* systemTabl
 
     efi::GraphicsOutputProtocol* gop = nullptr;
     efi::Status status = systemTable->bootServices->locateProtocol(&efi::GraphicsOutputProtocolGuid, nullptr, (void**)&gop);
-    if (status == EFI_SUCCESS && gop && gop->mode) {
+    if (status == EFI_SUCCESS && gop && gop->mode && gop->mode->info) {
         return gop;
     }
 
     connect_all_controllers(systemTable);
     status = systemTable->bootServices->locateProtocol(&efi::GraphicsOutputProtocolGuid, nullptr, (void**)&gop);
-    if (status == EFI_SUCCESS && gop && gop->mode) {
+    if (status == EFI_SUCCESS && gop && gop->mode && gop->mode->info) {
         return gop;
     }
 
@@ -115,7 +115,7 @@ efi::GraphicsOutputProtocol* locate_graphics_output(efi::SystemTable* systemTabl
     for (acos::usize i = 0; i < handleCount; ++i) {
         gop = nullptr;
         status = systemTable->bootServices->handleProtocol(handles[i], &efi::GraphicsOutputProtocolGuid, (void**)&gop);
-        if (status == EFI_SUCCESS && gop && gop->mode) {
+        if (status == EFI_SUCCESS && gop && gop->mode && gop->mode->info) {
             systemTable->bootServices->freePool(handles);
             return gop;
         }
@@ -140,95 +140,6 @@ void print_hex(efi::SystemTable* systemTable, acos::u64 value) {
     print(systemTable, buffer);
 }
 
-void print_dec(efi::SystemTable* systemTable, acos::u64 value) {
-    char16_t buffer[21] = {};
-    int index = 20;
-    buffer[index] = 0;
-    if (value == 0) {
-        buffer[--index] = u'0';
-    } else {
-        while (value > 0 && index > 0) {
-            buffer[--index] = static_cast<char16_t>(u'0' + (value % 10));
-            value /= 10;
-        }
-    }
-    print(systemTable, &buffer[index]);
-}
-
-bool usable_gop_mode(const efi::GraphicsOutputModeInformation* info) {
-    if (!info || info->horizontalResolution == 0 || info->verticalResolution == 0 || info->pixelsPerScanLine == 0) {
-        return false;
-    }
-    return info->pixelFormat == efi::GraphicsPixelFormat::PixelRedGreenBlueReserved8BitPerColor ||
-           info->pixelFormat == efi::GraphicsPixelFormat::PixelBlueGreenRedReserved8BitPerColor ||
-           info->pixelFormat == efi::GraphicsPixelFormat::PixelBitMask;
-}
-
-bool current_gop_mode_usable(efi::GraphicsOutputProtocol* gop) {
-    return gop && gop->mode && usable_gop_mode(gop->mode->info) &&
-           gop->mode->frameBufferBase != 0 && gop->mode->frameBufferSize != 0;
-}
-
-bool ensure_graphics_mode(efi::SystemTable* systemTable, efi::GraphicsOutputProtocol* gop) {
-    if (current_gop_mode_usable(gop)) {
-        return true;
-    }
-    if (!gop || !gop->mode || !gop->queryMode || !gop->setMode || gop->mode->maxMode == 0) {
-        return false;
-    }
-
-    acos::u32 bestMode = gop->mode->mode;
-    acos::u64 bestArea = 0;
-
-    for (acos::u32 mode = 0; mode < gop->mode->maxMode; ++mode) {
-        acos::usize infoSize = 0;
-        efi::GraphicsOutputModeInformation* info = nullptr;
-        const efi::Status queryStatus = gop->queryMode(gop, mode, &infoSize, &info);
-        if (queryStatus != EFI_SUCCESS || infoSize < sizeof(efi::GraphicsOutputModeInformation) || !usable_gop_mode(info)) {
-            continue;
-        }
-
-        const acos::u64 area = static_cast<acos::u64>(info->horizontalResolution) * info->verticalResolution;
-        if (area > bestArea) {
-            bestArea = area;
-            bestMode = mode;
-        }
-    }
-
-    if (bestArea == 0) {
-        return false;
-    }
-
-    const efi::Status setStatus = gop->setMode(gop, bestMode);
-    if (setStatus != EFI_SUCCESS) {
-        print(systemTable, u"ACOS Bootloader: GOP SetMode failed status=");
-        print_hex(systemTable, setStatus);
-        print(systemTable, u"\r\n");
-        return false;
-    }
-
-    return current_gop_mode_usable(gop);
-}
-
-void print_gop_mode(efi::SystemTable* systemTable, efi::GraphicsOutputProtocol* gop) {
-    if (!current_gop_mode_usable(gop)) {
-        return;
-    }
-
-    print(systemTable, u"ACOS Bootloader: GOP framebuffer ");
-    print_dec(systemTable, gop->mode->info->horizontalResolution);
-    print(systemTable, u"x");
-    print_dec(systemTable, gop->mode->info->verticalResolution);
-    print(systemTable, u" pitch=");
-    print_dec(systemTable, gop->mode->info->pixelsPerScanLine);
-    print(systemTable, u" base=");
-    print_hex(systemTable, gop->mode->frameBufferBase);
-    print(systemTable, u" size=");
-    print_hex(systemTable, gop->mode->frameBufferSize);
-    print(systemTable, u"\r\n");
-}
-
-
 [[noreturn]] efi::Status fail(efi::SystemTable* systemTable, const char16_t* message, efi::Status status) {
     print(systemTable, u"ACOS Bootloader: ERROR: ");
     print(systemTable, message);
@@ -240,62 +151,6 @@ void print_gop_mode(efi::SystemTable* systemTable, efi::GraphicsOutputProtocol* 
         __asm__("hlt");
     }
 }
-
-acos::MemoryRegionType convert_memory_type(efi::MemoryType type) {
-    switch (type) {
-        case efi::MemoryType::ConventionalMemory:
-            return acos::MemoryRegionType::Available;
-        case efi::MemoryType::LoaderCode:
-        case efi::MemoryType::LoaderData:
-        case efi::MemoryType::BootServicesCode:
-        case efi::MemoryType::BootServicesData:
-            return acos::MemoryRegionType::Bootloader;
-        case efi::MemoryType::RuntimeServicesCode:
-        case efi::MemoryType::RuntimeServicesData:
-            return acos::MemoryRegionType::Reserved;
-        case efi::MemoryType::ACPIReclaimMemory:
-            return acos::MemoryRegionType::AcpiReclaimable;
-        case efi::MemoryType::ACPIMemoryNVS:
-            return acos::MemoryRegionType::AcpiNvs;
-        case efi::MemoryType::UnusableMemory:
-            return acos::MemoryRegionType::Unusable;
-        case efi::MemoryType::MemoryMappedIO:
-        case efi::MemoryType::MemoryMappedIOPortSpace:
-            return acos::MemoryRegionType::Reserved;
-        default:
-            return acos::MemoryRegionType::Reserved;
-    }
-}
-
-void populate_boot_memory_map(acos::BootInfo& bootInfo,
-                              efi::MemoryDescriptor* efiMap,
-                              acos::usize mapSize,
-                              acos::usize descriptorSize,
-                              acos::MemoryRegion* regions,
-                              acos::usize regionCapacity,
-                              acos::MemoryMap& memoryMap) {
-    memoryMap.regions = regions;
-    memoryMap.count = 0;
-    if (!efiMap || descriptorSize == 0 || !regions || regionCapacity == 0) {
-        bootInfo.memoryMap = nullptr;
-        return;
-    }
-
-    const acos::usize descriptorCount = mapSize / descriptorSize;
-    for (acos::usize i = 0; i < descriptorCount && memoryMap.count < regionCapacity; ++i) {
-        auto* descriptor = reinterpret_cast<efi::MemoryDescriptor*>(reinterpret_cast<acos::u8*>(efiMap) + (i * descriptorSize));
-        if (descriptor->numberOfPages == 0) {
-            continue;
-        }
-        regions[memoryMap.count].base = descriptor->physicalStart;
-        regions[memoryMap.count].length = descriptor->numberOfPages * 4096;
-        regions[memoryMap.count].type = convert_memory_type(static_cast<efi::MemoryType>(descriptor->type));
-        ++memoryMap.count;
-    }
-
-    bootInfo.memoryMap = memoryMap.count > 0 ? &memoryMap : nullptr;
-}
-
 
 bool valid_elf_header(const Elf64_Ehdr& header) {
     return header.e_ident[0] == 0x7F &&
@@ -347,10 +202,8 @@ extern "C" efi::Status efi_main(efi::Handle imageHandle, efi::SystemTable* syste
 
     efi::GraphicsOutputProtocol* gop = locate_graphics_output(systemTable);
     efi::Status status = EFI_SUCCESS;
-    const bool hasFramebuffer = ensure_graphics_mode(systemTable, gop);
-    if (hasFramebuffer) {
-        print_gop_mode(systemTable, gop);
-    } else {
+    const bool hasFramebuffer = gop && gop->mode && gop->mode->info;
+    if (!hasFramebuffer) {
         print(systemTable, u"ACOS Bootloader: GOP unavailable; continuing without framebuffer.\r\n");
     }
 
@@ -441,8 +294,6 @@ extern "C" efi::Status efi_main(efi::Handle imageHandle, efi::SystemTable* syste
 
     static acos::BootInfo bootInfo;
     static acos::FramebufferInfo fbInfo;
-    static acos::MemoryMap bootMemoryMap;
-    static acos::MemoryRegion bootMemoryRegions[128];
     bootInfo.memoryMap = nullptr;
     bootInfo.cpuInfo = nullptr;
     bootInfo.framebuffer = nullptr;
@@ -486,13 +337,10 @@ extern "C" efi::Status efi_main(efi::Handle imageHandle, efi::SystemTable* syste
         return fail(systemTable, u"cannot read memory map", status);
     }
 
-    populate_boot_memory_map(bootInfo, map, mapSize, descSize, bootMemoryRegions, 128, bootMemoryMap);
-
     status = systemTable->bootServices->exitBootServices(imageHandle, mapKey);
     if (status != EFI_SUCCESS) {
         status = systemTable->bootServices->getMemoryMap(&mapSize, map, &mapKey, &descSize, &descVer);
         if (status == EFI_SUCCESS) {
-            populate_boot_memory_map(bootInfo, map, mapSize, descSize, bootMemoryRegions, 128, bootMemoryMap);
             status = systemTable->bootServices->exitBootServices(imageHandle, mapKey);
         }
         if (status != EFI_SUCCESS) {

@@ -26,9 +26,8 @@ BOOT_EFI   = acos_boot.efi
 KERNEL_ELF = kernel.elf
 DISK_IMG   = acos.img
 QEMU       ?= qemu-system-x86_64
-QEMU_FLAGS ?= -drive format=raw,file=$(DISK_IMG) -vga std
+QEMU_FLAGS ?= -drive format=raw,file=$(DISK_IMG)
 QEMU_FIRMWARE ?= $(firstword $(wildcard OVMF.fd /usr/share/ovmf/OVMF.fd /usr/share/qemu/OVMF.fd /usr/share/OVMF/OVMF_CODE.fd /usr/share/OVMF/OVMF_CODE_4M.fd))
-QEMU_HEADLESS_FLAGS ?= -display gtk
 MKFS_VFAT  ?= $(firstword $(shell command -v mkfs.vfat 2>/dev/null) $(wildcard /usr/sbin/mkfs.vfat /sbin/mkfs.vfat))
 MMD        ?= $(shell command -v mmd 2>/dev/null)
 MCOPY      ?= $(shell command -v mcopy 2>/dev/null)
@@ -255,7 +254,7 @@ $(BOOT_DIR)/main.o: $(BOOT_DIR)/main.cpp
 run: $(DISK_IMG)
 	@if command -v $(QEMU) >/dev/null 2>&1; then \
 		if [ -n "$(QEMU_FIRMWARE)" ]; then \
-			$(QEMU) $(QEMU_FLAGS) $(QEMU_HEADLESS_FLAGS) -bios "$(QEMU_FIRMWARE)"; \
+			$(QEMU) $(QEMU_FLAGS) -bios "$(QEMU_FIRMWARE)"; \
 		else \
 			echo "[RUN] Warning: OVMF firmware not found; cannot launch UEFI VM."; \
 			exit 1; \
