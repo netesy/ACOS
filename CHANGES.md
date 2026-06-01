@@ -115,3 +115,12 @@ ACOS core infrastructure is complete. The system now includes a foundational Gra
 - **Filesystem**: Added path translation to support standard Linux paths like `/proc`, `/dev`, and `/tmp`.
 - **Errno Translation**: Provided a comprehensive mapping between Linux error codes and ACOS error states.
 - **Security**: Designed the layer to maintain all ACOS security boundaries, ensuring Linux applications remain subject to capability-based access control.
+
+## Phase 19: Symmetric Multiprocessing (SMP) and Multicore Support
+- **Architecture**: Transformed ACOS into a multicore-aware OS using per-CPU structures and localized scheduler states.
+- **CPU Discovery**: Implemented ACPI MADT parsing to detect logical CPUs and their APIC IDs.
+- **AP Startup**: Established the INIT/SIPI startup sequence for Application Processors (APs).
+- **APIC Support**: Added support for Local APIC (LAPIC) and I/O APIC for advanced interrupt management and IPI delivery.
+- **Scheduler**: Redesigned the scheduler with per-CPU run queues to minimize contention and support CPU affinity.
+- **Load Balancing**: Implemented a load balancer foundation for thread migration and work stealing.
+- **IPI**: Added Inter-Processor Interrupts for cross-CPU rescheduling and TLB shootdowns.

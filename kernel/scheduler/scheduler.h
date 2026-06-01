@@ -1,17 +1,24 @@
 #pragma once
 #include <acos/types.h>
+#include <kernel/scheduler/process.h>
 #include <kernel/scheduler/thread.h>
 
 namespace acos::scheduler {
 
+struct RunQueue {
+    Thread* head;
+    Thread* tail;
+    u32 count;
+};
+
 void scheduler_init();
 void schedule();
-void block_thread(Thread* t);
-void wake_thread(Thread* t);
+void wake_thread(Thread* thread);
+void block_thread(Thread* thread);
 Thread* current_thread();
 
-// Internal helper for IPC
-void remove_from_ready_queue(Thread* t);
-void add_to_ready_queue(Thread* t);
+// SMP specific
+void enqueue_thread(u32 cpu_id, Thread* thread);
+Thread* dequeue_thread(u32 cpu_id);
 
 } // namespace acos::scheduler

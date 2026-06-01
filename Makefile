@@ -41,6 +41,9 @@ DRIVERS_DIR = $(KERNEL_DIR)/drivers
 GRAPHICS_DIR = $(KERNEL_DIR)/graphics
 K_AUDIO_DIR = $(KERNEL_DIR)/audio
 D_AUDIO_DIR = drivers/audio
+SMP_DIR     = $(KERNEL_DIR)/smp
+ACPI_DIR    = $(ARCH_DIR)/acpi
+ARCH_SMP_DIR = $(ARCH_DIR)/smp
 GUI_DIR     = userland/gui
 SHELL_DIR   = userland/shell
 POSIX_DIR   = userland/posix/libposix
@@ -169,12 +172,20 @@ KERNEL_SRCS = \
 	$(COMPAT_LINUX_DIR)/linux_socket.cpp \
 	$(COMPAT_LINUX_DIR)/linux_errno.cpp \
 	$(COMPAT_LINUX_DIR)/abi_translation.cpp \
+	$(SMP_DIR)/smp.cpp \
+	$(SMP_DIR)/cpu.cpp \
+	$(SMP_DIR)/ipi.cpp \
+	$(SMP_DIR)/load_balancer.cpp \
+	$(ACPI_DIR)/madt.cpp \
+	$(ARCH_SMP_DIR)/lapic.cpp \
+	$(ARCH_SMP_DIR)/ioapic.cpp \
 	libs/runtime/string.cpp
 
 KERNEL_ASM_SRCS = \
 	$(ARCH_DIR)/switch.S \
 	$(ARCH_DIR)/syscall.S \
-	$(ARCH_DIR)/boot.S
+	$(ARCH_DIR)/boot.S \
+	$(ARCH_SMP_DIR)/ap_boot.S
 
 BOOT_OBJS   = $(BOOT_SRCS:.cpp=.o)
 KERNEL_OBJS = $(KERNEL_SRCS:.cpp=.o) $(KERNEL_ASM_SRCS:.S=.o)
