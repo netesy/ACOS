@@ -9,13 +9,27 @@ void Ipi::send(u32 target_cpu, IpiType type) {
 }
 
 void Ipi::broadcast(IpiType type) {
-    (void)type;
-    // Implementation for broadast using LAPIC shorthand
+    u8 vector = 0x40 + (u8)type;
+    // Use LAPIC shorthand to broadcast to all CPUs except self
+    volatile u32* lapic_icr = (volatile u32*)0xFEE00300;
+    u32 icr_low = (vector & 0xFF) | (5 << 8) | (1 << 14) | (1 << 18);
+    lapic_icr[0] = icr_low;
 }
 
 void Ipi::handle(IpiType type) {
-    (void)type;
-    // Dispatch IPI handler
+    switch (type) {
+        case IpiType::Reschedule:
+            scheduler::schedule();
+            break;
+        case IpiType::Halt:
+            __asm__("hlt");
+            break;
+        case IpiType::TLBFlush:
+            __asm__("mov %%cr3, %%rax; mov %%rax, %%cr3" ::: "rax");
+            break;
+        default:
+            break;
+    }
 }
 
 } // namespace acos::smp

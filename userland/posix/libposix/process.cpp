@@ -13,14 +13,32 @@ pid_t getpid(void) {
 }
 
 void _exit(int status) {
-    (void)status;
-    // Call kernel exit logic
-    auto* thr = acos::scheduler::current_thread();
-    if (thr) {
-        thr->state = acos::scheduler::ThreadState::Terminated;
-        acos::scheduler::schedule();
+    // Terminate current thread and process
+    acos::scheduler::Thread* thr = acos::scheduler::current_thread();
+    if (!thr) {
+        while(1) __asm__("hlt");
     }
-    while(1);
+    
+    acos::scheduler::Process* proc = thr->parent;
+    if (proc) {
+        // Mark all threads as terminated
+        for (usize i = 0; i < proc->thread_count; i++) {
+            if (proc->threads[i]) {
+                proc->threads[i]->state = acos::scheduler::ThreadState::Terminated;
+                proc->threads[i]->return_value = (void*)(uintptr_t)status;
+            }
+        }
+        
+        // Mark process as terminated
+        proc->state = acos::scheduler::ProcessState::Terminated;
+        proc->exit_code = status;
+    }
+    
+    // Reschedule to next thread
+    acos::scheduler::schedule();
+    
+    // Should never reach here
+    while(1) __asm__("hlt");
 }
 
 int fork(void) {

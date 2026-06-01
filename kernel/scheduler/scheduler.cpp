@@ -29,7 +29,47 @@ void enqueue_thread(u32 cpu_id, Thread* thread) {
 
 void schedule() {
     u32 cpu_id = smp::Cpu::id();
-    // Context switch logic using per-CPU queues
+    hal::ScopedLock lock(g_queue_locks[cpu_id]);
+    
+    CpuData* cpu = smp::Cpu::current();
+    if (!cpu) return;
+    
+    // Get next thread from run queue
+    Thread* next = g_run_queues[cpu_id].head;
+    if (!next) {
+        // No threads to run, idle
+        return;
+    }
+    
+    // Remove from queue
+    g_run_queues[cpu_id].head = next->next;
+    if (!g_run_queues[cpu_id].head) {
+        g_run_queues[cpu_id].tail = nullptr;
+    }
+    g_run_queues[cpu_id].count--;
+    
+    // Get current thread
+    Thread* current = cpu->current_thread;
+    
+    // If current thread is still runnable, re-enqueue it
+    if (current && current->state == ThreadState::Running) {
+        current->state = ThreadState::Ready;
+        enqueue_thread(cpu_id, current);
+    }
+    
+    // Switch to next thread
+    if (next != current) {
+        next->state = ThreadState::Running;
+        cpu->current_thread = next;
+        
+        // Perform context switch
+        if (current) {
+            context_switch(&current->stack_pointer, next->stack_pointer);
+        } else {
+            // First thread on this CPU
+            __asm__ volatile("mov %0, %%rsp" : : "r"(next->stack_pointer));
+        }
+    }
 }
 
 Thread* current_thread() {
@@ -47,3 +87,19 @@ void block_thread(Thread* thread) {
 }
 
 } // namespace acos::scheduler
+
+
+usize get_thread_count() {
+    // Count total threads across all CPUs
+    usize total = 0;
+    for (int i = 0; i < 64; i++) {
+        total += g_run_queues[i].count;
+    }
+    return total;
+}
+
+usize get_running_thread_count() {
+    // Count running threads (simplified: return threads in run queues)
+    // In a full implementation, would track actual running vs ready threads
+    return get_thread_count();
+}

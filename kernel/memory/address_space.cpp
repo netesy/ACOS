@@ -20,6 +20,41 @@ AddressSpace::AddressSpace() {
 }
 
 AddressSpace::~AddressSpace() {
+    // Recursively free all page tables
+    if (m_pml4_virt) {
+        for (int i = 0; i < 512; i++) {
+            if (m_pml4_virt->entries[i] & PageFlags::Present) {
+                u64 pdpt_phys = m_pml4_virt->entries[i] & ~0xFFFULL;
+                PageTable* pdpt = reinterpret_cast<PageTable*>(pdpt_phys);
+                
+                for (int j = 0; j < 512; j++) {
+                    if (pdpt->entries[j] & PageFlags::Present) {
+                        u64 pd_phys = pdpt->entries[j] & ~0xFFFULL;
+                        PageTable* pd = reinterpret_cast<PageTable*>(pd_phys);
+                        
+                        for (int k = 0; k < 512; k++) {
+                            if (pd->entries[k] & PageFlags::Present) {
+                                u64 pt_phys = pd->entries[k] & ~0xFFFULL;
+                                PageTable* pt = reinterpret_cast<PageTable*>(pt_phys);
+                                
+                                // Free page table
+                                pmm_free(pt_phys);
+                            }
+                        }
+                        
+                        // Free page directory
+                        pmm_free(pd_phys);
+                    }
+                }
+                
+                // Free PDPT
+                pmm_free(pdpt_phys);
+            }
+        }
+        
+        // Free PML4
+        pmm_free(m_pml4_phys);
+    }
 }
 
 bool AddressSpace::map(u64 virt, u64 phys, u64 flags) {

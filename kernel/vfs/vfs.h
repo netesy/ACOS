@@ -9,6 +9,14 @@ enum class NodeType {
     Device
 };
 
+// Directory entry structure
+struct DirectoryEntry {
+    char name[256];
+    NodeType type;
+    u64 size;
+    u64 inode_number;
+};
+
 class Node {
 public:
     virtual ~Node() = default;
@@ -16,6 +24,12 @@ public:
     virtual i32 write(u64 offset, usize size, const void* buffer) = 0;
     virtual u64 size() const = 0;
     virtual NodeType type() const = 0;
+    
+    // Directory operations
+    virtual i32 read_dir(u64 offset, DirectoryEntry* entries, usize max_entries) {
+        (void)offset; (void)entries; (void)max_entries;
+        return -1; // Not a directory
+    }
 };
 
 class FileSystem {
@@ -35,6 +49,10 @@ public:
     static i32 read(u64 fd, void* buffer, usize size);
     static i32 write(u64 fd, const void* buffer, usize size);
     static bool mount(const char* path, FileSystem* fs);
+    
+    // Directory operations
+    static i32 read_dir(const char* path, DirectoryEntry* entries, usize max_entries);
+    static NodeType get_node_type(const char* path);
 };
 
 } // namespace acos::vfs

@@ -9,8 +9,28 @@ void Renderer::draw_pixel(u32 x, u32 y, u32 color) {
 }
 
 void Renderer::draw_line(u32 x1, u32 y1, u32 x2, u32 y2, u32 color) {
-    (void)x1; (void)y1; (void)x2; (void)y2; (void)color;
-    // Bresenham's logic placeholder
+    i32 dx = (x2 > x1) ? (x2 - x1) : (x1 - x2);
+    i32 dy = (y2 > y1) ? (y2 - y1) : (y1 - y2);
+    i32 sx = (x1 < x2) ? 1 : -1;
+    i32 sy = (y1 < y2) ? 1 : -1;
+    i32 err = dx - dy;
+    
+    i32 x = x1, y = y1;
+    while (true) {
+        draw_pixel(x, y, color);
+        
+        if (x == (i32)x2 && y == (i32)y2) break;
+        
+        i32 e2 = 2 * err;
+        if (e2 > -dy) {
+            err -= dy;
+            x += sx;
+        }
+        if (e2 < dx) {
+            err += dx;
+            y += sy;
+        }
+    }
 }
 
 void Renderer::draw_rect(u32 x, u32 y, u32 w, u32 h, u32 color) {
@@ -29,8 +49,14 @@ void Renderer::fill_rect(u32 x, u32 y, u32 w, u32 h, u32 color) {
 }
 
 void Renderer::draw_text(const char* text, u32 x, u32 y, u32 color) {
-    (void)text; (void)x; (void)y; (void)color;
-    // Glyph rendering logic
+    if (!text) return;
+    
+    u32 cur_x = x;
+    while (*text) {
+        Font::draw_char(*text, cur_x, y, color);
+        cur_x += 8;
+        text++;
+    }
 }
 
 } // namespace acos::graphics

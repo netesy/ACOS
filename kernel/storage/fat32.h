@@ -13,6 +13,15 @@ public:
 
 private:
     BlockDevice* m_device;
+    u16 m_bytes_per_sector;
+    u8 m_sectors_per_cluster;
+    u16 m_reserved_sectors;
+    u8 m_num_fats;
+    u32 m_sectors_per_fat;
+    u32 m_total_sectors;
+    u32 m_root_cluster;
+    u32 m_fat_start;
+    u32 m_data_start;
 };
 
 } // namespace acos::storage

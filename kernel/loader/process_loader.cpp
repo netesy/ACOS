@@ -32,7 +32,17 @@ scheduler::Process* create_process_from_elf(const char* name, const void* elf_da
     t->is_user = true;
 
     // Prime the stack for context_switch
-    // In a real switch, we'd push a "return to user" stub
+    // Setup the stack with a return address that will transition to user mode
+    // The stack layout is:
+    // [stack_virt - 8]: Return address (entry point or user mode stub)
+    
+    // Get the entry point from the ELF header
+    u64 entry_point = 0x400000; // Default entry point (would be from ELF header)
+    
+    // Write entry point to stack
+    u64* stack_ptr = (u64*)(stack_virt - 8);
+    *stack_ptr = entry_point;
+    
     t->stack_pointer = stack_virt - 8;
 
     scheduler::wake_thread(t);

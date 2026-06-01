@@ -11,10 +11,12 @@ void Cpu::init_bsp() {
     g_cpus[0].is_bsp = true;
     g_cpus[0].cpu_index = 0;
     g_cpu_count = 1;
-
+    
     // Set GS base to point to g_cpus[0]
     u64 addr = reinterpret_cast<u64>(&g_cpus[0]);
-    __asm__ volatile("wrmsr" : : "c"(0xC0000101), "a"(static_cast<u32>(addr)), "d"(static_cast<u32>(addr >> 32)));
+    u32 low = static_cast<u32>(addr);
+    u32 high = static_cast<u32>(addr >> 32);
+    __asm__ volatile("wrmsr" : : "c"(0xC0000101), "a"(low), "d"(high));
 }
 
 void Cpu::init_ap(u32 apic_id) {
@@ -27,8 +29,10 @@ void Cpu::init_ap(u32 apic_id) {
 }
 
 CpuData* Cpu::current() {
-    // Return &g_cpus[0] for now if we can't reliably read MSR in this environment
-    return &g_cpus[0];
+    u64 ptr;
+    // Read GS base
+    __asm__ volatile("rdmsr" : "=a"(*(u32*)&ptr), "=d"(*(((u32*)&ptr)+1)) : "c"(0xC0000101));
+    return reinterpret_cast<CpuData*>(ptr);
 }
 
 } // namespace acos::smp

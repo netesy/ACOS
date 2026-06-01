@@ -80,3 +80,14 @@ void pmm_free(u64 addr) {
 }
 
 } // namespace acos::memory
+
+
+u64 pmm_get_total_memory() {
+    // Return total memory in bytes
+    return g_total_pages * 4096;
+}
+
+u64 pmm_get_used_memory() {
+    // Return used memory in bytes
+    return g_used_pages * 4096;
+}

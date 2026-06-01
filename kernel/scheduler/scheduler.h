@@ -21,4 +21,8 @@ Thread* current_thread();
 void enqueue_thread(u32 cpu_id, Thread* thread);
 Thread* dequeue_thread(u32 cpu_id);
 
+// Statistics
+usize get_thread_count();
+usize get_running_thread_count();
+
 } // namespace acos::scheduler

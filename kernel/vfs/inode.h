@@ -11,6 +11,12 @@ public:
     virtual i32 write(u64 offset, usize size, const void* buffer) = 0;
     virtual u64 size() const = 0;
     virtual NodeType type() const = 0;
+    
+    // Directory operations
+    virtual i32 read_dir(u64 offset, DirectoryEntry* entries, usize max_entries) {
+        (void)offset; (void)entries; (void)max_entries;
+        return -1; // Not a directory
+    }
 };
 
 } // namespace acos::vfs

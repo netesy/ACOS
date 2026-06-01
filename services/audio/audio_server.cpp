@@ -8,17 +8,53 @@ namespace acos::audio {
 AudioServer::AudioServer() : m_stream_count(0), m_next_stream_id(1), m_running(false) {}
 
 bool AudioServer::initialize() {
+    m_running = false;
+    m_stream_count = 0;
+    m_next_stream_id = 1;
+    
+    // Initialize audio manager
+    acos::audio::AudioManager::init();
+    
+    // Register with service manager
+    acos::services::ServiceManager::register_service(
+        acos::services::ServiceId::Audio, 
+        acos::scheduler::current_thread()->parent->id
+    );
+    
     return true;
 }
 
 void AudioServer::run() {
     m_running = true;
+    
+    // Audio server main loop:
+    // 1. Process incoming IPC requests (create/destroy streams, etc.)
+    // 2. Run mixer to blend audio streams
+    // 3. Submit mixed audio to hardware
+    // 4. Handle timing and synchronization
+    
     while (m_running) {
+        // Process incoming IPC messages (non-blocking)
         acos::ipc::Message msg;
         if (m_channel.receive(msg, false)) {
             handle_request(msg);
         }
-        // In a real system, the mixer would run on a high-priority thread or timer
+        
+        // In a full system, the mixer would run on a high-priority thread or timer
+        // For now, we process requests and let the mixer run asynchronously
+        // The mixer should be driven by:
+        // - Hardware timer interrupts (e.g., every 10ms)
+        // - Or a dedicated high-priority mixer thread
+        // - Or a combination of both
+        
+        // Mix audio streams
+        m_mixer.mix();
+        
+        // Submit mixed audio to hardware
+        // This would typically involve:
+        // - Getting the mixed buffer from the mixer
+        // - Submitting it to the audio device via DMA
+        // - Waiting for completion
     }
 }
 
