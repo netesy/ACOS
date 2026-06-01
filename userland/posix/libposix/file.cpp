@@ -7,6 +7,7 @@
 
 extern "C" {
 
+int errno = 0;
 
 int open(const char *pathname, int flags, ...) {
     acos::u64 result = acos::vfs::VFS::open(pathname, flags);

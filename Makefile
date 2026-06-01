@@ -4,21 +4,14 @@ UEFI_CXX = clang++
 AS = as
 LD = ld
 
-UNAME_S := $(shell uname -s 2>/dev/null)
-WINDOWS_HOST := $(filter MINGW% MSYS% CYGWIN%,$(UNAME_S))
-KERNEL_CXX ?= $(if $(WINDOWS_HOST),clang++,$(CXX))
-KERNEL_CC  ?= $(if $(WINDOWS_HOST),clang,$(CC))
-KERNEL_TARGET_FLAGS ?= $(if $(WINDOWS_HOST),-target x86_64-unknown-elf,)
-KERNEL_LINKER_FLAGS ?= $(if $(WINDOWS_HOST),-fuse-ld=lld,)
-
 # UEFI Target
 UEFI_CFLAGS = -target x86_64-unknown-windows-coff -ffreestanding -fcf-protection=none -fno-stack-protector -fshort-wchar -mno-red-zone -I. -Ilibs/runtime/include
 UEFI_LDFLAGS = -m i386pep --subsystem 10 --entry efi_main
 
 # Kernel Target
-KERNEL_CFLAGS = $(KERNEL_TARGET_FLAGS) -nostdinc++ -fno-pic -ffreestanding -fcf-protection=none -fno-stack-protector -fno-exceptions -fno-rtti -mno-red-zone -I. -Ilibs/runtime/include -Iuserland/posix/include -std=c++23 -Wall -Wextra -Werror
+KERNEL_CFLAGS = -nostdinc++ -fno-pic -ffreestanding -fcf-protection=none -fno-stack-protector -fno-exceptions -fno-rtti -mno-red-zone -I. -Ilibs/runtime/include -Iuserland/posix/include -std=c++23 -Wall -Wextra -Werror
 KERNEL_ASFLAGS =
-KERNEL_LDFLAGS = $(KERNEL_TARGET_FLAGS) $(KERNEL_LINKER_FLAGS) -static -nostdlib -T linker.ld -Wl,-z,noexecstack
+KERNEL_LDFLAGS = -static -z noexecstack -nostdlib -T linker.ld
 
 # Userland PIE Build Flags
 USER_CFLAGS = $(KERNEL_CFLAGS) -fPIE
@@ -216,7 +209,7 @@ $(BOOT_EFI): $(BOOT_OBJS)
 	$(LD) $(UEFI_LDFLAGS) -o $@ $^
 
 $(KERNEL_ELF): $(KERNEL_OBJS)
-	$(KERNEL_CXX) $(KERNEL_LDFLAGS) -o $@ $^
+	$(CXX) $(KERNEL_LDFLAGS) -o $@ $^
 
 # ----------------------------------------------------
 # Disk Image Creation
@@ -247,10 +240,10 @@ $(DISK_IMG): $(BOOT_EFI) $(KERNEL_ELF)
 # ----------------------------------------------------
 
 %.o: %.cpp
-	$(KERNEL_CXX) $(KERNEL_CFLAGS) -c $< -o $@
+	$(CXX) $(KERNEL_CFLAGS) -c $< -o $@
 
 %.o: %.S
-	$(KERNEL_CC) $(KERNEL_CFLAGS) -c $< -o $@
+	$(CC) $(KERNEL_CFLAGS) -c $< -o $@
 
 $(BOOT_DIR)/main.o: $(BOOT_DIR)/main.cpp
 	$(UEFI_CXX) $(UEFI_CFLAGS) -c $< -o $@
@@ -278,6 +271,7 @@ run-win: $(DISK_IMG)
 		-drive format=raw,file=$(DISK_IMG)
 
 clean:
-	rm -f $(OBJS) $(BOOT_EFI) $(KERNEL_ELF) $(DISK_IMG)
+	find . -name "*.o" -type f -delete
+	rm -f $(BOOT_EFI) $(KERNEL_ELF) $(DISK_IMG)
 
 .PHONY: all image run run-win clean
