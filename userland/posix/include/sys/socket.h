@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 #define AF_INET     2
+#define AF_INET6    10
 #define SOCK_STREAM 1
 #define SOCK_DGRAM  2
 

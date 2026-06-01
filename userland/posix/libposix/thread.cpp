@@ -5,6 +5,7 @@
 extern "C" {
 
 int pthread_create(pthread_t *thread, const void *attr, void *(*start_routine) (void *), void *arg) {
+    (void)attr;
     if (!thread || !start_routine) return EINVAL;
     
     // Create ACOS thread
@@ -28,7 +29,7 @@ int pthread_join(pthread_t thread, void **retval) {
     if (thread == 0) return EINVAL;
     
     // Find thread by ID
-    acos::scheduler::Thread* t = acos::scheduler::find_thread((u64)thread);
+    acos::scheduler::Thread* t = acos::scheduler::find_thread(static_cast<acos::u64>(thread));
     if (!t) return ESRCH;
     
     // Wait for thread to terminate
@@ -42,6 +43,18 @@ int pthread_join(pthread_t thread, void **retval) {
     }
     
     return 0;
+}
+
+void pthread_exit(void *retval) {
+    acos::scheduler::Thread* current = acos::scheduler::current_thread();
+    if (current) {
+        current->return_value = retval;
+        current->state = acos::scheduler::ThreadState::Terminated;
+    }
+    acos::scheduler::schedule();
+    while (true) {
+        __asm__ volatile("hlt");
+    }
 }
 
 }

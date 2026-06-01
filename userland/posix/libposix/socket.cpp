@@ -1,6 +1,7 @@
 #include <sys/socket.h>
 #include <errno.h>
 #include <kernel/net/socket.h>
+#include <kernel/scheduler/scheduler.h>
 
 extern "C" {
 
@@ -30,11 +31,12 @@ int socket(int domain, int type, int protocol) {
         return -1;
     }
     
-    int fd = proc->register_file((void*)sock);
+    int fd = proc->register_socket(sock);
     return fd;
 }
 
 ssize_t send(int sockfd, const void *buf, size_t len, int flags) {
+    (void)flags;
     if (!buf || len == 0) {
         errno = EINVAL;
         return -1;
@@ -46,13 +48,13 @@ ssize_t send(int sockfd, const void *buf, size_t len, int flags) {
         return -1;
     }
     
-    acos::net::Socket* sock = (acos::net::Socket*)proc->get_file(sockfd);
+    acos::net::Socket* sock = proc->get_socket(sockfd);
     if (!sock) {
         errno = EBADF;
         return -1;
     }
     
-    ssize_t sent = sock->send(buf, len, flags);
+    ssize_t sent = sock->send(buf, len);
     if (sent < 0) {
         errno = EIO;
     }
@@ -61,6 +63,7 @@ ssize_t send(int sockfd, const void *buf, size_t len, int flags) {
 }
 
 ssize_t recv(int sockfd, void *buf, size_t len, int flags) {
+    (void)flags;
     if (!buf || len == 0) {
         errno = EINVAL;
         return -1;
@@ -72,13 +75,13 @@ ssize_t recv(int sockfd, void *buf, size_t len, int flags) {
         return -1;
     }
     
-    acos::net::Socket* sock = (acos::net::Socket*)proc->get_file(sockfd);
+    acos::net::Socket* sock = proc->get_socket(sockfd);
     if (!sock) {
         errno = EBADF;
         return -1;
     }
     
-    ssize_t received = sock->recv(buf, len, flags);
+    ssize_t received = sock->recv(buf, len);
     if (received < 0) {
         errno = EIO;
     }

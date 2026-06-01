@@ -185,12 +185,27 @@ struct SystemTable {
     void* configurationTable;
 };
 
+enum class GraphicsPixelFormat : acos::u32 {
+    PixelRedGreenBlueReserved8BitPerColor = 0,
+    PixelBlueGreenRedReserved8BitPerColor = 1,
+    PixelBitMask = 2,
+    PixelBltOnly = 3,
+    PixelFormatMax = 4,
+};
+
+struct PixelBitmask {
+    acos::u32 redMask;
+    acos::u32 greenMask;
+    acos::u32 blueMask;
+    acos::u32 reservedMask;
+};
+
 struct GraphicsOutputModeInformation {
     acos::u32 version;
     acos::u32 horizontalResolution;
     acos::u32 verticalResolution;
-    int pixelFormat;
-    acos::u32 pixelInformation[3];
+    GraphicsPixelFormat pixelFormat;
+    PixelBitmask pixelInformation;
     acos::u32 pixelsPerScanLine;
 };
 
@@ -203,15 +218,23 @@ struct GraphicsOutputProtocolMode {
     acos::usize frameBufferSize;
 };
 
+struct GraphicsOutputProtocol;
+
+using GraphicsOutputProtocolQueryMode = Status (*)(GraphicsOutputProtocol* self,
+                                                   acos::u32 modeNumber,
+                                                   acos::usize* sizeOfInfo,
+                                                   GraphicsOutputModeInformation** info);
+using GraphicsOutputProtocolSetMode = Status (*)(GraphicsOutputProtocol* self, acos::u32 modeNumber);
+
 struct GraphicsOutputProtocol {
-    void* queryMode;
-    void* setMode;
+    GraphicsOutputProtocolQueryMode queryMode;
+    GraphicsOutputProtocolSetMode setMode;
     void* blt;
     GraphicsOutputProtocolMode* mode;
 };
 
-static constexpr Guid GraphicsOutputProtocolGuid = {0x9042a9de, 0x23dc, 0x4a38, {0x96, 0xfb, 0x7a, 0xde, 0xde, 0x80, 0x51, 0x6a}};
+static constexpr Guid GraphicsOutputProtocolGuid = {0x9042a9de, 0x23dc, 0x4a38, {0x96, 0xfb, 0x7a, 0xde, 0xd0, 0x80, 0x51, 0x6a}};
 static constexpr Guid LoadedImageProtocolGuid = {0x5b1b31a1, 0x9562, 0x11d2, {0x8e, 0x3f, 0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b}};
-static constexpr Guid SimpleFileSystemProtocolGuid = {0x0964e5b2, 0x6459, 0x11d2, {0x8e, 0x39, 0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b}};
+static constexpr Guid SimpleFileSystemProtocolGuid = {0x964e5b22, 0x6459, 0x11d2, {0x8e, 0x39, 0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b}};
 
 } // namespace efi

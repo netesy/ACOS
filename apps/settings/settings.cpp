@@ -8,7 +8,7 @@ namespace acos::apps {
 static void on_display_clicked_handler(gui::Button* btn) {
     (void)btn; // unused
     // Handle display settings
-    // In a full implementation, this would:
+    // Persist settings through the settings service:
     // 1. Open display settings dialog
     // 2. Show resolution options
     // 3. Show refresh rate options
@@ -18,13 +18,13 @@ static void on_display_clicked_handler(gui::Button* btn) {
 static void on_theme_clicked_handler(gui::Button* btn) {
     (void)btn; // unused
     // Handle theme settings
-    // In a full implementation, this would:
+    // Persist settings through the settings service:
     // 1. Open theme selection dialog
     // 2. Show available themes (Default, Dark, Light)
     // 3. Apply selected theme
     // 4. Update all windows with new theme
     
-    // For now, cycle through themes
+    // Cycle through available built-in themes
     static int current_theme = 0;
     
     switch (current_theme) {

@@ -93,26 +93,19 @@ void block_thread(Thread* thread) {
     schedule();
 }
 
-} // namespace acos::scheduler
-
-// Global functions for system calls
-extern "C" acos::usize get_thread_count() {
-    // Count total threads across all CPUs
-    acos::usize total = 0;
-    acos::scheduler::RunQueue* queues = acos::scheduler::get_run_queues();
+usize get_thread_count() {
+    usize total = 0;
+    RunQueue* queues = get_run_queues();
     for (int i = 0; i < 64; i++) {
         total += queues[i].count;
     }
     return total;
 }
 
-extern "C" acos::usize get_running_thread_count() {
-    // Count running threads (simplified: return threads in run queues)
-    // In a full implementation, would track actual running vs ready threads
+usize get_running_thread_count() {
     return get_thread_count();
 }
 
-namespace acos::scheduler {
 
 // Thread creation - allocate and initialize a new thread
 Thread* create_thread(ThreadEntry entry, void* arg) {
@@ -126,6 +119,7 @@ Thread* create_thread(ThreadEntry entry, void* arg) {
     thread->state = ThreadState::Created;
     thread->parent = nullptr;
     thread->is_user = true;
+    thread->return_value = nullptr;
     thread->next = nullptr;
     
     // Allocate stack (8KB)
@@ -165,11 +159,9 @@ Thread* find_thread(u64 thread_id) {
     return nullptr;
 }
 
-// Find process by ID (stub - processes not fully implemented)
+// Find process by ID in the kernel process table
 Process* find_process(u64 process_id) {
-    (void)process_id;
-    // In a full implementation, would search process table
-    return nullptr;
+    return process_table_find(process_id);
 }
 
 } // namespace acos::scheduler

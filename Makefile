@@ -1,14 +1,15 @@
 CC = gcc
 CXX = g++
+UEFI_CXX = clang++
 AS = as
 LD = ld
 
 # UEFI Target
-UEFI_CFLAGS = -target x86_64-unknown-windows-coff -ffreestanding -fno-stack-protector -fshort-wchar -mno-red-zone -I. -Ilibs/runtime/include
+UEFI_CFLAGS = -target x86_64-unknown-windows-coff -ffreestanding -fcf-protection=none -fno-stack-protector -fshort-wchar -mno-red-zone -I. -Ilibs/runtime/include
 UEFI_LDFLAGS = -m i386pep --subsystem 10 --entry efi_main
 
 # Kernel Target
-KERNEL_CFLAGS = -nostdinc++ -fno-pic -ffreestanding -fno-stack-protector -fno-exceptions -fno-rtti -mno-red-zone -I. -Ilibs/runtime/include -Iuserland/posix/include -std=c++23 -Wall -Wextra -Werror
+KERNEL_CFLAGS = -nostdinc++ -fno-pic -ffreestanding -fcf-protection=none -fno-stack-protector -fno-exceptions -fno-rtti -mno-red-zone -I. -Ilibs/runtime/include -Iuserland/posix/include -std=c++23 -Wall -Wextra -Werror
 KERNEL_ASFLAGS =
 KERNEL_LDFLAGS = -static -z noexecstack -nostdlib -T linker.ld
 
@@ -24,6 +25,13 @@ SHARED_LDFLAGS = -shared -nostdlib
 BOOT_EFI   = acos_boot.efi
 KERNEL_ELF = kernel.elf
 DISK_IMG   = acos.img
+QEMU       ?= qemu-system-x86_64
+QEMU_FLAGS ?= -drive format=raw,file=$(DISK_IMG) -vga std
+QEMU_FIRMWARE ?= $(firstword $(wildcard OVMF.fd /usr/share/ovmf/OVMF.fd /usr/share/qemu/OVMF.fd /usr/share/OVMF/OVMF_CODE.fd /usr/share/OVMF/OVMF_CODE_4M.fd))
+QEMU_HEADLESS_FLAGS ?= -display gtk
+MKFS_VFAT  ?= $(firstword $(shell command -v mkfs.vfat 2>/dev/null) $(wildcard /usr/sbin/mkfs.vfat /sbin/mkfs.vfat))
+MMD        ?= $(shell command -v mmd 2>/dev/null)
+MCOPY      ?= $(shell command -v mcopy 2>/dev/null)
 
 # Directories
 BOOT_DIR   = boot
@@ -124,6 +132,7 @@ KERNEL_SRCS = \
 	$(SHELL_DIR)/desktop_shell.cpp \
 	$(SHELL_DIR)/session_manager.cpp \
 	$(SHELL_DIR)/volume_indicator.cpp \
+	$(KERNEL_DIR)/input/input_manager.cpp \
 	$(APPS_DIR)/terminal/terminal.cpp \
 	$(APPS_DIR)/file_manager/file_manager.cpp \
 	$(APPS_DIR)/settings/settings.cpp \
@@ -178,25 +187,57 @@ KERNEL_SRCS = \
 	$(SMP_DIR)/load_balancer.cpp \
 	$(ACPI_DIR)/madt.cpp \
 	$(ARCH_SMP_DIR)/lapic.cpp \
-	$(ARCH_SMP_DIR)/ioapic.cpp \
-	libs/runtime/string.cpp
+	$(ARCH_SMP_DIR)/ioapic.cpp
 
 KERNEL_ASM_SRCS = \
 	$(ARCH_DIR)/switch.S \
 	$(ARCH_DIR)/syscall.S \
-	$(ARCH_DIR)/boot.S \
-	$(ARCH_SMP_DIR)/ap_boot.S
+	$(ARCH_DIR)/boot.S
 
 BOOT_OBJS   = $(BOOT_SRCS:.cpp=.o)
 KERNEL_OBJS = $(KERNEL_SRCS:.cpp=.o) $(KERNEL_ASM_SRCS:.S=.o)
 
-all: $(KERNEL_ELF)
+# ----------------------------------------------------
+# Build Targets
+# ----------------------------------------------------
+
+all: image
+
+image: $(DISK_IMG)
 
 $(BOOT_EFI): $(BOOT_OBJS)
 	$(LD) $(UEFI_LDFLAGS) -o $@ $^
 
 $(KERNEL_ELF): $(KERNEL_OBJS)
 	$(CXX) $(KERNEL_LDFLAGS) -o $@ $^
+
+# ----------------------------------------------------
+# Disk Image Creation
+# ----------------------------------------------------
+
+OBJS = $(BOOT_OBJS) $(KERNEL_OBJS)
+
+$(DISK_IMG): $(BOOT_EFI) $(KERNEL_ELF)
+	@echo "[IMG] Creating FAT32 disk image..."
+	dd if=/dev/zero of=$(DISK_IMG) bs=1M count=64
+	@if [ -n "$(MKFS_VFAT)" ]; then \
+		$(MKFS_VFAT) -F 32 $(DISK_IMG); \
+	else \
+		echo "[IMG] Warning: mkfs.vfat not found; leaving unformatted raw image."; \
+	fi
+	@if [ -n "$(MMD)" ] && [ -n "$(MCOPY)" ] && [ -n "$(MKFS_VFAT)" ]; then \
+		$(MMD) -i $(DISK_IMG) ::/EFI; \
+		$(MMD) -i $(DISK_IMG) ::/EFI/BOOT; \
+		$(MCOPY) -i $(DISK_IMG) $(BOOT_EFI) ::/EFI/BOOT/BOOTX64.EFI; \
+		$(MCOPY) -i $(DISK_IMG) $(KERNEL_ELF) ::/kernel.elf; \
+	else \
+		echo "[IMG] Warning: mtools and mkfs.vfat are required to populate the FAT32 image."; \
+	fi
+	@echo "[IMG] Done."
+
+# ----------------------------------------------------
+# Compilation Rules
+# ----------------------------------------------------
 
 %.o: %.cpp
 	$(CXX) $(KERNEL_CFLAGS) -c $< -o $@
@@ -205,10 +246,32 @@ $(KERNEL_ELF): $(KERNEL_OBJS)
 	$(CC) $(KERNEL_CFLAGS) -c $< -o $@
 
 $(BOOT_DIR)/main.o: $(BOOT_DIR)/main.cpp
-	$(CXX) $(UEFI_CFLAGS) -c $< -o $@
+	$(UEFI_CXX) $(UEFI_CFLAGS) -c $< -o $@
+
+# ----------------------------------------------------
+# Run
+# ----------------------------------------------------
+
+run: $(DISK_IMG)
+	@if command -v $(QEMU) >/dev/null 2>&1; then \
+		if [ -n "$(QEMU_FIRMWARE)" ]; then \
+			$(QEMU) $(QEMU_FLAGS) $(QEMU_HEADLESS_FLAGS) -bios "$(QEMU_FIRMWARE)"; \
+		else \
+			echo "[RUN] Warning: OVMF firmware not found; cannot launch UEFI VM."; \
+			exit 1; \
+		fi; \
+	else \
+		echo "[RUN] Warning: $(QEMU) not found; skipping VM launch."; \
+		exit 1; \
+	fi
+
+run-win: $(DISK_IMG)
+	qemu-system-x86_64.exe \
+		-L "C:/Program Files/qemu" \
+		-drive format=raw,file=$(DISK_IMG)
 
 clean:
 	find . -name "*.o" -type f -delete
 	rm -f $(BOOT_EFI) $(KERNEL_ELF) $(DISK_IMG)
 
-.PHONY: all clean
+.PHONY: all image run run-win clean

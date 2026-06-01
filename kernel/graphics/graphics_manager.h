@@ -1,4 +1,5 @@
 #pragma once
+#include <acos/boot_info.h>
 #include <kernel/graphics/display.h>
 
 namespace acos::graphics {
@@ -8,6 +9,7 @@ public:
     static void register_display(DisplayDevice* display);
     static DisplayDevice* primary_display();
     static void init();
+    static void init(FramebufferInfo* boot_framebuffer);
 
 private:
     static DisplayDevice* g_displays[4];

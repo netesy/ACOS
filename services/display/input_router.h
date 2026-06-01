@@ -21,6 +21,7 @@ public:
 
 private:
     Window* find_window_at(u32 x, u32 y);
+    void enqueue_window_event(Window* window, const acos::input::InputEvent& event);
 
     Window* m_focused_window;
     Window* m_mouse_over_window;
@@ -28,6 +29,15 @@ private:
     u32 m_mouse_x;
     u32 m_mouse_y;
     bool m_mouse_pressed;
+
+    struct RoutedEvent {
+        WindowId window_id;
+        acos::input::InputEvent event;
+    };
+    RoutedEvent m_event_queue[64];
+    usize m_event_head;
+    usize m_event_tail;
+    usize m_event_count;
 
     Window** m_windows;
     usize m_window_count;

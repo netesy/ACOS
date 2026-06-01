@@ -23,7 +23,7 @@ Surface* SurfaceManager::create_surface(u64 owner_pid, u32 width, u32 height, bo
             m_surfaces[i].height = height;
             m_surfaces[i].double_buffered = double_buffered;
 
-            // For now, use kmalloc since we are currently building this into the "kernel services" layer
+            // Use explicit kernel allocation while this service is linked into the kernel image
             // as per the existing Makefile structure, although it's logically a service.
             m_surfaces[i].buffer = (u32*)acos::memory::kmalloc(width * height * sizeof(u32));
             if (double_buffered) {

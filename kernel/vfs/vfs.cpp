@@ -35,9 +35,7 @@ i32 VFS::open(const char* path, u64 flags [[maybe_unused]]) {
     File* file = reinterpret_cast<File*>(memory::kmalloc(sizeof(File)));
     if (!file) return -1;
     
-    // For now, pass nullptr as we don't have a proper Inode yet
-    // TODO: Convert Node to Inode or create wrapper
-    new (file) File(nullptr);
+    new (file) File(node);
     
     // Register with process
     scheduler::Process* current = scheduler::current_thread()->parent;

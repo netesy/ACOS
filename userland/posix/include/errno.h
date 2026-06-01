@@ -35,6 +35,8 @@ extern int errno;
 #define EMLINK  31
 #define EPIPE   32
 #define ENOSYS  38
+#define EAFNOSUPPORT 97
+#define ESOCKTNOSUPPORT 94
 
 #ifdef __cplusplus
 }

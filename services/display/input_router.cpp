@@ -8,6 +8,7 @@ namespace acos::display {
 InputRouter::InputRouter()
     : m_focused_window(nullptr), m_mouse_over_window(nullptr),
       m_mouse_x(0), m_mouse_y(0), m_mouse_pressed(false),
+      m_event_head(0), m_event_tail(0), m_event_count(0),
       m_windows(nullptr), m_window_count(0) {}
 
 void InputRouter::set_windows(Window** windows, usize count) {
@@ -51,29 +52,25 @@ Window* InputRouter::find_window_at(u32 x, u32 y) {
     return nullptr;
 }
 
+void InputRouter::enqueue_window_event(Window* window, const acos::input::InputEvent& event) {
+    if (!window || m_event_count >= 64) {
+        return;
+    }
+    m_event_queue[m_event_tail] = {window->id(), event};
+    m_event_tail = (m_event_tail + 1) % 64;
+    ++m_event_count;
+}
+
 void InputRouter::route_event(const acos::input::InputEvent& event) {
     if (event.type == acos::input::InputType::Keyboard) {
-        if (m_focused_window) {
-            // Send keyboard event to focused window owner via IPC
-            // For now, this is a placeholder - full IPC integration needed
-            (void)event;
-        }
+        enqueue_window_event(m_focused_window, event);
     } else if (event.type == acos::input::InputType::Mouse) {
-        // Parse mouse event
-        // Extract coordinates and button state from event
-        // For now, use simplified approach
-        u32 x = (event.code >> 16) & 0xFFFF;  // Extract x from code
-        u32 y = event.code & 0xFFFF;           // Extract y from code
-        bool pressed = (event.value & 0x01) != 0; // Button 1 pressed
-        
-        // Update mouse position and find window under cursor
+        u32 x = (event.code >> 16) & 0xFFFF;
+        u32 y = event.code & 0xFFFF;
+        bool pressed = (event.value & 0x01) != 0;
+
         update_mouse(x, y, pressed);
-        
-        // Send mouse event to window under cursor
-        if (m_mouse_over_window) {
-            // For now, this is a placeholder - full IPC integration needed
-            (void)event;
-        }
+        enqueue_window_event(m_mouse_over_window, event);
     }
 }
 

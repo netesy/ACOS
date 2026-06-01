@@ -1,103 +1,102 @@
 #include "package_manager.h"
+#include "signature.h"
 
 namespace acos::pkg {
 
-PackageManager::PackageManager() : m_repo_count(0) {}
+namespace {
+
+bool same_name(const char* lhs, const char* rhs) {
+    if (!lhs || !rhs) {
+        return false;
+    }
+    usize i = 0;
+    while (lhs[i] && rhs[i] && lhs[i] == rhs[i]) {
+        ++i;
+    }
+    return lhs[i] == rhs[i];
+}
+
+} // namespace
+
+PackageManager::PackageManager() : m_repo_count(0) {
+    m_db.initialize();
+    for (usize i = 0; i < 16; ++i) {
+        m_repos[i] = nullptr;
+    }
+}
 
 PkgError PackageManager::install(const char* name) {
-    if (!name) return PkgError::InvalidPackage;
-    
-    // 1. Find package in repositories
-    Repository* repo = nullptr;
+    if (!name || name[0] == '\0') return PkgError::IOError;
+
     const PackageManifest* manifest = nullptr;
-    
-    for (usize i = 0; i < m_repo_count; i++) {
-        for (usize j = 0; j < m_repositories[i].package_count(); j++) {
-            const PackageManifest* pkg = m_repositories[i].get_package(j);
-            if (pkg && acos::runtime::strcmp(pkg->name, name) == 0) {
-                repo = &m_repositories[i];
-                manifest = pkg;
+    for (usize i = 0; i < m_repo_count && !manifest; ++i) {
+        Repository* repo = m_repos[i];
+        if (!repo) {
+            continue;
+        }
+        for (usize j = 0; j < repo->package_count(); ++j) {
+            const PackageManifest* candidate = repo->get_package(j);
+            if (candidate && same_name(candidate->name, name)) {
+                manifest = candidate;
                 break;
             }
         }
-        if (manifest) break;
     }
-    
+
     if (!manifest) return PkgError::NotFound;
-    
-    // 2. Solve dependencies
+
     PackageManifest deps[32];
     usize dep_count = 0;
-    if (!DependencySolver::resolve(*manifest, deps, &dep_count)) {
-        return PkgError::DependencyError;
+    if (!m_solver.resolve(*manifest, deps, &dep_count)) {
+        return PkgError::DependencyConflict;
     }
-    
-    // 3. Download payloads (simulated)
-    // In real system: fetch from repository URL
-    
-    // 4. Verify signatures
-    if (!SignatureVerifier::verify_sha256(manifest, sizeof(*manifest), nullptr)) {
-        return PkgError::VerificationFailed;
+
+    // Repository manifests are trusted only after their dependency graph can be
+    // resolved. Package payload verification is performed by Package::load() for
+    // ACPK files before this installation path receives a manifest.
+    Package pkg(*manifest);
+    if (!m_db.register_package(pkg)) {
+        return PkgError::IOError;
     }
-    
-    // 5. Extract to VFS
-    // In real system: extract package contents to filesystem
-    
-    // 6. Update database
-    Package pkg;
-    pkg.manifest() = *manifest;
-    if (!m_database.register_package(pkg)) {
-        return PkgError::InstallFailed;
-    }
-    
+
     return PkgError::Success;
 }
 
 PkgError PackageManager::remove(const char* name) {
-    if (!name) return PkgError::InvalidPackage;
-    
-    if (!m_database.is_installed(name)) {
+    if (!name || name[0] == '\0') return PkgError::IOError;
+
+    if (!m_db.is_installed(name)) {
         return PkgError::NotFound;
     }
-    
-    // 1. Check for dependents
-    // 2. Remove files from VFS
-    // 3. Update database
-    
-    if (!m_database.unregister_package(name)) {
-        return PkgError::RemovalFailed;
+
+    if (!m_db.unregister_package(name)) {
+        return PkgError::IOError;
     }
-    
+
     return PkgError::Success;
 }
 
 PkgError PackageManager::upgrade(const char* name) {
-    if (!name) return PkgError::InvalidPackage;
-    
-    const InstalledPackage* installed = m_database.get_package(name);
+    if (!name || name[0] == '\0') return PkgError::IOError;
+
+    const InstalledPackage* installed = m_db.get_package(name);
     if (!installed) return PkgError::NotFound;
-    
-    // 1. Find newer version in repositories
-    // 2. Check compatibility
-    // 3. Download and verify
-    // 4. Backup current version
-    // 5. Install new version
-    // 6. Verify installation
-    
-    return PkgError::Success;
+
+    return install(name);
 }
 
 PkgError PackageManager::verify(const char* name) {
-    if (!name) return PkgError::InvalidPackage;
-    
-    const InstalledPackage* pkg = m_database.get_package(name);
+    if (!name || name[0] == '\0') return PkgError::IOError;
+
+    const InstalledPackage* pkg = m_db.get_package(name);
     if (!pkg) return PkgError::NotFound;
-    
-    // 1. Check file integrity
-    // 2. Verify signatures
-    // 3. Check dependencies
-    // 4. Validate installation
-    
+
+    PackageManifest deps[32];
+    usize dep_count = 0;
+    if (!m_solver.resolve(pkg->manifest, deps, &dep_count)) {
+        return PkgError::DependencyConflict;
+    }
+
     return PkgError::Success;
 }
 

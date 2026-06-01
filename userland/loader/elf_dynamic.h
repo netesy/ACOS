@@ -35,6 +35,15 @@ struct Elf64_Dyn {
 #define DT_JMPREL   23
 #define DT_BIND_NOW 24
 
+struct Elf64_Sym {
+    u32 st_name;
+    u8 st_info;
+    u8 st_other;
+    u16 st_shndx;
+    u64 st_value;
+    u64 st_size;
+};
+
 struct Elf64_Rela {
     u64 r_offset;
     u64 r_info;

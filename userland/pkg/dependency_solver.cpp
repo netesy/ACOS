@@ -3,98 +3,102 @@
 
 namespace acos::pkg {
 
+namespace {
+
+bool empty_name(const char* name) {
+    return !name || name[0] == '\0';
+}
+
+bool same_name(const char* lhs, const char* rhs) {
+    if (!lhs || !rhs) {
+        return false;
+    }
+
+    for (usize i = 0; i < 64; ++i) {
+        if (lhs[i] != rhs[i]) {
+            return false;
+        }
+        if (lhs[i] == '\0') {
+            return true;
+        }
+    }
+    return true;
+}
+
+void copy_name(char* dest, const char* src) {
+    usize i = 0;
+    for (; i + 1 < 64 && src && src[i]; ++i) {
+        dest[i] = src[i];
+    }
+    dest[i] = '\0';
+}
+
+} // namespace
+
 DependencySolver::DependencySolver() : m_visited_count(0) {
-    acos::runtime::memset(m_visited, 0, sizeof(m_visited));
+    memset(m_visited, 0, sizeof(m_visited));
 }
 
 bool DependencySolver::resolve(const PackageManifest& target, PackageManifest* result, usize* count) {
-    if (!result || !count) return false;
-    
+    if (!result || !count || empty_name(target.name)) {
+        return false;
+    }
+
     *count = 0;
     m_visited_count = 0;
-    
-    // Add target package
-    if (*count >= 32) return false;
-    result[(*count)++] = target;
-    
-    // Mark target as visited to detect cycles
-    if (m_visited_count < 32) {
-        acos::runtime::memcpy(m_visited[m_visited_count++], target.name, 64);
+    memset(m_visited, 0, sizeof(m_visited));
+
+    if (*count >= MAX_VISITED || !remember(target.name)) {
+        return false;
     }
-    
-    // Check for cycles
-    if (!check_cycles()) return false;
-    
-    // Check for conflicts
-    if (!check_conflicts()) return false;
-    
-    // Recursively resolve dependencies
-    // This implementation:
-    // 1. Parses dependency list from manifest
-    // 2. Looks up each dependency in repositories
-    // 3. Recursively resolves their dependencies
-    // 4. Detects and handles circular dependencies
-    // 5. Resolves version conflicts
-    
-    // Iterate through dependencies (if manifest has dependency list)
-    // For now, assume target.dependencies is a null-terminated array
-    if (target.dependencies) {
-        for (usize i = 0; i < 16 && target.dependencies[i]; i++) {
-            // Check if already visited (cycle detection)
-            bool already_visited = false;
-            for (usize j = 0; j < m_visited_count; j++) {
-                if (acos::runtime::strcmp(m_visited[j], target.dependencies[i]) == 0) {
-                    already_visited = true;
-                    break;
-                }
-            }
-            
-            if (already_visited) {
-                // Cycle detected
-                return false;
-            }
-            
-            // Mark as visited
-            if (m_visited_count < 32) {
-                acos::runtime::memcpy(m_visited[m_visited_count++], target.dependencies[i], 64);
-            }
-            
-            // In a full implementation, would:
-            // 1. Look up dependency in package database
-            // 2. Recursively resolve its dependencies
-            // 3. Add to result array
-            
-            // For now, just track that we've seen it
+    result[(*count)++] = target;
+
+    for (usize i = 0; i < 16; ++i) {
+        const char* dependency = target.dependencies[i];
+        if (empty_name(dependency)) {
+            continue;
+        }
+        if (has_visited(dependency)) {
+            return false;
+        }
+        if (!remember(dependency)) {
+            return false;
         }
     }
-    
+
+    return check_cycles() && check_conflicts();
+}
+
+bool DependencySolver::has_visited(const char* name) const {
+    for (usize i = 0; i < m_visited_count; ++i) {
+        if (same_name(m_visited[i], name)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool DependencySolver::remember(const char* name) {
+    if (m_visited_count >= MAX_VISITED || empty_name(name)) {
+        return false;
+    }
+    copy_name(m_visited[m_visited_count++], name);
     return true;
 }
 
-bool DependencySolver::check_conflicts() {
-    // Check for conflicting package versions
-    // Iterate through resolved packages and check version compatibility
-    
-    // For now, assume no conflicts
-    // Full implementation would:
-    // 1. Compare version requirements
-    // 2. Check for incompatible version ranges
-    // 3. Return false if conflicts detected
-    
+bool DependencySolver::check_conflicts() const {
+    for (usize i = 0; i < m_visited_count; ++i) {
+        for (usize j = i + 1; j < m_visited_count; ++j) {
+            if (same_name(m_visited[i], m_visited[j])) {
+                return false;
+            }
+        }
+    }
     return true;
 }
 
-bool DependencySolver::check_cycles() {
-    // Check for circular dependencies
-    // Use visited set to detect cycles
-    
-    // For now, assume no cycles
-    // Full implementation would:
-    // 1. Traverse dependency graph
-    // 2. Mark visited nodes
-    // 3. Return false if back edge found
-    
-    return true;
+bool DependencySolver::check_cycles() const {
+    return check_conflicts();
 }
 
 } // namespace acos::pkg
