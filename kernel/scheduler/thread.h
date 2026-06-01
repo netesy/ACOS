@@ -26,6 +26,7 @@ struct Thread {
     ThreadState state;
     Process* parent;
     bool is_user;
+    Thread* next;  // For run queue linking
 };
 
 } // namespace acos::scheduler

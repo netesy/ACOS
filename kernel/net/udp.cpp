@@ -1,4 +1,5 @@
 #include <kernel/net/udp.h>
+#include <libs/runtime/include/acos/runtime.h>
 
 namespace acos::net {
 
@@ -41,6 +42,8 @@ void UDP::handle_packet(NetDevice* dev, u32 src_ip, const void* data, usize size
 bool UDP::send_packet(NetDevice* dev, u32 dest_ip, u16 src_port, u16 dest_port, const void* data, usize size) {
     if (!dev || !data || size > 65527) return false;
     
+    (void)dest_ip; // Not used in this implementation
+    
     u8 packet[65535];
     packet[0] = (src_port >> 8) & 0xFF;
     packet[1] = src_port & 0xFF;
@@ -53,7 +56,7 @@ bool UDP::send_packet(NetDevice* dev, u32 dest_ip, u16 src_port, u16 dest_port, 
     packet[6] = 0;
     packet[7] = 0;
     
-    acos::runtime::memcpy(packet + 8, data, size);
+    memcpy(packet + 8, data, size);
     
     // Calculate checksum
     u32 sum = 0;

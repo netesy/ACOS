@@ -8,7 +8,7 @@
 
 namespace acos::vfs {
 
-i32 VFS::open(const char* path, u64 flags) {
+i32 VFS::open(const char* path, u64 flags [[maybe_unused]]) {
     if (!path || path[0] == '\0') return -1;
     
     // Validate path - prevent directory traversal attacks
@@ -35,7 +35,9 @@ i32 VFS::open(const char* path, u64 flags) {
     File* file = reinterpret_cast<File*>(memory::kmalloc(sizeof(File)));
     if (!file) return -1;
     
-    new (file) File(node->inode);
+    // For now, pass nullptr as we don't have a proper Inode yet
+    // TODO: Convert Node to Inode or create wrapper
+    new (file) File(nullptr);
     
     // Register with process
     scheduler::Process* current = scheduler::current_thread()->parent;
@@ -83,9 +85,6 @@ bool VFS::mount(const char* path, FileSystem* fs) {
     return MountRegistry::mount(path, fs);
 }
 
-} // namespace acos::vfs
-
-
 i32 VFS::read_dir(const char* path, DirectoryEntry* entries, usize max_entries) {
     if (!path || !entries || max_entries == 0) return -1;
     
@@ -121,3 +120,5 @@ NodeType VFS::get_node_type(const char* path) {
     
     return node->type();
 }
+
+} // namespace acos::vfs

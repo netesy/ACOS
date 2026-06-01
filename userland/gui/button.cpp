@@ -5,6 +5,13 @@
 
 namespace acos::gui {
 
+// Helper function for string length
+static inline usize strlen_impl(const char* s) {
+    usize len = 0;
+    while (s && s[len]) len++;
+    return len;
+}
+
 Button::Button(const char* label) 
     : m_label(label), m_on_click(nullptr), m_mouse_over(false), m_press_time(0) {
     m_rect.w = 100;
@@ -39,9 +46,9 @@ void Button::draw(acos::graphics::Renderer* renderer) {
     
     // Draw label text centered
     if (m_label) {
-        u32 text_x = m_rect.x + (m_rect.w / 2) - (acos::runtime::strlen(m_label) * 4);
-        u32 text_y = m_rect.y + (m_rect.h / 2) - 4;
-        renderer->draw_text(m_label, text_x, text_y, m_text_color);
+        i32 text_x = m_rect.x + (m_rect.w / 2) - (i32)(strlen_impl(m_label) * 4);
+        i32 text_y = m_rect.y + (m_rect.h / 2) - 4;
+        renderer->draw_text(m_label, (u32)text_x, (u32)text_y, m_text_color);
     }
 }
 
@@ -50,9 +57,10 @@ void Button::handle_event(const acos::input::InputEvent& event) {
     
     if (event.type == acos::input::InputType::Mouse) {
         // Extract mouse position and button state from event
-        u32 mouse_x = event.x;
-        u32 mouse_y = event.y;
-        bool button_pressed = (event.code & 0x01) != 0; // Left mouse button
+        // Simplified: use code field for button state
+        i32 mouse_x = (i32)((event.code >> 16) & 0xFFFF);
+        i32 mouse_y = (i32)(event.code & 0xFFFF);
+        bool button_pressed = (event.value & 0x01) != 0; // Left mouse button
         
         // Check if mouse is over button using hit test
         bool was_over = m_mouse_over;

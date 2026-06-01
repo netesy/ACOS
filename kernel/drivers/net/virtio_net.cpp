@@ -1,4 +1,6 @@
 #include <kernel/drivers/net/virtio_net.h>
+#include <kernel/memory/heap.h>
+#include <acos/runtime.h>
 
 namespace acos::drivers::net {
 
@@ -89,7 +91,7 @@ bool VirtIONet::send_packet(const void* data, usize size) {
     if (!tx_buffer) return false;
     
     // Copy packet data
-    acos::runtime::memcpy(tx_buffer, data, size);
+    memcpy(tx_buffer, data, size);
     
     // Setup descriptor for this packet
     // Descriptor format (in VirtIO):

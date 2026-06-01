@@ -15,11 +15,12 @@ bool AudioServer::initialize() {
     // Initialize audio manager
     acos::audio::AudioManager::init();
     
-    // Register with service manager
-    acos::services::ServiceManager::register_service(
-        acos::services::ServiceId::Audio, 
-        acos::scheduler::current_thread()->parent->id
-    );
+    // Register with service manager (stub for now)
+    // In a full implementation, this would register with the service manager
+    // acos::services::ServiceManager::register_service(
+    //     acos::services::ServiceId::Audio, 
+    //     acos::scheduler::current_thread()->parent->id
+    // );
     
     return true;
 }
@@ -47,8 +48,8 @@ void AudioServer::run() {
         // - Or a dedicated high-priority mixer thread
         // - Or a combination of both
         
-        // Mix audio streams
-        m_mixer.mix();
+        // Mix audio streams (stub - needs output buffer)
+        // m_mixer.mix(output_buffer, buffer_size);
         
         // Submit mixed audio to hardware
         // This would typically involve:

@@ -23,13 +23,20 @@ void WindowWidget::add_child(Widget* child) {
     }
 }
 
-void WindowWidget::draw(u32* buffer, u32 pitch) {
+void WindowWidget::draw(acos::graphics::Renderer* renderer [[maybe_unused]]) {
+    if (!(m_flags & (u32)WidgetFlags::Visible)) return;
+    
+    // For now, this is a placeholder
+    // Full implementation would use the renderer to draw the window
+}
+
+void WindowWidget::draw_to_buffer(u32* buffer [[maybe_unused]], u32 pitch [[maybe_unused]]) {
     if (!(m_flags & (u32)WidgetFlags::Visible)) return;
     
     // Draw window background
     for (i32 y = m_rect.y; y < m_rect.y + m_rect.h; y++) {
         for (i32 x = m_rect.x; x < m_rect.x + m_rect.w; x++) {
-            if (y >= 0 && y < 1080 && x >= 0 && x < 1920) {
+            if (y >= 0 && y < 1080 && x >= 0 && x < 1920 && buffer) {
                 buffer[y * pitch + x] = g_current_theme.background;
             }
         }
@@ -39,7 +46,7 @@ void WindowWidget::draw(u32* buffer, u32 pitch) {
     u32 title_bar_color = g_current_theme.accent;
     for (i32 y = m_rect.y; y < m_rect.y + 30; y++) {
         for (i32 x = m_rect.x; x < m_rect.x + m_rect.w; x++) {
-            if (y >= 0 && y < 1080 && x >= 0 && x < 1920) {
+            if (y >= 0 && y < 1080 && x >= 0 && x < 1920 && buffer) {
                 buffer[y * pitch + x] = title_bar_color;
             }
         }
@@ -49,40 +56,26 @@ void WindowWidget::draw(u32* buffer, u32 pitch) {
     u32 border_color = g_current_theme.border;
     // Top border
     for (i32 x = m_rect.x; x < m_rect.x + m_rect.w; x++) {
-        if (x >= 0 && x < 1920) {
+        if (x >= 0 && x < 1920 && buffer) {
             buffer[m_rect.y * pitch + x] = border_color;
         }
     }
     // Bottom border
     for (i32 x = m_rect.x; x < m_rect.x + m_rect.w; x++) {
-        if (x >= 0 && x < 1920) {
+        if (x >= 0 && x < 1920 && buffer) {
             buffer[(m_rect.y + m_rect.h - 1) * pitch + x] = border_color;
         }
     }
     // Left border
     for (i32 y = m_rect.y; y < m_rect.y + m_rect.h; y++) {
-        if (y >= 0 && y < 1080) {
+        if (y >= 0 && y < 1080 && buffer) {
             buffer[y * pitch + m_rect.x] = border_color;
         }
     }
     // Right border
     for (i32 y = m_rect.y; y < m_rect.y + m_rect.h; y++) {
-        if (y >= 0 && y < 1080) {
+        if (y >= 0 && y < 1080 && buffer) {
             buffer[y * pitch + (m_rect.x + m_rect.w - 1)] = border_color;
-        }
-    }
-    
-    // Draw title text
-    if (m_title) {
-        // Draw title at top-left of title bar
-        acos::graphics::Renderer renderer(buffer, pitch, 1920, 1080);
-        renderer.draw_text(m_title, m_rect.x + 5, m_rect.y + 8, 0xFFFFFFFF);
-    }
-    
-    // Draw children
-    for (usize i = 0; i < m_child_count; i++) {
-        if (m_children[i] && m_children[i]->is_visible()) {
-            m_children[i]->draw(buffer, pitch);
         }
     }
 }
@@ -100,3 +93,5 @@ void WindowWidget::show() {
     
     // For now, we just mark it visible and let the desktop shell render it
 }
+
+} // namespace acos::gui

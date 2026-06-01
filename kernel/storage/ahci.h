@@ -4,6 +4,9 @@
 
 namespace acos::storage {
 
+// Forward declaration
+class AHCIPort;
+
 /**
  * AHCI Controller driver foundation.
  * Manages HBA (Host Bus Adapter) ports and communication.
@@ -16,6 +19,8 @@ public:
     // Future: Interrupt handling
 private:
     u64 m_base_addr;
+    AHCIPort* m_ports[32];
+    u32 m_port_count = 0;
 };
 
 class AHCIPort : public BlockDevice {

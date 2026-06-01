@@ -8,7 +8,7 @@ namespace acos::apps {
 class AudioSettings : public gui::Widget {
 public:
     AudioSettings();
-    void draw(u32* buffer, u32 pitch) override;
+    void draw(acos::graphics::Renderer* renderer) override;
 
 private:
     gui::Label m_title;

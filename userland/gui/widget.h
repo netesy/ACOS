@@ -1,7 +1,7 @@
 #pragma once
 #include <acos/types.h>
 #include <kernel/input/input_device.h>
-#include <kernel/graphics/display.h>
+#include <kernel/graphics/renderer.h>
 
 namespace acos::gui {
 

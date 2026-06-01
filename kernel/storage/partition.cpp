@@ -32,7 +32,7 @@ void PartitionManager::enumerate(BlockDevice* device) {
     for (int i = 0; i < 4; i++) {
         u8* entry = sector + 446 + (i * 16);
         
-        u8 status = entry[0];
+        u8 status [[maybe_unused]] = entry[0];
         u8 type = entry[4];
         
         if (type == 0) continue; // Empty partition

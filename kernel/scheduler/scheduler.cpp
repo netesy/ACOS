@@ -1,11 +1,18 @@
 #include <kernel/scheduler/scheduler.h>
 #include <kernel/smp/cpu.h>
 #include <kernel/hal/spinlock.h>
+#include <kernel/memory/heap.h>
+#include <acos/types.h>
 
 namespace acos::scheduler {
 
 static RunQueue g_run_queues[64];
 static hal::SpinLock g_queue_locks[64];
+
+// Make g_run_queues accessible for global functions
+RunQueue* get_run_queues() {
+    return g_run_queues;
+}
 
 void scheduler_init() {
     for (int i = 0; i < 64; i++) {
@@ -31,7 +38,7 @@ void schedule() {
     u32 cpu_id = smp::Cpu::id();
     hal::ScopedLock lock(g_queue_locks[cpu_id]);
     
-    CpuData* cpu = smp::Cpu::current();
+    smp::CpuData* cpu = smp::Cpu::current();
     if (!cpu) return;
     
     // Get next thread from run queue
@@ -88,18 +95,81 @@ void block_thread(Thread* thread) {
 
 } // namespace acos::scheduler
 
-
-usize get_thread_count() {
+// Global functions for system calls
+extern "C" acos::usize get_thread_count() {
     // Count total threads across all CPUs
-    usize total = 0;
+    acos::usize total = 0;
+    acos::scheduler::RunQueue* queues = acos::scheduler::get_run_queues();
     for (int i = 0; i < 64; i++) {
-        total += g_run_queues[i].count;
+        total += queues[i].count;
     }
     return total;
 }
 
-usize get_running_thread_count() {
+extern "C" acos::usize get_running_thread_count() {
     // Count running threads (simplified: return threads in run queues)
     // In a full implementation, would track actual running vs ready threads
     return get_thread_count();
 }
+
+namespace acos::scheduler {
+
+// Thread creation - allocate and initialize a new thread
+Thread* create_thread(ThreadEntry entry, void* arg) {
+    // Allocate thread structure
+    Thread* thread = (Thread*)acos::memory::kmalloc(sizeof(Thread));
+    if (!thread) return nullptr;
+    
+    // Initialize thread
+    static u64 next_thread_id = 1;
+    thread->id = next_thread_id++;
+    thread->state = ThreadState::Created;
+    thread->parent = nullptr;
+    thread->is_user = true;
+    thread->next = nullptr;
+    
+    // Allocate stack (8KB)
+    const usize STACK_SIZE = 8192;
+    u64* stack = (u64*)acos::memory::kmalloc(STACK_SIZE);
+    if (!stack) {
+        acos::memory::kfree(thread);
+        return nullptr;
+    }
+    
+    thread->stack_top = (u64)stack + STACK_SIZE;
+    thread->stack_pointer = thread->stack_top;
+    
+    // Setup initial stack frame for thread entry
+    // Push return address (entry point)
+    thread->stack_pointer -= sizeof(u64);
+    *(u64*)thread->stack_pointer = (u64)entry;
+    
+    // Push argument
+    thread->stack_pointer -= sizeof(u64);
+    *(u64*)thread->stack_pointer = (u64)arg;
+    
+    return thread;
+}
+
+// Find thread by ID
+Thread* find_thread(u64 thread_id) {
+    // Search all run queues
+    RunQueue* queues = get_run_queues();
+    for (int cpu = 0; cpu < 64; cpu++) {
+        Thread* t = queues[cpu].head;
+        while (t) {
+            if (t->id == thread_id) return t;
+            t = t->next;
+        }
+    }
+    return nullptr;
+}
+
+// Find process by ID (stub - processes not fully implemented)
+Process* find_process(u64 process_id) {
+    (void)process_id;
+    // In a full implementation, would search process table
+    return nullptr;
+}
+
+} // namespace acos::scheduler

@@ -12,7 +12,7 @@ struct Notification {
 class NotificationCenter : public gui::Widget {
 public:
     NotificationCenter();
-    void draw(u32* buffer, u32 pitch) override;
+    void draw(acos::graphics::Renderer* renderer) override;
     void post_notification(const char* title, const char* message);
 
 private:

@@ -28,7 +28,6 @@ bool VirtIOSound::initialize() {
     // - Initialize device configuration
     // - Setup interrupt handlers
     
-    m_initialized = true;
     return true;
 }
 

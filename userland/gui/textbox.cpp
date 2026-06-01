@@ -2,9 +2,23 @@
 #include "theme.h"
 #include <kernel/graphics/renderer.h>
 #include <kernel/graphics/font.h>
-#include <libs/runtime/include/acos/runtime.h>
 
 namespace acos::gui {
+
+// Helper functions
+static inline usize strlen_impl(const char* s) {
+    usize len = 0;
+    while (s && s[len]) len++;
+    return len;
+}
+
+static inline void memcpy_impl(void* dest, const void* src, usize size) {
+    u8* d = (u8*)dest;
+    const u8* s = (const u8*)src;
+    for (usize i = 0; i < size; i++) {
+        d[i] = s[i];
+    }
+}
 
 TextBox::TextBox() 
     : m_cursor(0), m_max_length(512), m_placeholder(nullptr),
@@ -83,10 +97,10 @@ void TextBox::set_text(const char* text) {
         return;
     }
     
-    usize len = acos::runtime::strlen(text);
+    usize len = strlen_impl(text);
     if (len >= m_max_length) len = m_max_length - 1;
     
-    acos::runtime::memcpy(m_buffer, text, len);
+    memcpy_impl(m_buffer, text, len);
     m_buffer[len] = '\0';
     m_cursor = len;
 }

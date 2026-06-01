@@ -1,7 +1,8 @@
 #include <kernel/loader/elf.h>
 #include <kernel/memory/vmm.h>
+#include <kernel/memory/pmm.h>
 #include <kernel/scheduler/process.h>
-#include <libs/runtime/include/acos/runtime.h>
+#include <acos/runtime.h>
 
 namespace acos::loader {
 
@@ -10,7 +11,7 @@ struct ELFLoadResult {
     u64 load_base;
 };
 
-ELFLoadResult load_elf(const void* data, usize size, bool randomize = true) {
+ELFLoadResult load_elf(const void* data, usize size [[maybe_unused]], bool randomize = true) {
     const Elf64_Ehdr* header = (const Elf64_Ehdr*)data;
 
     if (header->e_ident[0] != 0x7F || header->e_ident[1] != 'E' ||
@@ -38,7 +39,7 @@ ELFLoadResult load_elf(const void* data, usize size, bool randomize = true) {
                 u64 phys = memory::pmm_alloc();
                 if (!phys) return {0, 0};
                 
-                u64 page_vaddr = vaddr + (j * 4096);
+                u64 page_vaddr [[maybe_unused]] = vaddr + (j * 4096);
                 u32 flags = memory::PageFlags::User | memory::PageFlags::Writable;
                 
                 if (!(phdr[i].p_flags & PF_W)) {
@@ -51,12 +52,12 @@ ELFLoadResult load_elf(const void* data, usize size, bool randomize = true) {
             // Copy file data
             if (filesz > 0) {
                 const void* src = (const u8*)data + offset;
-                acos::runtime::memcpy((void*)vaddr, src, filesz);
+                memcpy((void*)vaddr, src, filesz);
             }
             
             // Zero BSS
             if (memsz > filesz) {
-                acos::runtime::memset((void*)(vaddr + filesz), 0, memsz - filesz);
+                memset((void*)(vaddr + filesz), 0, memsz - filesz);
             }
         }
     }

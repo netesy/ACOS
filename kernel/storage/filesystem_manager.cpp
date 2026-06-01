@@ -1,5 +1,6 @@
 #include <kernel/storage/filesystem_manager.h>
 #include <acos/runtime.h>
+#include <kernel/hal/console.h>
 
 namespace acos::storage {
 
@@ -30,19 +31,19 @@ void FileSystemManager::probe_and_mount(BlockDevice* device, const char* path) {
         // Try to mount with this filesystem
         if (fs->mount(path)) {
             // Successfully mounted
-            acos::hal::console_print("Mounted ");
-            acos::hal::console_print(g_filesystems[i].name);
-            acos::hal::console_print(" at ");
-            acos::hal::console_print(path);
-            acos::hal::console_print("\n");
+            hal::console_print("Mounted ");
+            hal::console_print(g_filesystems[i].name);
+            hal::console_print(" at ");
+            hal::console_print(path);
+            hal::console_print("\n");
             return;
         }
     }
     
     // No filesystem could mount this device
-    acos::hal::console_print("Failed to mount device at ");
-    acos::hal::console_print(path);
-    acos::hal::console_print("\n");
+    hal::console_print("Failed to mount device at ");
+    hal::console_print(path);
+    hal::console_print("\n");
 }
 
 } // namespace acos::storage

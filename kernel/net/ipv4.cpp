@@ -1,4 +1,6 @@
 #include <kernel/net/ipv4.h>
+#include <kernel/net/udp.h>
+#include <kernel/net/tcp.h>
 
 namespace acos::net {
 

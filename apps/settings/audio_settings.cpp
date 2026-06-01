@@ -7,9 +7,9 @@ AudioSettings::AudioSettings() : m_title("Audio Settings") {
     m_rect = {0, 0, 400, 300};
 }
 
-void AudioSettings::draw(u32* buffer, u32 pitch) {
-    m_title.draw(buffer, pitch);
-    m_device_list.draw(buffer, pitch);
+void AudioSettings::draw(acos::graphics::Renderer* renderer) {
+    m_title.draw(renderer);
+    m_device_list.draw(renderer);
 }
 
 } // namespace acos::apps

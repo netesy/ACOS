@@ -6,7 +6,8 @@ namespace acos::gui {
 class ListView : public Widget {
 public:
     ListView();
-    void draw(u32* buffer, u32 pitch) override;
+    void draw(acos::graphics::Renderer* renderer) override;
+    void draw_to_buffer(u32* buffer, u32 pitch);
     void add_item(const char* item);
     void clear();
     void set_selected(i32 index) { m_selected_index = index; }

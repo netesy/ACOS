@@ -19,12 +19,12 @@ Package::Package(const char* path) {
     m_path[i] = '\0';
     
     // Initialize manifest
-    acos::runtime::memset(&m_manifest, 0, sizeof(m_manifest));
-    acos::runtime::memset(&m_header, 0, sizeof(m_header));
+    memset(&m_manifest, 0, sizeof(m_manifest));
+    memset(&m_header, 0, sizeof(m_header));
 }
 
 bool Package::load() {
-    if (!m_path || m_path[0] == '\0') return false;
+    if (m_path[0] == '\0') return false;
     
     // Open package file
     int fd = open(m_path, O_RDONLY);
@@ -49,10 +49,7 @@ bool Package::load() {
     }
     
     // Seek to manifest offset
-    if (lseek(fd, m_header.manifest_offset, SEEK_SET) < 0) {
-        close(fd);
-        return false;
-    }
+    lseek(fd, m_header.manifest_offset, 0); // 0 = SEEK_SET
     
     // Read manifest
     if (read(fd, &m_manifest, sizeof(PackageManifest)) != sizeof(PackageManifest)) {

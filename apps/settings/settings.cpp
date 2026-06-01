@@ -4,25 +4,9 @@
 
 namespace acos::apps {
 
-Settings::Settings() : gui::WindowWidget("Settings", 200, 150, 400, 300),
-                       m_display_btn("Display"), m_theme_btn("Theme") {
-    add_child(&m_display_btn);
-    add_child(&m_theme_btn);
-
-    m_display_btn.set_position(220, 200);
-    m_theme_btn.set_position(220, 240);
-    
-    // Setup button callbacks
-    m_display_btn.set_on_click([this](gui::Button* btn) {
-        this->on_display_clicked();
-    });
-    
-    m_theme_btn.set_on_click([this](gui::Button* btn) {
-        this->on_theme_clicked();
-    });
-}
-
-void Settings::on_display_clicked() {
+// Static callback handlers
+static void on_display_clicked_handler(gui::Button* btn) {
+    (void)btn; // unused
     // Handle display settings
     // In a full implementation, this would:
     // 1. Open display settings dialog
@@ -31,7 +15,8 @@ void Settings::on_display_clicked() {
     // 4. Apply changes to display server
 }
 
-void Settings::on_theme_clicked() {
+static void on_theme_clicked_handler(gui::Button* btn) {
+    (void)btn; // unused
     // Handle theme settings
     // In a full implementation, this would:
     // 1. Open theme selection dialog
@@ -55,6 +40,19 @@ void Settings::on_theme_clicked() {
     }
     
     current_theme = (current_theme + 1) % 3;
+}
+
+Settings::Settings() : gui::WindowWidget("Settings", 200, 150, 400, 300),
+                       m_display_btn("Display"), m_theme_btn("Theme") {
+    add_child(&m_display_btn);
+    add_child(&m_theme_btn);
+
+    m_display_btn.set_position(220, 200);
+    m_theme_btn.set_position(220, 240);
+    
+    // Setup button callbacks
+    m_display_btn.set_on_click(on_display_clicked_handler);
+    m_theme_btn.set_on_click(on_theme_clicked_handler);
 }
 
 } // namespace acos::apps

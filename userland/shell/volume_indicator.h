@@ -6,7 +6,7 @@ namespace acos::shell {
 class VolumeIndicator : public gui::Widget {
 public:
     VolumeIndicator();
-    void draw(u32* buffer, u32 pitch) override;
+    void draw(acos::graphics::Renderer* renderer) override;
     void set_volume(u32 vol) { m_volume = vol; }
 
 private:

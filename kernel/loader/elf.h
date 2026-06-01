@@ -47,6 +47,10 @@ static constexpr u8 ELFCLASS64 = 2;
 static constexpr u8 ELFDATA2LSB = 1;
 static constexpr Elf64_Half EM_X86_64 = 62;
 
+// ELF file types
+static constexpr Elf64_Half ET_EXEC = 2;
+static constexpr Elf64_Half ET_DYN = 3;
+
 static constexpr Elf64_Word PT_LOAD = 1;
 
 static constexpr Elf64_Word PF_X = 0x1;

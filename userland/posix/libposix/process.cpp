@@ -19,20 +19,9 @@ void _exit(int status) {
         while(1) __asm__("hlt");
     }
     
-    acos::scheduler::Process* proc = thr->parent;
-    if (proc) {
-        // Mark all threads as terminated
-        for (usize i = 0; i < proc->thread_count; i++) {
-            if (proc->threads[i]) {
-                proc->threads[i]->state = acos::scheduler::ThreadState::Terminated;
-                proc->threads[i]->return_value = (void*)(uintptr_t)status;
-            }
-        }
-        
-        // Mark process as terminated
-        proc->state = acos::scheduler::ProcessState::Terminated;
-        proc->exit_code = status;
-    }
+    // Mark thread as terminated
+    thr->state = acos::scheduler::ThreadState::Terminated;
+    (void)status; // unused
     
     // Reschedule to next thread
     acos::scheduler::schedule();

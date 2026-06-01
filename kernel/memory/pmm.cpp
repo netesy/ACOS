@@ -8,6 +8,10 @@ static u64 g_total_pages = 0;
 static u64 g_used_pages = 0;
 static u64 g_bitmap_size = 0;
 
+// Accessors for global functions
+u64 get_total_pages() { return g_total_pages; }
+u64 get_used_pages() { return g_used_pages; }
+
 static inline void bitmap_set(u64 page) {
     g_bitmap[page / 64] |= (1ULL << (page % 64));
 }
@@ -81,13 +85,13 @@ void pmm_free(u64 addr) {
 
 } // namespace acos::memory
 
-
-u64 pmm_get_total_memory() {
+// Global functions for system calls
+extern "C" acos::u64 pmm_get_total_memory() {
     // Return total memory in bytes
-    return g_total_pages * 4096;
+    return acos::memory::get_total_pages() * 4096;
 }
 
-u64 pmm_get_used_memory() {
+extern "C" acos::u64 pmm_get_used_memory() {
     // Return used memory in bytes
-    return g_used_pages * 4096;
+    return acos::memory::get_used_pages() * 4096;
 }

@@ -2,7 +2,7 @@
 #include <acos/types.h>
 
 extern "C" {
-    int errno = 0;
+    int acos_errno = 0;
 }
 
 namespace acos::posix {

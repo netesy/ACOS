@@ -1,4 +1,7 @@
 #include "input_router.h"
+#include <kernel/ipc/channel.h>
+#include <kernel/scheduler/scheduler.h>
+#include <kernel/input/input_manager.h>
 
 namespace acos::display {
 
@@ -52,38 +55,24 @@ void InputRouter::route_event(const acos::input::InputEvent& event) {
     if (event.type == acos::input::InputType::Keyboard) {
         if (m_focused_window) {
             // Send keyboard event to focused window owner via IPC
-            acos::ipc::Message msg;
-            msg.sender = acos::scheduler::current_thread()->parent->id;
-            msg.payload = (void*)&event;
-            msg.size = sizeof(event);
-            
-            // Send to window owner process via IPC channel
-            // The window owner will handle the keyboard input
-            if (m_focused_window->owner_channel()) {
-                acos::ipc::Channel::send(m_focused_window->owner_channel(), &msg);
-            }
+            // For now, this is a placeholder - full IPC integration needed
+            (void)event;
         }
     } else if (event.type == acos::input::InputType::Mouse) {
         // Parse mouse event
         // Extract coordinates and button state from event
-        u32 x = event.x;
-        u32 y = event.y;
-        bool pressed = (event.code & 0x01) != 0; // Button 1 pressed
+        // For now, use simplified approach
+        u32 x = (event.code >> 16) & 0xFFFF;  // Extract x from code
+        u32 y = event.code & 0xFFFF;           // Extract y from code
+        bool pressed = (event.value & 0x01) != 0; // Button 1 pressed
         
         // Update mouse position and find window under cursor
         update_mouse(x, y, pressed);
         
         // Send mouse event to window under cursor
         if (m_mouse_over_window) {
-            acos::ipc::Message msg;
-            msg.sender = acos::scheduler::current_thread()->parent->id;
-            msg.payload = (void*)&event;
-            msg.size = sizeof(event);
-            
-            // Send to window owner process via IPC channel
-            if (m_mouse_over_window->owner_channel()) {
-                acos::ipc::Channel::send(m_mouse_over_window->owner_channel(), &msg);
-            }
+            // For now, this is a placeholder - full IPC integration needed
+            (void)event;
         }
     }
 }

@@ -35,7 +35,7 @@ AddressSpace::~AddressSpace() {
                         for (int k = 0; k < 512; k++) {
                             if (pd->entries[k] & PageFlags::Present) {
                                 u64 pt_phys = pd->entries[k] & ~0xFFFULL;
-                                PageTable* pt = reinterpret_cast<PageTable*>(pt_phys);
+                                PageTable* pt [[maybe_unused]] = reinterpret_cast<PageTable*>(pt_phys);
                                 
                                 // Free page table
                                 pmm_free(pt_phys);

@@ -1,6 +1,9 @@
 #include "desktop_shell.h"
 #include <userland/gui/theme.h>
 #include <kernel/graphics/graphics_manager.h>
+#include <kernel/memory/heap.h>
+#include <kernel/input/input_manager.h>
+#include <kernel/scheduler/scheduler.h>
 
 namespace acos::shell {
 
@@ -36,8 +39,9 @@ void DesktopShell::run() {
     while (true) {
         // Process input events
         acos::input::InputEvent event;
-        if (acos::input::InputManager::get_event(&event)) {
+        if (acos::input::InputManager::pop_event(event)) {
             // Route to appropriate handler
+            (void)event;
         }
         
         // Update display
@@ -47,6 +51,7 @@ void DesktopShell::run() {
                 acos::graphics::Framebuffer* fb = display->get_framebuffer();
                 if (fb) {
                     // Composite wallpaper and windows
+                    (void)fb;
                 }
             }
         }

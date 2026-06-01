@@ -9,7 +9,12 @@ public:
     WindowWidget(const char* title, i32 x, i32 y, i32 w, i32 h);
     ~WindowWidget();
 
-    void draw(u32* buffer, u32 pitch) override;
+    // Implement base class draw method
+    void draw(acos::graphics::Renderer* renderer) override;
+    
+    // Additional draw method for direct buffer rendering
+    void draw_to_buffer(u32* buffer, u32 pitch);
+    
     void add_child(Widget* child);
 
     void show();

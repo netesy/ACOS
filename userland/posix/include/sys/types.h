@@ -13,4 +13,8 @@ typedef acos::u64 ino_t;
 typedef acos::u64 nlink_t;
 typedef acos::u64 blksize_t;
 typedef acos::u64 blkcnt_t;
+
+#ifndef _TIME_T_DEFINED
+#define _TIME_T_DEFINED
 typedef acos::u64 time_t;
+#endif

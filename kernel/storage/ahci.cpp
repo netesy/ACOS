@@ -34,7 +34,7 @@ bool AHCIController::initialize() {
         
         // Check if device is present
         if ((ssts & 0x0F) == 0x03) {
-            AHCIPort* port = new AHCIPort(i, port_reg);
+            AHCIPort* port = new AHCIPort(i, const_cast<void*>(reinterpret_cast<const volatile void*>(port_reg)));
             m_ports[m_port_count++] = port;
         }
     }
@@ -45,7 +45,7 @@ bool AHCIController::initialize() {
 AHCIPort::AHCIPort(u32 port_num, void* hba_port_reg)
     : m_port_num(port_num), m_reg(hba_port_reg), m_capacity(0) {}
 
-i32 AHCIPort::read_block(u64 block_id, void* buffer) {
+i32 AHCIPort::read_block(u64 block_id [[maybe_unused]], void* buffer) {
     if (!m_reg || !buffer) return -1;
     
     volatile u32* port = (volatile u32*)m_reg;
@@ -66,7 +66,7 @@ i32 AHCIPort::read_block(u64 block_id, void* buffer) {
     return 0;
 }
 
-i32 AHCIPort::write_block(u64 block_id, const void* buffer) {
+i32 AHCIPort::write_block(u64 block_id [[maybe_unused]], const void* buffer) {
     if (!m_reg || !buffer) return -1;
     
     volatile u32* port = (volatile u32*)m_reg;

@@ -1,4 +1,5 @@
 #include <kernel/graphics/renderer.h>
+#include <kernel/graphics/font.h>
 
 namespace acos::graphics {
 

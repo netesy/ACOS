@@ -3,6 +3,13 @@
 
 namespace acos::vfs {
 
+// Helper function for string length
+static inline usize strlen_impl(const char* s) {
+    usize len = 0;
+    while (s[len]) len++;
+    return len;
+}
+
 MountPoint MountRegistry::g_mounts[16];
 usize MountRegistry::g_mount_count = 0;
 
@@ -33,7 +40,7 @@ MountPoint* MountRegistry::find_mount(const char* path) {
     
     for (usize i = 0; i < g_mount_count; i++) {
         const char* mount_path = g_mounts[i].path;
-        usize mount_len = acos::runtime::strlen(mount_path);
+        usize mount_len = strlen_impl(mount_path);
         
         // Check if path starts with this mount point
         bool matches = true;

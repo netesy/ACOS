@@ -1,6 +1,6 @@
 #pragma once
 #include <acos/types.h>
-#include <kernel/graphics/display.h>
+#include <kernel/graphics/types.h>
 
 namespace acos::graphics {
 
