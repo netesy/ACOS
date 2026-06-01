@@ -9,5 +9,5 @@
 2. **TCP State Machine**: Congestion control and retransmission logic are incomplete.
 
 ## Architecture Improvements
-1. **Package Signatures**: `SignatureVerifier` is currently a success-stub.
+1. **Package Signatures**: SHA-256 verification is implemented; Ed25519 remains fail-closed until curve verification is available.
 2. **Process Resource Tracking**: Automatic cleanup of all resources (FDs, sockets) on process crash.

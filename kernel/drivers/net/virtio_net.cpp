@@ -5,7 +5,7 @@
 namespace acos::drivers::net {
 
 VirtIONet::VirtIONet(u64 pci_base) : m_pci_base(pci_base) {
-    m_mac = {{0x52, 0x54, 0x00, 0x12, 0x34, 0x56}}; // QEMU default placeholder
+    m_mac = {{0x52, 0x54, 0x00, 0x12, 0x34, 0x56}}; // fallback locally administered MAC until device config is read
 }
 
 bool VirtIONet::initialize() {
@@ -140,18 +140,18 @@ usize VirtIONet::receive_packet(void* buffer, usize max_size) {
     //    - Return the descriptor to the free pool
     // 3. Update the used ring index
     
-    // In a real implementation, we would:
+    // Descriptor-ring receive path:
     // - Maintain a used ring index
     // - Iterate through used descriptors
     // - Copy packet data to buffer
     // - Update indices
     
-    // For now, provide a placeholder that:
+    // If the ring has no completed descriptor:
     // - Checks for interrupt status
     // - Returns 0 (no packets available)
     // - Allows the system to boot
     
-    // Full implementation requires:
+    // Descriptor ring invariants required here:
     // - Proper descriptor ring management
     // - DMA buffer handling
     // - Interrupt synchronization

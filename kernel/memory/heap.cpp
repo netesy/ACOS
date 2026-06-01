@@ -1,19 +1,25 @@
 #include <acos/types.h>
 #include <kernel/memory/pmm.h>
-#include <kernel/hal/spinlock.h>
 
 namespace acos::memory {
 
-static hal::SpinLock g_heap_lock;
-static u64 g_heap_end = 0x10000000;
+namespace {
+
+constexpr usize PAGE_SIZE = 4096;
+
+usize align_up(usize value, usize alignment) {
+    return (value + alignment - 1) & ~(alignment - 1);
+}
+
+} // namespace
 
 void* kmalloc(usize size) {
-    hal::ScopedLock lock(g_heap_lock);
+    if (size == 0) return nullptr;
 
-    u64 addr = g_heap_end;
-    g_heap_end += (size + 15) & ~15ULL;
-
-    return reinterpret_cast<void*>(addr);
+    const usize aligned_size = align_up(size, 16);
+    const u64 pages = (aligned_size + PAGE_SIZE - 1) / PAGE_SIZE;
+    const u64 addr = pmm_alloc_contiguous(pages);
+    return addr ? reinterpret_cast<void*>(addr) : nullptr;
 }
 
 void kfree(void* ptr) {

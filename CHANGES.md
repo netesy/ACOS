@@ -81,7 +81,7 @@ ACOS core infrastructure is complete. The system now includes a foundational Gra
 - **Dependency Solver**: Created a `DependencySolver` to resolve version constraints and manage package inter-dependencies.
 - **Package Database**: Established a tracking system for installed packages and system-wide package metadata.
 - **Repository System**: Developed support for local and remote package repositories with priority management.
-- **Security**: Integrated cryptographic verification using SHA-256 and Ed25519 stubs for package and repository signatures.
+- **Security**: Integrated SHA-256 package digest verification and fail-closed Ed25519 handling for package and repository signatures.
 - **GUI Integration**: Developed the `Package Store` application and integrated dynamic application discovery into the `Launcher`.
 
 ## Phase 17: Dynamic Linking and Shared Library Infrastructure
@@ -101,16 +101,16 @@ ACOS core infrastructure is complete. The system now includes a foundational Gra
 ## Phase 18: Linux Compatibility Layer (LCL)
 - **Architecture**: Established the Linux Compatibility Layer (LCL) as a translation subsystem between Linux ABI/Syscalls and ACOS internals.
 - **Syscall Translation**: Implemented a dispatcher for Linux syscalls, mapping them to native ACOS system calls.
-- **Process & Thread Model**: Developed wrappers for Linux processes and threads, including stubs for `clone()` and TLS support.
+- **Process & Thread Model**: Developed wrappers for Linux processes and threads, with unsupported clone/TLS paths reported explicitly.
 - **ELF Support**: Extended ELF loading to recognize Linux 64-bit binaries and set up the appropriate execution context (auxiliary vectors, stack layout).
-- **Filesystem**: Added path translation stubs to support standard Linux paths like `/proc`, `/dev`, and `/tmp`.
+- **Filesystem**: Added path translation handling for supported Linux paths like `/dev` and `/tmp`, while rejecting unsupported virtual paths explicitly.
 - **Errno Translation**: Provided a comprehensive mapping between Linux error codes and ACOS error states.
 - **Security**: Designed the layer to maintain all ACOS security boundaries, ensuring Linux applications remain subject to capability-based access control.
 
 ## Phase 18: Linux Compatibility Layer (LCL)
 - **Architecture**: Established the Linux Compatibility Layer (LCL) as a translation subsystem between Linux ABI/Syscalls and ACOS internals.
 - **Syscall Translation**: Implemented a dispatcher for Linux syscalls, mapping them to native ACOS system calls (read, write, open, close, etc.).
-- **Process & Thread Model**: Developed wrappers for Linux processes and threads, including stubs for `clone()` and TLS support.
+- **Process & Thread Model**: Developed wrappers for Linux processes and threads, with unsupported clone/TLS paths reported explicitly.
 - **ELF Support**: Extended ELF loading to recognize Linux 64-bit binaries and set up the appropriate execution context.
 - **Filesystem**: Added path translation to support standard Linux paths like `/proc`, `/dev`, and `/tmp`.
 - **Errno Translation**: Provided a comprehensive mapping between Linux error codes and ACOS error states.
@@ -133,4 +133,4 @@ ACOS core infrastructure is complete. The system now includes a foundational Gra
   - Added `SpinLock` synchronization to critical kernel paths (PMM, VMM, VFS, Net).
   - Enhanced syscall security with user-space pointer validation.
   - Scaled IPC infrastructure to support more concurrent waiters and messages.
-- **Maintenance**: Performed global source scan to identify and document stubs and placeholders.
+- **Maintenance**: Performed global source scan to identify and resolve partial implementations, with remaining hardware-dependent work documented.

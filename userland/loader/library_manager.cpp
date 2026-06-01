@@ -22,6 +22,11 @@ LoadedLibrary* LibraryManager::load(const char* path) {
     lib->name[i] = '\0';
 
     lib->ref_count = 1;
+    lib->size = 0;
+    lib->dynamic_section = nullptr;
+    lib->dynsym = nullptr;
+    lib->dynstr = nullptr;
+    lib->dynsym_count = 0;
 
     // In a stable implementation, we calculate a random base address if PIE
     lib->base_address = 0x50000000 + (g_count * 0x1000000);
@@ -51,6 +56,17 @@ LoadedLibrary* LibraryManager::find_by_name(const char* name) {
         if (match) return &g_libraries[i];
     }
     return nullptr;
+}
+
+usize LibraryManager::count() {
+    return g_count;
+}
+
+LoadedLibrary* LibraryManager::at(usize index) {
+    if (index >= g_count) {
+        return nullptr;
+    }
+    return &g_libraries[index];
 }
 
 } // namespace acos::loader

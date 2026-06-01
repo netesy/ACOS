@@ -8,6 +8,7 @@ static u64 g_total_pages = 0;
 static u64 g_used_pages = 0;
 static u64 g_bitmap_size = 0;
 
+
 // Accessors for global functions
 u64 get_total_pages() { return g_total_pages; }
 u64 get_used_pages() { return g_used_pages; }
@@ -62,10 +63,13 @@ void pmm_init(BootInfo* bootInfo) {
     for (u64 i = 0; i < (g_bitmap_size * 8 + 4095) / 4096; ++i) {
         bitmap_set(reinterpret_cast<uptr>(g_bitmap) / 4096 + i);
     }
+
+    bitmap_set(0);
 }
 
 u64 pmm_alloc() {
-    for (u64 i = 0; i < g_total_pages; ++i) {
+    if (!g_bitmap) return 0;
+    for (u64 i = 1; i < g_total_pages; ++i) {
         if (!bitmap_test(i)) {
             bitmap_set(i);
             g_used_pages++;
@@ -75,6 +79,33 @@ u64 pmm_alloc() {
     return 0;
 }
 
+u64 pmm_alloc_contiguous(u64 page_count) {
+    if (!g_bitmap || page_count == 0) return 0;
+
+    const u64 limit = g_total_pages < (0x40000000ULL / 4096) ? g_total_pages : (0x40000000ULL / 4096);
+    for (u64 start = 1; start + page_count <= limit; ++start) {
+        bool free_run = true;
+        for (u64 offset = 0; offset < page_count; ++offset) {
+            if (bitmap_test(start + offset)) {
+                free_run = false;
+                start += offset;
+                break;
+            }
+        }
+        if (!free_run) {
+            continue;
+        }
+
+        for (u64 offset = 0; offset < page_count; ++offset) {
+            bitmap_set(start + offset);
+        }
+        g_used_pages += page_count;
+        return start * 4096;
+    }
+    return 0;
+}
+
+
 void pmm_free(u64 addr) {
     u64 page = addr / 4096;
     if (bitmap_test(page)) {
@@ -83,15 +114,12 @@ void pmm_free(u64 addr) {
     }
 }
 
+u64 pmm_get_total_memory() {
+    return get_total_pages() * 4096;
+}
+
+u64 pmm_get_used_memory() {
+    return get_used_pages() * 4096;
+}
+
 } // namespace acos::memory
-
-// Global functions for system calls
-extern "C" acos::u64 pmm_get_total_memory() {
-    // Return total memory in bytes
-    return acos::memory::get_total_pages() * 4096;
-}
-
-extern "C" acos::u64 pmm_get_used_memory() {
-    // Return used memory in bytes
-    return acos::memory::get_used_pages() * 4096;
-}

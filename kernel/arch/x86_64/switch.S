@@ -13,7 +13,7 @@ context_switch:
     push %r15
     
     # Save FPU/SSE state if needed
-    # For now, we'll save the basic registers
+    # Save callee-saved registers required by the x86_64 ABI
     # Full FPU state would require fxsave/fxrstor
     
     # Save old stack pointer

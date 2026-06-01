@@ -31,3 +31,20 @@ void operator delete(void* ptr, acos::usize size) noexcept {
     (void)size;
     acos::memory::kfree(ptr);
 }
+
+void* operator new(acos::usize size) {
+    return acos::memory::kmalloc(size);
+}
+
+void* operator new[](acos::usize size) {
+    return acos::memory::kmalloc(size);
+}
+
+void operator delete[](void* ptr) noexcept {
+    acos::memory::kfree(ptr);
+}
+
+void operator delete[](void* ptr, acos::usize size) noexcept {
+    (void)size;
+    acos::memory::kfree(ptr);
+}

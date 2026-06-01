@@ -6,7 +6,8 @@ namespace acos::loader {
 bool RelocationEngine::apply(LoadedLibrary* lib) {
     if (!lib || !lib->dynamic_section) return false;
     
-    u64 base = lib->base_address;
+    const u64 base = lib->base_address;
+    (void)base;
     
     // Parse dynamic section to find relocation tables
     // Support for PIE: Handle R_X86_64_RELATIVE

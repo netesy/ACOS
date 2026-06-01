@@ -26,7 +26,7 @@ void console_init(FramebufferInfo* fb) {
 void console_put_pixel(u32 x, u32 y, u32 color) {
     if (!g_fb) return;
     u32* fb_ptr = (u32*)g_fb->base;
-    fb_ptr[y * g_fb->width + x] = color;
+    fb_ptr[y * g_fb->pitch + x] = color;
 }
 
 void console_putchar(char c, u32 x, u32 y, u32 color) {
@@ -42,8 +42,10 @@ void console_putchar(char c, u32 x, u32 y, u32 color) {
 void console_clear(u32 color) {
     if (!g_fb) return;
     u32* fb_ptr = (u32*)g_fb->base;
-    for (u32 i = 0; i < g_fb->width * g_fb->height; i++) {
-        fb_ptr[i] = color;
+    for (u32 y = 0; y < g_fb->height; ++y) {
+        for (u32 x = 0; x < g_fb->width; ++x) {
+            fb_ptr[y * g_fb->pitch + x] = color;
+        }
     }
 }
 
@@ -51,6 +53,10 @@ static u32 cursor_x = 0;
 static u32 cursor_y = 0;
 
 void console_print(const char* s, u32 color) {
+    if (!g_fb || !s) {
+        return;
+    }
+
     while (*s) {
         if (*s == '\n') {
             cursor_x = 0;

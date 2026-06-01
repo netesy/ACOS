@@ -23,6 +23,12 @@ Package::Package(const char* path) {
     memset(&m_header, 0, sizeof(m_header));
 }
 
+
+Package::Package(const PackageManifest& manifest) : m_manifest(manifest) {
+    m_path[0] = '\0';
+    memset(&m_header, 0, sizeof(m_header));
+}
+
 bool Package::load() {
     if (m_path[0] == '\0') return false;
     

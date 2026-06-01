@@ -11,11 +11,29 @@ ListView::ListView() : m_item_count(0), m_selected_index(-1) {
     m_flags = (u32)WidgetFlags::Visible | (u32)WidgetFlags::Enabled | (u32)WidgetFlags::Focusable;
 }
 
-void ListView::draw(acos::graphics::Renderer* renderer [[maybe_unused]]) {
-    if (!(m_flags & (u32)WidgetFlags::Visible)) return;
-    
-    // For now, this is a placeholder
-    // Full implementation would use the renderer to draw the list
+void ListView::draw(acos::graphics::Renderer* renderer) {
+    if (!(m_flags & (u32)WidgetFlags::Visible) || !renderer) return;
+
+    renderer->fill_rect(static_cast<u32>(m_rect.x), static_cast<u32>(m_rect.y),
+                        static_cast<u32>(m_rect.w), static_cast<u32>(m_rect.h),
+                        g_current_theme.widget_bg);
+    renderer->draw_border(static_cast<u32>(m_rect.x), static_cast<u32>(m_rect.y),
+                          static_cast<u32>(m_rect.w), static_cast<u32>(m_rect.h),
+                          g_current_theme.border, 1);
+
+    i32 item_y = m_rect.y + 5;
+    constexpr i32 item_height = 20;
+    for (usize i = 0; i < m_item_count; ++i) {
+        if (item_y + item_height > m_rect.y + m_rect.h) break;
+        if (static_cast<i32>(i) == m_selected_index) {
+            renderer->fill_rect(static_cast<u32>(m_rect.x + 2), static_cast<u32>(item_y),
+                                static_cast<u32>(m_rect.w - 4), static_cast<u32>(item_height),
+                                g_current_theme.accent);
+        }
+        renderer->draw_text(m_items[i], static_cast<u32>(m_rect.x + 6),
+                            static_cast<u32>(item_y + 6), g_current_theme.text);
+        item_y += item_height;
+    }
 }
 
 void ListView::draw_to_buffer(u32* buffer [[maybe_unused]], u32 pitch [[maybe_unused]]) {
@@ -45,7 +63,7 @@ void ListView::draw_to_buffer(u32* buffer [[maybe_unused]], u32 pitch [[maybe_un
         }
     }
     
-    // Draw items (placeholder - would need proper renderer)
+    // Draw selection bands for direct framebuffer mode.
     i32 item_y = m_rect.y + 5;
     const i32 item_height = 20;
     

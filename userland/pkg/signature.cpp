@@ -1,117 +1,124 @@
 #include "signature.h"
+#include <libs/runtime/include/acos/runtime.h>
 
 namespace acos::pkg {
 
+namespace {
+
+constexpr u32 k[64] = {
+    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
+};
+
+u32 rotr(u32 value, u32 shift) {
+    return (value >> shift) | (value << (32 - shift));
+}
+
+u32 load_be32(const u8* p) {
+    return (static_cast<u32>(p[0]) << 24) | (static_cast<u32>(p[1]) << 16) |
+           (static_cast<u32>(p[2]) << 8) | static_cast<u32>(p[3]);
+}
+
+void store_be32(u8* p, u32 value) {
+    p[0] = static_cast<u8>(value >> 24);
+    p[1] = static_cast<u8>(value >> 16);
+    p[2] = static_cast<u8>(value >> 8);
+    p[3] = static_cast<u8>(value);
+}
+
+void transform(u32 state[8], const u8 block[64]) {
+    u32 w[64];
+    for (usize i = 0; i < 16; ++i) {
+        w[i] = load_be32(block + i * 4);
+    }
+    for (usize i = 16; i < 64; ++i) {
+        const u32 s0 = rotr(w[i - 15], 7) ^ rotr(w[i - 15], 18) ^ (w[i - 15] >> 3);
+        const u32 s1 = rotr(w[i - 2], 17) ^ rotr(w[i - 2], 19) ^ (w[i - 2] >> 10);
+        w[i] = w[i - 16] + s0 + w[i - 7] + s1;
+    }
+
+    u32 a = state[0], b = state[1], c = state[2], d = state[3];
+    u32 e = state[4], f = state[5], g = state[6], h = state[7];
+
+    for (usize i = 0; i < 64; ++i) {
+        const u32 s1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
+        const u32 ch = (e & f) ^ ((~e) & g);
+        const u32 temp1 = h + s1 + ch + k[i] + w[i];
+        const u32 s0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
+        const u32 maj = (a & b) ^ (a & c) ^ (b & c);
+        const u32 temp2 = s0 + maj;
+        h = g;
+        g = f;
+        f = e;
+        e = d + temp1;
+        d = c;
+        c = b;
+        b = a;
+        a = temp1 + temp2;
+    }
+
+    state[0] += a; state[1] += b; state[2] += c; state[3] += d;
+    state[4] += e; state[5] += f; state[6] += g; state[7] += h;
+}
+
+} // namespace
+
 bool SignatureVerifier::verify_sha256(const void* data, usize size, const u8* expected_hash) {
     if (!data || !expected_hash) return false;
-    
-    // Simple SHA256 implementation
-    // This is a basic implementation for verification purposes
-    
-    u32 h0 = 0x6a09e667, h1 = 0xbb67ae85, h2 = 0x3c6ef372, h3 = 0xa54ff53a;
-    u32 h4 = 0x510e527f, h5 = 0x9b05688c, h6 = 0x1f83d9ab, h7 = 0x5be0cd19;
-    
-    // Process message in 512-bit chunks
-    u64 msg_len = size * 8;
-    u8 msg[128];
-    
-    // Copy first 64 bytes of message
-    usize copy_size = size < 64 ? size : 64;
-    acos::runtime::memcpy(msg, data, copy_size);
-    msg[copy_size] = 0x80;
-    
-    // Zero padding
-    for (usize i = copy_size + 1; i < 120; i++) {
-        msg[i] = 0;
+
+    u32 state[8] = {
+        0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
+        0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
+    };
+
+    const u8* bytes = static_cast<const u8*>(data);
+    usize processed = 0;
+    while (size - processed >= 64) {
+        transform(state, bytes + processed);
+        processed += 64;
     }
-    
-    // Append message length
-    *(u64*)(msg + 120) = msg_len;
-    
-    // Simplified: just verify first 32 bytes match
-    // Full SHA256 would process all blocks
-    u8 computed_hash[32];
-    computed_hash[0] = (h0 >> 24) & 0xFF;
-    computed_hash[1] = (h0 >> 16) & 0xFF;
-    computed_hash[2] = (h0 >> 8) & 0xFF;
-    computed_hash[3] = h0 & 0xFF;
-    computed_hash[4] = (h1 >> 24) & 0xFF;
-    computed_hash[5] = (h1 >> 16) & 0xFF;
-    computed_hash[6] = (h1 >> 8) & 0xFF;
-    computed_hash[7] = h1 & 0xFF;
-    
-    // Compare hashes
-    for (int i = 0; i < 32; i++) {
-        if (computed_hash[i] != expected_hash[i]) return false;
+
+    u8 block[128];
+    const usize remaining = size - processed;
+    memset(block, 0, sizeof(block));
+    memcpy(block, bytes + processed, remaining);
+    block[remaining] = 0x80;
+
+    const u64 bit_len = static_cast<u64>(size) * 8;
+    const usize length_offset = (remaining < 56) ? 56 : 120;
+    for (usize i = 0; i < 8; ++i) {
+        block[length_offset + i] = static_cast<u8>(bit_len >> (56 - i * 8));
     }
-    
-    return true;
+
+    transform(state, block);
+    if (length_offset == 120) {
+        transform(state, block + 64);
+    }
+
+    u8 digest[32];
+    for (usize i = 0; i < 8; ++i) {
+        store_be32(digest + i * 4, state[i]);
+    }
+
+    u8 diff = 0;
+    for (usize i = 0; i < 32; ++i) {
+        diff |= digest[i] ^ expected_hash[i];
+    }
+    return diff == 0;
 }
 
 bool SignatureVerifier::verify_ed25519(const void* data, usize size, const u8* signature, const u8* public_key) {
-    if (!data || !signature || !public_key || size == 0) return false;
-    
-    // Ed25519 signature verification
-    // Ed25519 uses:
-    // - 32-byte public key
-    // - 64-byte signature (R || S)
-    // - Variable-length message
-    
-    // Validate signature structure
-    // Signature must be exactly 64 bytes
-    // Public key must be exactly 32 bytes
-    
-    // In a full implementation, this would:
-    // 1. Decode the public key point
-    // 2. Decode the signature (R, S components)
-    // 3. Hash the message with the public key
-    // 4. Verify the signature equation: [8][S]B = [8]R + [8][k]A'
-    //    where k = H(R || A || PH(M))
-    
-    // For now, provide a structural validation:
-    // - Check that signature and public key have correct sizes
-    // - Perform basic sanity checks
-    // - Return true if structure is valid
-    
-    // Verify signature is 64 bytes (R: 32 bytes, S: 32 bytes)
-    // This is implicit in the function signature
-    
-    // Verify public key is 32 bytes
-    // This is implicit in the function signature
-    
-    // Structural validation: check that S < L (order of base point)
-    // L = 2^252 + 27742317777884353535851937790883648493
-    // For simplicity, just check that S is not all zeros or all ones
-    
-    u8 all_zeros = 1;
-    u8 all_ones = 1;
-    
-    for (usize i = 32; i < 64; i++) {
-        if (signature[i] != 0) all_zeros = 0;
-        if (signature[i] != 0xFF) all_ones = 0;
-    }
-    
-    // Reject if S component is all zeros or all ones
-    if (all_zeros || all_ones) return false;
-    
-    // Structural validation: check that public key is not all zeros
-    all_zeros = 1;
-    for (usize i = 0; i < 32; i++) {
-        if (public_key[i] != 0) all_zeros = 0;
-    }
-    
-    if (all_zeros) return false;
-    
-    // Full Ed25519 verification requires:
-    // - Elliptic curve point operations
-    // - SHA-512 hashing
-    // - Modular arithmetic
-    
-    // For now, return true if structural validation passes
-    // This allows the system to function while a full implementation is added
     (void)data;
     (void)size;
-    return true;
+    (void)signature;
+    (void)public_key;
+    return false;
 }
 
 } // namespace acos::pkg

@@ -23,11 +23,25 @@ void WindowWidget::add_child(Widget* child) {
     }
 }
 
-void WindowWidget::draw(acos::graphics::Renderer* renderer [[maybe_unused]]) {
-    if (!(m_flags & (u32)WidgetFlags::Visible)) return;
-    
-    // For now, this is a placeholder
-    // Full implementation would use the renderer to draw the window
+void WindowWidget::draw(acos::graphics::Renderer* renderer) {
+    if (!(m_flags & (u32)WidgetFlags::Visible) || !renderer) return;
+
+    renderer->fill_rect(static_cast<u32>(m_rect.x), static_cast<u32>(m_rect.y),
+                        static_cast<u32>(m_rect.w), static_cast<u32>(m_rect.h),
+                        g_current_theme.background);
+    renderer->fill_rect(static_cast<u32>(m_rect.x), static_cast<u32>(m_rect.y),
+                        static_cast<u32>(m_rect.w), 30, g_current_theme.accent);
+    renderer->draw_border(static_cast<u32>(m_rect.x), static_cast<u32>(m_rect.y),
+                          static_cast<u32>(m_rect.w), static_cast<u32>(m_rect.h),
+                          g_current_theme.border, 1);
+    renderer->draw_text(m_title, static_cast<u32>(m_rect.x + 8),
+                        static_cast<u32>(m_rect.y + 10), g_current_theme.foreground);
+
+    for (usize i = 0; i < m_child_count; ++i) {
+        if (m_children[i] && m_children[i]->is_visible()) {
+            m_children[i]->draw(renderer);
+        }
+    }
 }
 
 void WindowWidget::draw_to_buffer(u32* buffer [[maybe_unused]], u32 pitch [[maybe_unused]]) {
@@ -84,14 +98,6 @@ void WindowWidget::show() {
     // Mark window as visible
     m_flags |= (u32)WidgetFlags::Visible;
     
-    // In a full system, this would:
-    // 1. Connect to display server via IPC
-    // 2. Request surface creation with dimensions
-    // 3. Map the surface buffer into our address space
-    // 4. Store the surface handle for future operations
-    // 5. Register window with input router
-    
-    // For now, we just mark it visible and let the desktop shell render it
 }
 
 } // namespace acos::gui

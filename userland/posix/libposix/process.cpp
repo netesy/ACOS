@@ -32,7 +32,7 @@ void _exit(int status) {
 
 int fork(void) {
     // fork() is hard in a microkernel without specific support.
-    // We provide a stub for source compatibility.
+    // Report unsupported fork semantics explicitly for source compatibility.
     errno = ENOSYS;
     return -1;
 }

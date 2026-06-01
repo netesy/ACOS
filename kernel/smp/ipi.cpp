@@ -1,5 +1,6 @@
 #include "ipi.h"
 #include <kernel/arch/x86_64/smp/lapic.h>
+#include <kernel/scheduler/scheduler.h>
 
 namespace acos::smp {
 
@@ -24,7 +25,7 @@ void Ipi::handle(IpiType type) {
         case IpiType::Halt:
             __asm__("hlt");
             break;
-        case IpiType::TLBFlush:
+        case IpiType::TlbShootdown:
             __asm__("mov %%cr3, %%rax; mov %%rax, %%cr3" ::: "rax");
             break;
         default:

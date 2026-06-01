@@ -13,6 +13,8 @@ struct PackageManifest {
 
     // Capability bits requested by the package
     u64 capabilities;
+    u64 size;
+    char dependencies[16][64];
 };
 
 struct ACPKHeader {
@@ -27,6 +29,7 @@ struct ACPKHeader {
 class Package {
 public:
     Package(const char* path);
+    Package(const PackageManifest& manifest);
     bool load();
 
     const PackageManifest& manifest() const { return m_manifest; }
