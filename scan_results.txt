@@ -1,0 +1,8 @@
+kernel/drivers/net/virtio_net.cpp:6:    m_mac = {{0x52, 0x54, 0x00, 0x12, 0x34, 0x56}}; // QEMU default placeholder
+kernel/arch/x86_64/syscall.S:11:    mov %rsp, %gs:0x0   # Save user stack (placeholder for GS segment use)
+kernel/ipc/message.h:14:    // Placeholder for future capability attachment
+kernel/loader/process_loader.cpp:35:    // In a real switch, we'd push a "return to user" stub
+kernel/smp/smp.cpp:18:            arch::x86_64::LocalApic::send_ipi(apic_id, 0); // Mock SIPI
+kernel/main.cpp:113:// Stubs to avoid link errors
+kernel/graphics/renderer.cpp:13:    // Bresenham's logic placeholder
+userland/posix/libposix/process.cpp:28:    // We provide a stub for source compatibility.

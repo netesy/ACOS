@@ -11,6 +11,10 @@ void Cpu::init_bsp() {
     g_cpus[0].is_bsp = true;
     g_cpus[0].cpu_index = 0;
     g_cpu_count = 1;
+
+    // Set GS base to point to g_cpus[0]
+    u64 addr = reinterpret_cast<u64>(&g_cpus[0]);
+    __asm__ volatile("wrmsr" : : "c"(0xC0000101), "a"(static_cast<u32>(addr)), "d"(static_cast<u32>(addr >> 32)));
 }
 
 void Cpu::init_ap(u32 apic_id) {
@@ -23,8 +27,7 @@ void Cpu::init_ap(u32 apic_id) {
 }
 
 CpuData* Cpu::current() {
-    // In real implementation, uses 'swapgs' and reads from GS base.
-    // For now, return BSP data.
+    // Return &g_cpus[0] for now if we can't reliably read MSR in this environment
     return &g_cpus[0];
 }
 
