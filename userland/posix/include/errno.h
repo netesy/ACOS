@@ -1,10 +1,14 @@
 #pragma once
 
+#ifdef errno
+#undef errno
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-extern int errno;
+extern int acos_errno;
 
 #define EPERM    1
 #define ENOENT   2
@@ -41,3 +45,5 @@ extern int errno;
 #ifdef __cplusplus
 }
 #endif
+
+#define errno acos_errno
