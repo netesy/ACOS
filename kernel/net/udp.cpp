@@ -1,4 +1,5 @@
 #include <kernel/net/udp.h>
+#include <kernel/net/socket.h>
 #include <libs/runtime/include/acos/runtime.h>
 
 namespace acos::net {
@@ -31,19 +32,14 @@ void UDP::handle_packet(NetDevice* dev, u32 src_ip, const void* data, usize size
     const void* payload = (const u8*)data + 8;
     usize payload_size = length - 8;
     
-    // Dispatch to socket layer (would be implemented in socket manager)
-    (void)src_ip;
-    (void)src_port;
-    (void)dst_port;
-    (void)payload;
-    (void)payload_size;
+    Socket::deliver_udp(src_ip, src_port, dst_port, payload, payload_size);
 }
 
 bool UDP::send_packet(NetDevice* dev, u32 dest_ip, u16 src_port, u16 dest_port, const void* data, usize size) {
     if (!dev || !data || size > 65527) return false;
     
-    (void)dest_ip; // Not used in this implementation
-    
+    (void)dest_ip;
+
     u8 packet[65535];
     packet[0] = (src_port >> 8) & 0xFF;
     packet[1] = src_port & 0xFF;
@@ -73,8 +69,7 @@ bool UDP::send_packet(NetDevice* dev, u32 dest_ip, u16 src_port, u16 dest_port, 
     packet[6] = (checksum >> 8) & 0xFF;
     packet[7] = checksum & 0xFF;
     
-    // Pass to IPv4 layer
-    return true;
+    return dev->send_packet(packet, length);
 }
 
 } // namespace acos::net

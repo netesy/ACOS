@@ -9,6 +9,9 @@ struct LoadedLibrary {
     u64 size;
     u32 ref_count;
     void* dynamic_section;
+    void* dynsym;
+    const char* dynstr;
+    usize dynsym_count;
 };
 
 class LibraryManager {
@@ -16,6 +19,8 @@ public:
     static LoadedLibrary* load(const char* path);
     static void unload(LoadedLibrary* lib);
     static LoadedLibrary* find_by_name(const char* name);
+    static usize count();
+    static LoadedLibrary* at(usize index);
 
 private:
     static constexpr usize MAX_LIBRARIES = 64;

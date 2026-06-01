@@ -26,7 +26,7 @@ void __dlerror_set(const char* msg) {
         return;
     }
     
-    usize i = 0;
+    acos::usize i = 0;
     while (msg[i] && i < 255) {
         g_dlerror_buffer[i] = msg[i];
         i++;

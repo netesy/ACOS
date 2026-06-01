@@ -4,14 +4,27 @@
 namespace acos::shell {
 
 NotificationCenter::NotificationCenter() : m_count(0) {
-    m_rect = {600, 0, 200, 600}; // Right sidebar
+    m_rect = {600, 0, 200, 600};
 }
 
-void NotificationCenter::draw(u32* buffer, u32 pitch) {
-    for (i32 y = m_rect.y; y < m_rect.y + m_rect.h; y++) {
-        for (i32 x = m_rect.x; x < m_rect.x + m_rect.w; x++) {
-            buffer[y * pitch + x] = 0x88000000; // Semi-transparent black
-        }
+void NotificationCenter::draw(acos::graphics::Renderer* renderer) {
+    if (!renderer) {
+        return;
+    }
+
+    renderer->blend_rect(static_cast<u32>(m_rect.x),
+                         static_cast<u32>(m_rect.y),
+                         static_cast<u32>(m_rect.w),
+                         static_cast<u32>(m_rect.h),
+                         0xFF000000,
+                         136);
+
+    u32 y = static_cast<u32>(m_rect.y + 12);
+    for (usize i = 0; i < m_count; ++i) {
+        renderer->draw_text(m_queue[i].title, static_cast<u32>(m_rect.x + 12), y, gui::g_current_theme.text);
+        y += 12;
+        renderer->draw_text(m_queue[i].message, static_cast<u32>(m_rect.x + 12), y, gui::g_current_theme.text_secondary);
+        y += 24;
     }
 }
 

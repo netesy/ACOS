@@ -51,6 +51,10 @@ static u32 cursor_x = 0;
 static u32 cursor_y = 0;
 
 void console_print(const char* s, u32 color) {
+    if (!g_fb || !s) {
+        return;
+    }
+
     while (*s) {
         if (*s == '\n') {
             cursor_x = 0;

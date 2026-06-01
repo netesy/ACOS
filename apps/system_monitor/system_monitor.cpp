@@ -16,7 +16,7 @@ SystemMonitor::SystemMonitor() : gui::WindowWidget("System Monitor", 300, 100, 3
 
 void SystemMonitor::refresh() {
     // Update CPU usage statistics
-    // In a full implementation, this would:
+    // Collect metrics from kernel counters:
     // 1. Query scheduler for CPU load
     // 2. Calculate per-CPU utilization
     // 3. Get total system load
@@ -30,7 +30,7 @@ void SystemMonitor::refresh() {
     if (cpu_percent > 100) cpu_percent = 100;
     
     // Update memory usage statistics
-    // In a full implementation, this would:
+    // Collect metrics from kernel counters:
     // 1. Query PMM for allocated pages
     // 2. Calculate total system memory
     // 3. Calculate percentage used

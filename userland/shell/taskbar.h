@@ -12,7 +12,7 @@ public:
 
 private:
     char m_clock_str[16];
-    VolumeIndicator* m_volume;
+    VolumeIndicator m_volume;
 };
 
 } // namespace acos::shell

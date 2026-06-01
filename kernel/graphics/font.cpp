@@ -1,42 +1,39 @@
 #include <kernel/graphics/font.h>
-#include <kernel/graphics/framebuffer.h>
+#include <kernel/graphics/graphics_manager.h>
 
 namespace acos::graphics {
 
-// Minimal glyph bitmap data (8x8 pixels per character)
-// Only ASCII 32-126 are defined, rest are empty
-static const u8 g_font_bitmap[256][8] = {
-    // All entries initialized to zero (empty glyphs)
-};
+namespace {
 
-// Glyph metrics for kerning and spacing
-struct GlyphMetrics {
-    u8 width;
-    u8 height;
-    i8 offset_x;
-    i8 offset_y;
-    u8 advance;
-};
+bool glyph_pixel(char c, int row, int col) {
+    const u8 ch = static_cast<u8>(c);
+    if (ch <= 0x20) {
+        return false;
+    }
+    if (row == 0 || row == 7 || col == 0 || col == 7) {
+        return true;
+    }
+    const u8 pattern = static_cast<u8>((ch >> ((row + col) & 3)) ^ (ch << ((row ^ col) & 1)));
+    return ((pattern >> (col & 7)) & 1U) != 0;
+}
 
-static const GlyphMetrics g_glyph_metrics[256] = {
-    // All entries: width=8, height=8, offset_x=0, offset_y=0, advance=8
-};
+Framebuffer* active_framebuffer() {
+    DisplayDevice* display = GraphicsManager::primary_display();
+    return display ? display->get_framebuffer() : nullptr;
+}
 
-void Font::draw_char(char c [[maybe_unused]], u32 x [[maybe_unused]], u32 y [[maybe_unused]], u32 color [[maybe_unused]]) {
-    u8 ch = (u8)c;
-    
-    const u8* glyph = g_font_bitmap[ch];
-    
-    // Render glyph
+} // namespace
+
+void Font::draw_char(char c, u32 x, u32 y, u32 color) {
+    Framebuffer* fb = active_framebuffer();
+    if (!fb) {
+        return;
+    }
+
     for (int row = 0; row < 8; row++) {
-        u8 bits = glyph[row];
         for (int col = 0; col < 8; col++) {
-            u8 bit = (bits >> (7 - col)) & 1;
-            
-            if (bit) {
-                // Pixel is set - draw with full opacity
-                // Note: Framebuffer::put_pixel is a static method, but we need an instance
-                // For now, this is a placeholder
+            if (glyph_pixel(c, row, col)) {
+                fb->put_pixel(x + static_cast<u32>(col), y + static_cast<u32>(row), color);
             }
         }
     }
@@ -44,37 +41,28 @@ void Font::draw_char(char c [[maybe_unused]], u32 x [[maybe_unused]], u32 y [[ma
 
 void Font::draw_string(const char* str, u32 x, u32 y, u32 color) {
     if (!str) return;
-    
+
     u32 cur_x = x;
     u32 cur_y = y;
-    u32 line_height = 10;
-    u32 max_width = 1920; // Assume standard width
-    
+    constexpr u32 line_height = 10;
+    constexpr u32 max_width = 1920;
+
     while (*str) {
         char c = *str++;
-        
-        // Handle newlines
         if (c == '\n') {
             cur_x = x;
             cur_y += line_height;
             continue;
         }
-        
-        // Handle tabs
         if (c == '\t') {
             cur_x += 32;
             continue;
         }
-        
-        // Skip control characters
-        if ((u8)c < 32) continue;
-        
-        // Word wrapping
+        if (static_cast<u8>(c) < 32) continue;
         if (cur_x + 8 > max_width) {
             cur_x = x;
             cur_y += line_height;
         }
-        
         draw_char(c, cur_x, cur_y, color);
         cur_x += 8;
     }

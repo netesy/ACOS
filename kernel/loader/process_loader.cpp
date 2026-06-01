@@ -14,9 +14,11 @@ scheduler::Process* create_process_from_elf(const char* name, const void* elf_da
     scheduler::Process* p = scheduler::Process::create();
     if (!p) return nullptr;
 
-    // 2. Load ELF
+    u64 entry_point = 0;
     if (elf_data && size > 0) {
-        if (!ElfLoader::load(p->address_space, elf_data, size)) return nullptr;
+        ELFLoadResult load_result = ElfLoader::load_executable(p->address_space, elf_data, size);
+        if (!load_result.success) return nullptr;
+        entry_point = load_result.entry_point;
     }
 
     // 3. Setup User Stack
@@ -30,15 +32,19 @@ scheduler::Process* create_process_from_elf(const char* name, const void* elf_da
     t->parent = p;
     t->state = scheduler::ThreadState::Ready;
     t->is_user = true;
+    t->return_value = nullptr;
+    t->next = nullptr;
+    t->stack_top = stack_virt;
 
     // Prime the stack for context_switch
     // Setup the stack with a return address that will transition to user mode
     // The stack layout is:
-    // [stack_virt - 8]: Return address (entry point or user mode stub)
+    // [stack_virt - 8]: Initial userspace entry address
     
-    // Get the entry point from the ELF header
-    u64 entry_point = 0x400000; // Default entry point (would be from ELF header)
-    
+    if (entry_point == 0) {
+        entry_point = 0x400000;
+    }
+
     // Write entry point to stack
     u64* stack_ptr = (u64*)(stack_virt - 8);
     *stack_ptr = entry_point;

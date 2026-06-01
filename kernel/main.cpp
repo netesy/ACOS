@@ -38,6 +38,7 @@ acos::shell::SessionManager* g_session_manager = nullptr;
 
 extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     acos::hal::serial_init();
+    acos::hal::console_init(nullptr);
     acos::hal::serial_print("ACOS Kernel: Core Infrastructure Initializing (GCC Build)...\n");
 
     if (bootInfo && bootInfo->framebuffer) {
@@ -53,7 +54,7 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     acos::scheduler::scheduler_init();
 
     // Graphics and Audio initialization
-    acos::graphics::GraphicsManager::init();
+    acos::graphics::GraphicsManager::init(bootInfo ? bootInfo->framebuffer : nullptr);
     acos::audio::AudioManager::init();
 
     // Register Services
@@ -62,10 +63,12 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     acos::services::ServiceManager::register_service(acos::services::ServiceId::Audio, 3);
 
     // Initialize Display Server
+    bool display_ready = false;
     void* ds_mem = acos::memory::kmalloc(sizeof(acos::display::DisplayServer));
     if (ds_mem) {
         g_display_server = new (ds_mem) acos::display::DisplayServer();
         if (g_display_server->initialize()) {
+            display_ready = true;
             acos::hal::serial_print("Display Server: Initialized\n");
         }
     }
@@ -99,7 +102,12 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     if (sm_mem) {
         g_session_manager = new (sm_mem) acos::shell::SessionManager();
         acos::hal::console_print("Starting Multimedia User Session...\n");
-        acos::hal::serial_print("Session Manager: Starting Session for User 0\n");
+        if (display_ready) {
+            acos::hal::serial_print("Session Manager: Starting GUI Session for User 0\n");
+            g_session_manager->start_session(0);
+        } else {
+            acos::hal::serial_print("Session Manager: No display available; GUI session not started\n");
+        }
     }
 
     acos::hal::console_print("Core System Initialization: PASS\n");

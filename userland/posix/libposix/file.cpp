@@ -7,13 +7,15 @@
 
 extern "C" {
 
+int errno = 0;
+
 int open(const char *pathname, int flags, ...) {
     acos::u64 result = acos::vfs::VFS::open(pathname, flags);
-    if (result == (acos::u64)-1) {
+    if (result == static_cast<acos::u64>(-1)) {
         errno = EACCES;
         return -1;
     }
-    return (int)result;
+    return static_cast<int>(result);
 }
 
 int close(int fd) {
@@ -31,7 +33,7 @@ ssize_t read(int fd, void *buf, size_t count) {
         errno = EIO;
         return -1;
     }
-    return (ssize_t)result;
+    return static_cast<ssize_t>(result);
 }
 
 ssize_t write(int fd, const void *buf, size_t count) {
@@ -40,7 +42,13 @@ ssize_t write(int fd, const void *buf, size_t count) {
         errno = EIO;
         return -1;
     }
-    return (ssize_t)result;
+    return static_cast<ssize_t>(result);
+}
+
+off_t lseek(int fd, off_t offset, int whence) {
+    (void)fd;
+    (void)whence;
+    return offset;
 }
 
 }

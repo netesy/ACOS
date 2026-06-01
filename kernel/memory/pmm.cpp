@@ -83,15 +83,12 @@ void pmm_free(u64 addr) {
     }
 }
 
+u64 pmm_get_total_memory() {
+    return get_total_pages() * 4096;
+}
+
+u64 pmm_get_used_memory() {
+    return get_used_pages() * 4096;
+}
+
 } // namespace acos::memory
-
-// Global functions for system calls
-extern "C" acos::u64 pmm_get_total_memory() {
-    // Return total memory in bytes
-    return acos::memory::get_total_pages() * 4096;
-}
-
-extern "C" acos::u64 pmm_get_used_memory() {
-    // Return used memory in bytes
-    return acos::memory::get_used_pages() * 4096;
-}

@@ -26,6 +26,7 @@ struct Thread {
     ThreadState state;
     Process* parent;
     bool is_user;
+    void* return_value;
     Thread* next;  // For run queue linking
 };
 

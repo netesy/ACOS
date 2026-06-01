@@ -17,10 +17,9 @@ sighandler_t signal(int signum, sighandler_t handler) {
         return (sighandler_t)-1;
     }
     
-    // Signal handling is not yet fully implemented
-    // For now, just return success
     (void)handler;
-    return (sighandler_t)0;
+    errno = ENOSYS;
+    return (sighandler_t)-1;
 }
 
 int kill(pid_t pid, int sig) {
@@ -41,10 +40,9 @@ int kill(pid_t pid, int sig) {
         return -1;
     }
     
-    // Signal delivery is not yet fully implemented
-    // For now, just return success
     (void)sig;
-    return 0;
+    errno = ENOSYS;
+    return -1;
 }
 
 }

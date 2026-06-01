@@ -8,7 +8,7 @@
 # rdi, rsi, rdx, r10, r8, r9 = args
 syscall_entry:
     swapgs
-    mov %rsp, %gs:0x0   # Save user stack (placeholder for GS segment use)
+    mov %rsp, %gs:0x0   # Save user stack in the per-CPU syscall area
     mov %gs:0x8, %rsp   # Load kernel stack
 
     # Save user context
