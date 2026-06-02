@@ -26,7 +26,7 @@ BOOT_EFI   = acos_boot.efi
 KERNEL_ELF = kernel.elf
 DISK_IMG   = acos.img
 QEMU       ?= qemu-system-x86_64
-QEMU_FLAGS ?= -drive format=raw,file=$(DISK_IMG) -nographic
+QEMU_FLAGS ?= -drive format=raw,file=$(DISK_IMG) -display sdl -serial stdio 
 QEMU_FIRMWARE ?= $(firstword $(wildcard OVMF.fd /usr/share/ovmf/OVMF.fd /usr/share/qemu/OVMF.fd /usr/share/OVMF/OVMF_CODE.fd /usr/share/OVMF/OVMF_CODE_4M.fd))
 MKFS_VFAT  ?= $(firstword $(shell command -v mkfs.vfat 2>/dev/null) $(wildcard /usr/sbin/mkfs.vfat /sbin/mkfs.vfat))
 MMD        ?= $(shell command -v mmd 2>/dev/null)
