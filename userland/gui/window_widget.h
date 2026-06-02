@@ -23,7 +23,7 @@ private:
     const char* m_title;
     Widget* m_children[32];
     usize m_child_count;
-    u64 m_window_handle;
+    [[maybe_unused]] u64 m_window_handle;
 };
 
 } // namespace acos::gui

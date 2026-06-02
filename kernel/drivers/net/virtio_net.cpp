@@ -20,7 +20,7 @@ bool VirtIONet::initialize() {
     device_cfg[0] = 1;
     
     // 3. Set DRIVER status
-    device_cfg[0] |= 2;
+    device_cfg[0] = device_cfg[0] | 2;
     
     // 4. Read device features
     u32 device_features = device_cfg[1];
@@ -30,7 +30,7 @@ bool VirtIONet::initialize() {
     device_cfg[1] = driver_features;
     
     // 6. Set FEATURES_OK status
-    device_cfg[0] |= 8;
+    device_cfg[0] = device_cfg[0] | 8;
     
     // 7. Verify features were accepted
     if (!(device_cfg[0] & 8)) return false;
@@ -58,7 +58,7 @@ bool VirtIONet::initialize() {
     device_cfg[4] = (u32)((u64)tx_mem >> 12);
     
     // 10. Set DRIVER_OK status
-    device_cfg[0] |= 4;
+    device_cfg[0] = device_cfg[0] | 4;
     
     return true;
 }
@@ -83,8 +83,8 @@ bool VirtIONet::send_packet(const void* data, usize size) {
     // - A used descriptor ring
     // - Proper synchronization
     
-    static u16 tx_idx = 0;
-    static u16 tx_avail_idx = 0;
+    [[maybe_unused]] static u16 tx_idx = 0;
+    [[maybe_unused]] static u16 tx_avail_idx = 0;
     
     // Allocate buffer for packet
     u8* tx_buffer = (u8*)acos::memory::kmalloc(size);

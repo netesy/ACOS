@@ -53,7 +53,7 @@ private:
     u32 m_width, m_height;
     u32 m_z_order;
     WindowState m_state;
-    u32 m_flags;
+    [[maybe_unused]] u32 m_flags;
     bool m_focused;
     u64 m_surface_id;
 };

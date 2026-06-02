@@ -1,4 +1,5 @@
 #include <libs/runtime/include/acos/runtime.h>
+#include <kernel/memory/heap.h>
 
 extern "C" void* memcpy(void* dest, const void* src, acos::usize n) {
     acos::u8* d = reinterpret_cast<acos::u8*>(dest);
@@ -23,10 +24,27 @@ extern "C" void __cxa_pure_virtual() {
     }
 }
 
+void* operator new(acos::usize size) {
+    // Use kernel heap allocator
+    void* ptr = acos::memory::kmalloc(size);
+    if (!ptr) {
+        // Allocation failed - halt in freestanding environment
+        while (1) {
+            __asm__("hlt");
+        }
+    }
+    return ptr;
+}
+
 void operator delete(void* ptr) noexcept {
-    (void)ptr;
+    if (ptr) {
+        acos::memory::kfree(ptr);
+    }
 }
 
 void operator delete(void* ptr, acos::usize size) noexcept {
-    (void)ptr; (void)size;
+    (void)size;
+    if (ptr) {
+        acos::memory::kfree(ptr);
+    }
 }

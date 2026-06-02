@@ -20,4 +20,4 @@ stack_bottom:
     .skip 16384 # 16KiB stack
 stack_top:
 
-.section .note.GNU-stack,"",@progbits
+

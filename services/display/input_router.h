@@ -35,7 +35,7 @@ private:
         acos::input::InputEvent event;
     };
     RoutedEvent m_event_queue[64];
-    usize m_event_head;
+    [[maybe_unused]] usize m_event_head;
     usize m_event_tail;
     usize m_event_count;
 

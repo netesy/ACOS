@@ -32,4 +32,3 @@ context_switch:
     
     ret
 
-.section .note.GNU-stack,"",@progbits

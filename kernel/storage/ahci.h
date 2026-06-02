@@ -34,7 +34,7 @@ public:
     u64 capacity() const override { return m_capacity; }
 
 private:
-    u32 m_port_num;
+    [[maybe_unused]] u32 m_port_num;
     void* m_reg;
     u64 m_capacity;
 };

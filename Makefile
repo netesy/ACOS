@@ -1,7 +1,7 @@
-CC = gcc
-CXX = g++
+CC = clang
+CXX = clang++
 UEFI_CXX = clang++
-AS = as
+AS = clang
 LD = ld
 
 # UEFI Target
@@ -9,9 +9,9 @@ UEFI_CFLAGS = -target x86_64-unknown-windows-coff -ffreestanding -fcf-protection
 UEFI_LDFLAGS = -m i386pep --subsystem 10 --entry efi_main
 
 # Kernel Target
-KERNEL_CFLAGS = -nostdinc++ -fno-pic -ffreestanding -fcf-protection=none -fno-stack-protector -fno-exceptions -fno-rtti -mno-red-zone -I. -Ilibs/runtime/include -Iuserland/posix/include -std=c++23 -Wall -Wextra -Werror
-KERNEL_ASFLAGS =
-KERNEL_LDFLAGS = -static -z noexecstack -nostdlib -T linker.ld
+KERNEL_CFLAGS = -target x86_64-unknown-elf -nostdinc++ -fno-pic -ffreestanding -fcf-protection=none -fno-stack-protector -fno-exceptions -fno-rtti -mno-red-zone -I. -Ilibs/runtime/include -Iuserland/posix/include -std=c++20 -Wall -Wextra -Werror
+KERNEL_ASFLAGS = -target x86_64-unknown-elf
+KERNEL_LDFLAGS = -target x86_64-unknown-elf -fuse-ld=lld -nostdlib -Wl,-T,linker.ld -Wl,--no-undefined
 
 # Userland PIE Build Flags
 USER_CFLAGS = $(KERNEL_CFLAGS) -fPIE
@@ -26,7 +26,7 @@ BOOT_EFI   = acos_boot.efi
 KERNEL_ELF = kernel.elf
 DISK_IMG   = acos.img
 QEMU       ?= qemu-system-x86_64
-QEMU_FLAGS ?= -drive format=raw,file=$(DISK_IMG)
+QEMU_FLAGS ?= -drive format=raw,file=$(DISK_IMG) -nographic
 QEMU_FIRMWARE ?= $(firstword $(wildcard OVMF.fd /usr/share/ovmf/OVMF.fd /usr/share/qemu/OVMF.fd /usr/share/OVMF/OVMF_CODE.fd /usr/share/OVMF/OVMF_CODE_4M.fd))
 MKFS_VFAT  ?= $(firstword $(shell command -v mkfs.vfat 2>/dev/null) $(wildcard /usr/sbin/mkfs.vfat /sbin/mkfs.vfat))
 MMD        ?= $(shell command -v mmd 2>/dev/null)
@@ -65,6 +65,7 @@ APPS_DIR    = apps
 BOOT_SRCS = $(BOOT_DIR)/main.cpp
 
 KERNEL_SRCS = \
+	libs/runtime/string.cpp \
 	$(NET_DIR)/net_device.cpp \
 	$(NET_DIR)/ethernet.cpp \
 	$(NET_DIR)/arp.cpp \
@@ -152,8 +153,6 @@ KERNEL_SRCS = \
 	$(POSIX_DIR)/thread.cpp \
 	$(POSIX_DIR)/signal.cpp \
 	$(POSIX_DIR)/time.cpp \
-	$(LIBC_DIR)/string/string.cpp \
-	$(LIBC_DIR)/memory/malloc.cpp \
 	$(LIBC_DIR)/stdio/stdio.cpp \
 	$(LIBC_DIR)/stdlib/stdlib.cpp \
 	$(PKG_DIR)/pkg.cpp \
@@ -208,7 +207,7 @@ $(BOOT_EFI): $(BOOT_OBJS)
 	$(LD) $(UEFI_LDFLAGS) -o $@ $^
 
 $(KERNEL_ELF): $(KERNEL_OBJS)
-	$(CXX) $(KERNEL_LDFLAGS) -o $@ $^
+	ld -T linker.ld -o $@ $^
 
 # ----------------------------------------------------
 # Disk Image Creation
@@ -242,7 +241,7 @@ $(DISK_IMG): $(BOOT_EFI) $(KERNEL_ELF)
 	$(CXX) $(KERNEL_CFLAGS) -c $< -o $@
 
 %.o: %.S
-	$(CC) $(KERNEL_CFLAGS) -c $< -o $@
+	$(AS) $(KERNEL_ASFLAGS) -c $< -o $@
 
 $(BOOT_DIR)/main.o: $(BOOT_DIR)/main.cpp
 	$(UEFI_CXX) $(UEFI_CFLAGS) -c $< -o $@
@@ -264,13 +263,15 @@ run: $(DISK_IMG)
 		exit 1; \
 	fi
 
+
 run-win: $(DISK_IMG)
 	qemu-system-x86_64.exe \
 		-L "C:/Program Files/qemu" \
+		-drive if=pflash,format=raw,readonly=on,file="C:\Program Files\qemu\share\edk2-x86_64-code.fd" \
 		-drive format=raw,file=$(DISK_IMG)
 
 clean:
-	find . -name "*.o" -type f -delete
 	rm -f $(BOOT_EFI) $(KERNEL_ELF) $(DISK_IMG)
+	find . -name "*.o" -type f -delete 2>/dev/null || true
 
 .PHONY: all image run run-win clean

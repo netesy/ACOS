@@ -13,9 +13,9 @@ void font_init() {
             font8x8_basic[i][j] = 0;
         }
     }
-    font8x8_basic['A'][0] = 0x18; font8x8_basic['A'][1] = 0x3C; font8x8_basic['A'][2] = 0x66;
-    font8x8_basic['A'][3] = 0x7E; font8x8_basic['A'][4] = 0x66; font8x8_basic['A'][5] = 0x66;
-    font8x8_basic['A'][6] = 0x66;
+    font8x8_basic[static_cast<u8>('A')][0] = 0x18; font8x8_basic[static_cast<u8>('A')][1] = 0x3C; font8x8_basic[static_cast<u8>('A')][2] = 0x66;
+    font8x8_basic[static_cast<u8>('A')][3] = 0x7E; font8x8_basic[static_cast<u8>('A')][4] = 0x66; font8x8_basic[static_cast<u8>('A')][5] = 0x66;
+    font8x8_basic[static_cast<u8>('A')][6] = 0x66;
 }
 
 void console_init(FramebufferInfo* fb) {

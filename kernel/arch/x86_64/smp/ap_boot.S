@@ -107,4 +107,4 @@ ap_gs_base:
 ap_entry_point:
     .quad 0
 
-.section .note.GNU-stack,"",@progbits
+
