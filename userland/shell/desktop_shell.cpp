@@ -69,14 +69,10 @@ void DesktopShell::initialize() {
 }
 
 void DesktopShell::run() {
-    while (true) {
-        acos::input::InputEvent event;
-        if (acos::input::InputManager::pop_event(event)) {
-            (void)event;
-        }
-
-        acos::scheduler::schedule();
-    }
+    // Initial desktop frame already rendered in initialize().
+    // Return immediately so kernelMain can enter its idle loop.
+    // In a fully scheduled system, input/event processing would be
+    // driven by the scheduler via periodic tick callbacks.
 }
 
 } // namespace acos::shell

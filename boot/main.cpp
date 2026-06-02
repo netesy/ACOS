@@ -50,6 +50,33 @@ extern "C" void* memcpy(void* dest, const void* src, acos::usize count) {
 
 namespace {
 
+// Direct COM1 serial output for bootloader diagnostics
+constexpr acos::u16 COM1_PORT = 0x3F8;
+
+void serial_putchar(char c) {
+    // Wait for transmitter empty (bit 5 of LSR)
+    unsigned char status;
+    do {
+        __asm__ volatile("inb %1, %0" : "=a"(status) : "Nd"(static_cast<unsigned short>(COM1_PORT + 5)));
+    } while ((status & 0x20) == 0);
+    __asm__ volatile("outb %0, %1" : : "a"(static_cast<unsigned char>(c)), "Nd"(COM1_PORT));
+}
+
+void serial_print(const char* s) {
+    while (*s) {
+        if (*s == '\n') serial_putchar('\r');
+        serial_putchar(*s++);
+    }
+}
+
+void serial_print_hex(acos::u64 value) {
+    const char hex[] = "0123456789ABCDEF";
+    serial_print("0x");
+    for (int i = 60; i >= 0; i -= 4) {
+        serial_putchar(hex[(value >> i) & 0xF]);
+    }
+}
+
 constexpr efi::Status EFI_SUCCESS = 0;
 constexpr efi::Status EFI_LOAD_ERROR = 0x8000000000000001ULL;
 constexpr efi::Status EFI_INVALID_PARAMETER = 0x8000000000000002ULL;
@@ -205,6 +232,15 @@ extern "C" efi::Status efi_main(efi::Handle imageHandle, efi::SystemTable* syste
     const bool hasFramebuffer = gop && gop->mode && gop->mode->info;
     if (!hasFramebuffer) {
         print(systemTable, u"ACOS Bootloader: GOP unavailable; continuing without framebuffer.\r\n");
+        serial_print("[BOOT] GOP unavailable - no framebuffer\n");
+    } else {
+        serial_print("[BOOT] GOP found: ");
+        serial_print("base="); serial_print_hex(gop->mode->frameBufferBase);
+        serial_print(" size="); serial_print_hex(gop->mode->frameBufferSize);
+        serial_print(" w="); serial_print_hex(gop->mode->info->horizontalResolution);
+        serial_print(" h="); serial_print_hex(gop->mode->info->verticalResolution);
+        serial_print(" pitch="); serial_print_hex(gop->mode->info->pixelsPerScanLine);
+        serial_print("\n");
     }
 
     efi::LoadedImageProtocol* loadedImage = nullptr;
@@ -294,6 +330,8 @@ extern "C" efi::Status efi_main(efi::Handle imageHandle, efi::SystemTable* syste
 
     static acos::BootInfo bootInfo;
     static acos::FramebufferInfo fbInfo;
+    static acos::MemoryMap memoryMap;
+    static acos::MemoryRegion memoryRegions[64];
     bootInfo.memoryMap = nullptr;
     bootInfo.cpuInfo = nullptr;
     bootInfo.framebuffer = nullptr;
@@ -346,6 +384,55 @@ extern "C" efi::Status efi_main(efi::Handle imageHandle, efi::SystemTable* syste
         if (status != EFI_SUCCESS) {
             return fail(systemTable, u"ExitBootServices failed", status);
         }
+    }
+
+    // Convert UEFI memory map to ACOS format
+    {
+        acos::usize regionCount = 0;
+        const acos::usize descCount = mapSize / descSize;
+        for (acos::usize i = 0; i < descCount && regionCount < 64; ++i) {
+            auto* desc = reinterpret_cast<efi::MemoryDescriptor*>(
+                reinterpret_cast<acos::u8*>(map) + i * descSize);
+            if (desc->numberOfPages == 0) continue;
+
+            acos::MemoryRegionType type;
+            switch (desc->type) {
+                case 7:  // ConventionalMemory
+                case 3:  // BootServicesCode
+                case 4:  // BootServicesData
+                case 2:  // LoaderData
+                case 1:  // LoaderCode
+                    type = acos::MemoryRegionType::Available;
+                    break;
+                case 9:  // ACPIReclaimMemory
+                    type = acos::MemoryRegionType::AcpiReclaimable;
+                    break;
+                case 10: // ACPIMemoryNVS
+                    type = acos::MemoryRegionType::AcpiNvs;
+                    break;
+                default:
+                    type = acos::MemoryRegionType::Reserved;
+                    break;
+            }
+
+            // Merge contiguous regions of the same type
+            if (regionCount > 0 &&
+                memoryRegions[regionCount - 1].type == type &&
+                memoryRegions[regionCount - 1].base + memoryRegions[regionCount - 1].length == desc->physicalStart) {
+                memoryRegions[regionCount - 1].length += desc->numberOfPages * 4096;
+            } else {
+                memoryRegions[regionCount].base = desc->physicalStart;
+                memoryRegions[regionCount].length = desc->numberOfPages * 4096;
+                memoryRegions[regionCount].type = type;
+                regionCount++;
+            }
+        }
+        memoryMap.regions = memoryRegions;
+        memoryMap.count = regionCount;
+        bootInfo.memoryMap = &memoryMap;
+        serial_print("[BOOT] Memory map: ");
+        serial_print_hex(regionCount);
+        serial_print(" regions\n");
     }
 
     enter_kernel(header.e_entry, &bootInfo);

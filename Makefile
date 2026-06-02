@@ -26,7 +26,7 @@ BOOT_EFI   = acos_boot.efi
 KERNEL_ELF = kernel.elf
 DISK_IMG   = acos.img
 QEMU       ?= qemu-system-x86_64
-QEMU_FLAGS ?= -drive format=raw,file=$(DISK_IMG) -display sdl -serial stdio 
+QEMU_FLAGS ?= -m 512M -drive format=raw,file=$(DISK_IMG) -vga std -display sdl -serial stdio
 QEMU_FIRMWARE ?= $(firstword $(wildcard OVMF.fd /usr/share/ovmf/OVMF.fd /usr/share/qemu/OVMF.fd /usr/share/OVMF/OVMF_CODE.fd /usr/share/OVMF/OVMF_CODE_4M.fd))
 MKFS_VFAT  ?= $(firstword $(shell command -v mkfs.vfat 2>/dev/null) $(wildcard /usr/sbin/mkfs.vfat /sbin/mkfs.vfat))
 MMD        ?= $(shell command -v mmd 2>/dev/null)
@@ -253,6 +253,12 @@ $(BOOT_DIR)/main.o: $(BOOT_DIR)/main.cpp
 run: $(DISK_IMG)
 	@if command -v $(QEMU) >/dev/null 2>&1; then \
 		if [ -n "$(QEMU_FIRMWARE)" ]; then \
+			if [ -d /mnt/wslg ]; then \
+				export DISPLAY=:0; \
+				export WAYLAND_DISPLAY=wayland-0; \
+				export XDG_RUNTIME_DIR=/mnt/wslg/runtime-dir; \
+				echo "[RUN] WSLg detected: DISPLAY=$$DISPLAY WAYLAND_DISPLAY=$$WAYLAND_DISPLAY"; \
+			fi; \
 			$(QEMU) $(QEMU_FLAGS) -bios "$(QEMU_FIRMWARE)"; \
 		else \
 			echo "[RUN] Warning: OVMF firmware not found; cannot launch UEFI VM."; \

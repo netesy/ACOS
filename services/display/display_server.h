@@ -46,6 +46,7 @@ public:
     DisplayServer();
     bool initialize();
     void run();
+    void run_tick();
 
     // IPC Channels as requested
     acos::ipc::Channel* graphics_channel() { return &m_graphics_channel; }

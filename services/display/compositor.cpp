@@ -39,6 +39,13 @@ void Compositor::mark_dirty(u32 x, u32 y, u32 w, u32 h) {
 void Compositor::compose() {
     if (!m_has_damage) return;
 
+    // Nothing to composite yet — preserve whatever is on the framebuffer
+    // (e.g. the desktop shell's initial render) instead of clearing it.
+    if (m_window_count == 0) {
+        m_has_damage = false;
+        return;
+    }
+
     u32 background_color = 0x001E3A5F;
     m_fb->clear(background_color);
 

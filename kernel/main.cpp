@@ -16,18 +16,15 @@
 #include <drivers/audio/virtio_sound/virtio_sound.h>
 #include <drivers/audio/hda/hda.h>
 
+#include <kernel/hal/serial.h>
+#include <kernel/hal/console.h>
+
 namespace acos::hal {
-    void serial_init();
-    void serial_print(const char* s);
-    void console_init(FramebufferInfo* fb);
-    void console_clear(u32 color);
-    void console_print(const char* s, u32 color = 0xFFFFFFFF);
     void gdt_init();
     void idt_init();
 }
 
 namespace acos::memory {
-    void pmm_init(BootInfo* bootInfo);
     void vmm_init(BootInfo* bootInfo);
 }
 
@@ -44,7 +41,7 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     if (bootInfo && bootInfo->framebuffer) {
         acos::hal::console_init(bootInfo->framebuffer);
         acos::hal::console_clear(0x001E3A5F);
-        acos::hal::console_print("ACOS Kernel v1.4.0 - Multimedia Ready\n");
+        acos::hal::console_print("ACOS Kernel v1.0.0 - Multimedia Ready\n");
     }
 
     acos::hal::gdt_init();
@@ -111,9 +108,13 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     }
 
     acos::hal::console_print("Core System Initialization: PASS\n");
-    acos::hal::serial_print("ACOS Kernel Phase 14 Success. Entering Idle Loop.\n");
+    acos::hal::serial_print("ACOS Kernel Boot Success. Entering Idle Loop.\n");
 
+    // Kernel idle loop: drive display compositing each tick
     while (true) {
+        if (g_display_server) {
+            g_display_server->run_tick();
+        }
         __asm__("hlt");
     }
 }

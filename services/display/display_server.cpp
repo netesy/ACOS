@@ -33,11 +33,16 @@ void DisplayServer::run() {
     acos::hal::console_print("Display Server: Initialized and running\n");
 
     while (m_running) {
-        acos::ipc::Message msg;
-        if (m_graphics_channel.receive(msg, false)) {
-            handle_request(msg);
-        }
+        run_tick();
+    }
+}
 
+void DisplayServer::run_tick() {
+    acos::ipc::Message msg;
+    if (m_graphics_channel.receive(msg, false)) {
+        handle_request(msg);
+    }
+    if (m_compositor) {
         m_compositor->compose();
     }
 }
