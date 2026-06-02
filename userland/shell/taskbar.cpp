@@ -13,16 +13,19 @@ void Taskbar::draw(acos::graphics::Renderer* renderer) {
         return;
     }
 
-    renderer->fill_rect(static_cast<u32>(m_rect.x),
+    // Glassmorphic taskbar
+    renderer->blend_rect(static_cast<u32>(m_rect.x),
                         static_cast<u32>(m_rect.y),
                         static_cast<u32>(m_rect.w),
                         static_cast<u32>(m_rect.h),
-                        gui::g_current_theme.widget_bg);
+                        gui::g_current_theme.glass_bg, (u8)((gui::g_current_theme.glass_bg >> 24) & 0xFF));
+
     renderer->draw_line(static_cast<u32>(m_rect.x),
                         static_cast<u32>(m_rect.y),
                         static_cast<u32>(m_rect.x + m_rect.w - 1),
                         static_cast<u32>(m_rect.y),
                         gui::g_current_theme.border);
+
     m_volume.draw(renderer);
 }
 

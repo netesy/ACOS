@@ -1,5 +1,6 @@
 #include "compositor.h"
 #include <libs/runtime/include/acos/runtime.h>
+#include <kernel/graphics/types.h>
 
 namespace acos::display {
 
@@ -39,14 +40,8 @@ void Compositor::mark_dirty(u32 x, u32 y, u32 w, u32 h) {
 void Compositor::compose() {
     if (!m_has_damage) return;
 
-    // Nothing to composite yet — preserve whatever is on the framebuffer
-    // (e.g. the desktop shell's initial render) instead of clearing it.
-    if (m_window_count == 0) {
-        m_has_damage = false;
-        return;
-    }
-
-    u32 background_color = 0x001E3A5F;
+    // Background color from Synthetic Interface: #0A0A0B
+    u32 background_color = 0xFF0A0A0B;
     m_fb->clear(background_color);
 
     u32 fb_width = m_fb->width();
@@ -70,8 +65,19 @@ void Compositor::compose() {
                 if (win_x + x >= fb_width) break;
 
                 u32 color = surface->buffer[y * win_w + x];
-                if (color != 0) {
+                u8 alpha = (color >> 24) & 0xFF;
+
+                if (alpha == 255) {
                     m_fb->put_pixel(win_x + x, win_y + y, color);
+                } else if (alpha > 0) {
+                    // Alpha blend with what's already in the framebuffer
+                    u32 bg = m_fb->get_pixel(win_x + x, win_y + y);
+
+                    u32 rb = (color & 0xFF00FF) * alpha + (bg & 0xFF00FF) * (255 - alpha);
+                    u32 g = (color & 0x00FF00) * alpha + (bg & 0x00FF00) * (255 - alpha);
+
+                    u32 blended = ((rb >> 8) & 0xFF00FF) | ((g >> 8) & 0x00FF00);
+                    m_fb->put_pixel(win_x + x, win_y + y, 0xFF000000 | blended);
                 }
             }
         }

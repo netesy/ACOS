@@ -26,17 +26,28 @@ void WindowWidget::add_child(Widget* child) {
 void WindowWidget::draw(acos::graphics::Renderer* renderer) {
     if (!(m_flags & (u32)WidgetFlags::Visible) || !renderer) return;
 
-    renderer->fill_rect(static_cast<u32>(m_rect.x), static_cast<u32>(m_rect.y),
-                        static_cast<u32>(m_rect.w), static_cast<u32>(m_rect.h),
-                        g_current_theme.background);
-    renderer->fill_rect(static_cast<u32>(m_rect.x), static_cast<u32>(m_rect.y),
-                        static_cast<u32>(m_rect.w), 30, g_current_theme.accent);
-    renderer->draw_border(static_cast<u32>(m_rect.x), static_cast<u32>(m_rect.y),
-                          static_cast<u32>(m_rect.w), static_cast<u32>(m_rect.h),
-                          g_current_theme.border, 1);
-    renderer->draw_text(m_title, static_cast<u32>(m_rect.x + 8),
-                        static_cast<u32>(m_rect.y + 10), g_current_theme.foreground);
+    u8 glass_alpha = (u8)((g_current_theme.glass_bg >> 24) & 0xFF);
 
+    // Draw main window background with glass effect
+    renderer->blend_rect(static_cast<u32>(m_rect.x), static_cast<u32>(m_rect.y),
+                         static_cast<u32>(m_rect.w), static_cast<u32>(m_rect.h),
+                         g_current_theme.glass_bg, glass_alpha);
+
+    // Title bar - slightly more opaque
+    renderer->blend_rect(static_cast<u32>(m_rect.x), static_cast<u32>(m_rect.y),
+                         static_cast<u32>(m_rect.w), 30, g_current_theme.glass_bg, 200);
+
+    // Shimmering border
+    renderer->draw_rounded_rect(static_cast<u32>(m_rect.x), static_cast<u32>(m_rect.y),
+                                static_cast<u32>(m_rect.w), static_cast<u32>(m_rect.h),
+                                g_current_theme.window_radius, g_current_theme.border);
+
+    // Title text
+    renderer->draw_text(m_title, static_cast<u32>(m_rect.x + 12),
+                        static_cast<u32>(m_rect.y + 10), g_current_theme.text,
+                        acos::graphics::Font::Alignment::Left, acos::graphics::Font::Style::Bold);
+
+    // Draw children
     for (usize i = 0; i < m_child_count; ++i) {
         if (m_children[i] && m_children[i]->is_visible()) {
             m_children[i]->draw(renderer);
@@ -45,59 +56,10 @@ void WindowWidget::draw(acos::graphics::Renderer* renderer) {
 }
 
 void WindowWidget::draw_to_buffer(u32* buffer [[maybe_unused]], u32 pitch [[maybe_unused]]) {
-    if (!(m_flags & (u32)WidgetFlags::Visible)) return;
-    
-    // Draw window background
-    for (i32 y = m_rect.y; y < m_rect.y + m_rect.h; y++) {
-        for (i32 x = m_rect.x; x < m_rect.x + m_rect.w; x++) {
-            if (y >= 0 && y < 1080 && x >= 0 && x < 1920 && buffer) {
-                buffer[y * pitch + x] = g_current_theme.background;
-            }
-        }
-    }
-    
-    // Draw window title bar
-    u32 title_bar_color = g_current_theme.accent;
-    for (i32 y = m_rect.y; y < m_rect.y + 30; y++) {
-        for (i32 x = m_rect.x; x < m_rect.x + m_rect.w; x++) {
-            if (y >= 0 && y < 1080 && x >= 0 && x < 1920 && buffer) {
-                buffer[y * pitch + x] = title_bar_color;
-            }
-        }
-    }
-    
-    // Draw window border
-    u32 border_color = g_current_theme.border;
-    // Top border
-    for (i32 x = m_rect.x; x < m_rect.x + m_rect.w; x++) {
-        if (x >= 0 && x < 1920 && buffer) {
-            buffer[m_rect.y * pitch + x] = border_color;
-        }
-    }
-    // Bottom border
-    for (i32 x = m_rect.x; x < m_rect.x + m_rect.w; x++) {
-        if (x >= 0 && x < 1920 && buffer) {
-            buffer[(m_rect.y + m_rect.h - 1) * pitch + x] = border_color;
-        }
-    }
-    // Left border
-    for (i32 y = m_rect.y; y < m_rect.y + m_rect.h; y++) {
-        if (y >= 0 && y < 1080 && buffer) {
-            buffer[y * pitch + m_rect.x] = border_color;
-        }
-    }
-    // Right border
-    for (i32 y = m_rect.y; y < m_rect.y + m_rect.h; y++) {
-        if (y >= 0 && y < 1080 && buffer) {
-            buffer[y * pitch + (m_rect.x + m_rect.w - 1)] = border_color;
-        }
-    }
 }
 
 void WindowWidget::show() {
-    // Mark window as visible
     m_flags |= (u32)WidgetFlags::Visible;
-    
 }
 
 } // namespace acos::gui

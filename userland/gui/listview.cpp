@@ -14,75 +14,24 @@ ListView::ListView() : m_item_count(0), m_selected_index(-1) {
 void ListView::draw(acos::graphics::Renderer* renderer) {
     if (!(m_flags & (u32)WidgetFlags::Visible) || !renderer) return;
 
-    renderer->fill_rect(static_cast<u32>(m_rect.x), static_cast<u32>(m_rect.y),
-                        static_cast<u32>(m_rect.w), static_cast<u32>(m_rect.h),
-                        g_current_theme.widget_bg);
-    renderer->draw_border(static_cast<u32>(m_rect.x), static_cast<u32>(m_rect.y),
-                          static_cast<u32>(m_rect.w), static_cast<u32>(m_rect.h),
-                          g_current_theme.border, 1);
+    renderer->blend_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, g_current_theme.surface, 180);
+    renderer->draw_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, g_current_theme.widget_radius, g_current_theme.border);
 
     i32 item_y = m_rect.y + 5;
-    constexpr i32 item_height = 20;
+    constexpr i32 item_height = 24;
     for (usize i = 0; i < m_item_count; ++i) {
         if (item_y + item_height > m_rect.y + m_rect.h) break;
         if (static_cast<i32>(i) == m_selected_index) {
-            renderer->fill_rect(static_cast<u32>(m_rect.x + 2), static_cast<u32>(item_y),
-                                static_cast<u32>(m_rect.w - 4), static_cast<u32>(item_height),
-                                g_current_theme.accent);
+            renderer->blend_rect(m_rect.x + 4, item_y, m_rect.w - 8, item_height, g_current_theme.primary, 100);
+            renderer->draw_rounded_rect(m_rect.x + 4, item_y, m_rect.w - 8, item_height, 4, g_current_theme.primary);
         }
-        renderer->draw_text(m_items[i], static_cast<u32>(m_rect.x + 6),
-                            static_cast<u32>(item_y + 6), g_current_theme.text);
+        renderer->draw_text(m_items[i], m_rect.x + 10, item_y + 4, g_current_theme.text);
         item_y += item_height;
     }
 }
 
 void ListView::draw_to_buffer(u32* buffer [[maybe_unused]], u32 pitch [[maybe_unused]]) {
-    if (!(m_flags & (u32)WidgetFlags::Visible)) return;
-    
-    // Draw background
-    for (i32 y = m_rect.y; y < m_rect.y + m_rect.h; y++) {
-        for (i32 x = m_rect.x; x < m_rect.x + m_rect.w; x++) {
-            if (y >= 0 && y < 1080 && x >= 0 && x < 1920 && buffer) {
-                buffer[y * pitch + x] = g_current_theme.widget_bg;
-            }
-        }
-    }
-    
-    // Draw border
-    u32 border_color = g_current_theme.border;
-    for (i32 x = m_rect.x; x < m_rect.x + m_rect.w; x++) {
-        if (x >= 0 && x < 1920 && buffer) {
-            buffer[m_rect.y * pitch + x] = border_color;
-            buffer[(m_rect.y + m_rect.h - 1) * pitch + x] = border_color;
-        }
-    }
-    for (i32 y = m_rect.y; y < m_rect.y + m_rect.h; y++) {
-        if (y >= 0 && y < 1080 && buffer) {
-            buffer[y * pitch + m_rect.x] = border_color;
-            buffer[y * pitch + (m_rect.x + m_rect.w - 1)] = border_color;
-        }
-    }
-    
-    // Draw selection bands for direct framebuffer mode.
-    i32 item_y = m_rect.y + 5;
-    const i32 item_height = 20;
-    
-    for (usize i = 0; i < m_item_count; i++) {
-        if (item_y + item_height > m_rect.y + m_rect.h) break;
-        
-        // Draw selection highlight
-        if ((i32)i == m_selected_index) {
-            for (i32 y = item_y; y < item_y + item_height; y++) {
-                for (i32 x = m_rect.x + 2; x < m_rect.x + m_rect.w - 2; x++) {
-                    if (y >= 0 && y < 1080 && x >= 0 && x < 1920 && buffer) {
-                        buffer[y * pitch + x] = g_current_theme.accent;
-                    }
-                }
-            }
-        }
-        
-        item_y += item_height;
-    }
+    // Legacy support not needed as we use the renderer
 }
 
 void ListView::add_item(const char* item) {

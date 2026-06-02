@@ -5,7 +5,6 @@
 
 namespace acos::gui {
 
-// Helper function for string length
 static inline usize strlen_impl(const char* s) {
     usize len = 0;
     while (s && s[len]) len++;
@@ -14,35 +13,30 @@ static inline usize strlen_impl(const char* s) {
 
 Label::Label(const char* text) 
     : m_text(text), m_text_color(g_current_theme.text), 
-      m_alignment(TextAlignment::Left), m_font_size(8) {
+      m_alignment(TextAlignment::Left), m_font_size(16) {
     m_rect.w = 200;
-    m_rect.h = 20;
+    m_rect.h = 24;
     m_flags = (u32)WidgetFlags::Visible | (u32)WidgetFlags::Enabled;
 }
 
 Label::~Label() {}
 
 void Label::draw(acos::graphics::Renderer* renderer) {
-    if (!(m_flags & (u32)WidgetFlags::Visible)) return;
-    if (!m_text) return;
+    if (!(m_flags & (u32)WidgetFlags::Visible) || !m_text) return;
     
-    i32 text_x = m_rect.x;
-    usize text_len = strlen_impl(m_text);
-    
-    // Calculate alignment
-    switch (m_alignment) {
-        case TextAlignment::Center:
-            text_x = m_rect.x + (m_rect.w / 2) - (i32)(text_len * 4);
-            break;
-        case TextAlignment::Right:
-            text_x = m_rect.x + m_rect.w - (i32)(text_len * 8);
-            break;
-        case TextAlignment::Left:
-        default:
-            break;
+    acos::graphics::Font::Alignment align = acos::graphics::Font::Alignment::Left;
+    u32 tx = m_rect.x;
+    u32 ty = m_rect.y + (m_rect.h / 2) - 8; // Adjust based on font height
+
+    if (m_alignment == TextAlignment::Center) {
+        align = acos::graphics::Font::Alignment::Center;
+        tx = m_rect.x + m_rect.w / 2;
+    } else if (m_alignment == TextAlignment::Right) {
+        align = acos::graphics::Font::Alignment::Right;
+        tx = m_rect.x + m_rect.w;
     }
     
-    renderer->draw_text(m_text, (u32)text_x, (u32)m_rect.y, m_text_color);
+    renderer->draw_text(m_text, tx, ty, m_text_color);
 }
 
 } // namespace acos::gui

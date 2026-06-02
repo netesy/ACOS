@@ -3,7 +3,6 @@
 
 namespace acos::graphics {
 
-// Color utilities
 struct Color {
     u8 r, g, b, a;
     
@@ -15,18 +14,16 @@ struct Color {
     }
     
     static Color from_argb(u32 argb) {
-        return Color((argb >> 16) & 0xFF, (argb >> 8) & 0xFF, argb & 0xFF, (argb >> 24) & 0xFF);
+        return Color((u8)((argb >> 16) & 0xFF), (u8)((argb >> 8) & 0xFF), (u8)(argb & 0xFF), (u8)((argb >> 24) & 0xFF));
     }
 };
 
-// Gradient support
 struct Gradient {
     Color start;
     Color end;
     bool horizontal;
 };
 
-// Clipping rectangle
 struct ClipRect {
     i32 x, y, w, h;
     

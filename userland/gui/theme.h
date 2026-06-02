@@ -4,34 +4,39 @@
 namespace acos::gui {
 
 struct Theme {
-    // Base colors
-    u32 background;
-    u32 foreground;
-    u32 accent;
-    u32 accent_light;
-    u32 accent_dark;
+    // ACOS Synthetic Interface colors
+    u32 background;       // Level 0: #0A0A0B
+    u32 surface;          // Level 1: #131314
+    u32 glass_bg;         // 60% opaque charcoal
+    u32 primary;          // Electric Blue: #00E5FF
+    u32 secondary;        // Neon Purple: #BF00FF
     
-    // UI colors
-    u32 border;
-    u32 text;
-    u32 text_secondary;
-    u32 widget_bg;
-    u32 widget_bg_hover;
-    u32 widget_bg_pressed;
+    u32 border;           // 1px shimmering edge
+    u32 foreground;       // Primary text
+    u32 text;             // #E5E2E3 (same as foreground)
+    u32 text_secondary;   // #BAC9CC
     
-    // Status colors
-    u32 success;
-    u32 warning;
-    u32 error;
-    u32 info;
+    u32 success;          // Electric Blue
+    u32 warning;          // Vibrant Orange
+    u32 error;            // Neon Pink/Red
+    u32 accent;           // For compatibility
+    u32 widget_bg;        // For compatibility
+    u32 widget_bg_hover;  // For compatibility
+    u32 widget_bg_pressed;// For compatibility
+    u32 info;             // For compatibility
     
-    // Shadows and effects
-    u32 shadow;
+    u32 shadow;           // Glow effect color
     u8 shadow_alpha;
+
+    // Shape properties
+    u32 window_radius;    // 16px
+    u32 widget_radius;    // 8px
+    u32 border_width;     // 1px
 };
 
 extern Theme g_current_theme;
 
+void init_synthetic_theme();
 void init_default_theme();
 void init_dark_theme();
 void init_light_theme();
