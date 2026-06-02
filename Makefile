@@ -126,6 +126,20 @@ KERNEL_SRCS = \
 	$(GUI_DIR)/window_widget.cpp \
 	$(GUI_DIR)/textbox.cpp \
 	$(GUI_DIR)/listview.cpp \
+	$(GUI_DIR)/progressbar.cpp \
+	$(GUI_DIR)/checkbox.cpp \
+	$(GUI_DIR)/slider.cpp \
+	$(GUI_DIR)/panel.cpp \
+	$(GUI_DIR)/icon.cpp \
+	$(GUI_DIR)/radiobutton.cpp \
+	$(GUI_DIR)/switch.cpp \
+	$(GUI_DIR)/textarea.cpp \
+	$(GUI_DIR)/scrollbar.cpp \
+	$(GUI_DIR)/scrollview.cpp \
+	$(GUI_DIR)/tabwidget.cpp \
+	$(GUI_DIR)/combobox.cpp \
+	$(GUI_DIR)/messagebox.cpp \
+	$(GUI_DIR)/menu.cpp \
 	$(SHELL_DIR)/taskbar.cpp \
 	$(SHELL_DIR)/launcher.cpp \
 	$(SHELL_DIR)/notification_center.cpp \

@@ -21,27 +21,27 @@ float sqrt(float x) {
 }
 }
 
-Renderer::Renderer(Framebuffer* fb) : m_fb(fb) {}
+Renderer::Renderer(Framebuffer* fb) : m_fb(fb), m_clip_enabled(false) {}
 
 void Renderer::draw_pixel(u32 x, u32 y, u32 color) {
+    if (is_clipped(x, y)) return;
     m_fb->put_pixel(x, y, color);
 }
 
 void Renderer::blend_pixel(u32 x, u32 y, u32 color, u8 alpha) {
+    if (is_clipped(x, y)) return;
     if (alpha == 255) {
-        draw_pixel(x, y, color);
+        m_fb->put_pixel(x, y, color);
         return;
     }
     if (alpha == 0) return;
 
     u32 bg = m_fb->get_pixel(x, y);
-
-    // Faster blend
     u32 rb = (color & 0xFF00FF) * alpha + (bg & 0xFF00FF) * (255 - alpha);
     u32 g = (color & 0x00FF00) * alpha + (bg & 0x00FF00) * (255 - alpha);
     u32 blended = ((rb >> 8) & 0xFF00FF) | ((g >> 8) & 0x00FF00);
 
-    draw_pixel(x, y, 0xFF000000 | blended);
+    m_fb->put_pixel(x, y, 0xFF000000 | blended);
 }
 
 void Renderer::draw_line(u32 x1, u32 y1, u32 x2, u32 y2, u32 color) {
@@ -64,7 +64,6 @@ void Renderer::draw_line(u32 x1, u32 y1, u32 x2, u32 y2, u32 color) {
     i32 dx = x2_i - x1_i;
     i32 dy = y2_i - y1_i;
     float gradient = (dx == 0) ? 1.0f : (float)dy / dx;
-
     float intery = (float)y1_i + gradient;
 
     plot(x1_i, y1_i, 1.0f);
@@ -89,7 +88,11 @@ void Renderer::draw_rect(u32 x, u32 y, u32 w, u32 h, u32 color) {
 }
 
 void Renderer::fill_rect(u32 x, u32 y, u32 w, u32 h, u32 color) {
-    m_fb->fill_rect(x, y, w, h, color);
+    for (u32 py = y; py < y + h; py++) {
+        for (u32 px = x; px < x + w; px++) {
+            draw_pixel(px, py, color);
+        }
+    }
 }
 
 void Renderer::draw_text(const char* text, u32 x, u32 y, u32 color, Font::Alignment align, Font::Style style, i32 spacing) {
@@ -101,15 +104,10 @@ void Renderer::draw_circle(u32 cx, u32 cy, u32 radius, u32 color) {
     for (i32 y = -r; y <= r; y++) {
         for (i32 x = -r; x <= r; x++) {
             float dist = sqrt((float)(x * x + y * y));
-            if (dist <= r - 0.5f) {
-                if (dist > r - 1.5f) {
-                     float alpha = 1.0f;
-                     if (dist > r - 0.5f) alpha = 1.0f - (dist - (r - 0.5f));
-                     blend_pixel(cx + x, cy + y, color, (u8)(alpha * 255));
-                }
-            } else if (dist <= r + 0.5f) {
-                float alpha = 1.0f - (dist - (r - 0.5f));
-                blend_pixel(cx + x, cy + y, color, (u8)(alpha * 255));
+            if (dist <= r + 0.5f) {
+                float alpha = 1.0f;
+                if (dist > r - 0.5f) alpha = 1.0f - (dist - (r - 0.5f));
+                if (dist > r - 1.5f) blend_pixel(cx + x, cy + y, color, (u8)(alpha * 255));
             }
         }
     }
@@ -218,7 +216,7 @@ void Renderer::draw_shadow(u32 x, u32 y, u32 w, u32 h, u32 offset, u8 alpha) {
     blend_rect(x + offset, y + offset, w, h, 0xFF000000, alpha);
 }
 
-void Renderer::set_clip_rect(const ClipRect& rect) { (void)rect; }
-void Renderer::clear_clip_rect() {}
+void Renderer::set_clip_rect(const ClipRect& rect) { m_clip_rect = rect; m_clip_enabled = true; }
+void Renderer::clear_clip_rect() { m_clip_enabled = false; }
 
 } // namespace acos::graphics

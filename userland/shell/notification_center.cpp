@@ -3,13 +3,13 @@
 
 namespace acos::shell {
 
-NotificationCenter::NotificationCenter() {
+NotificationCenter::NotificationCenter() : m_count(0) {
     m_rect = {590, 50, 200, 400};
-    m_visible = false;
+    set_visible(false);
 }
 
 void NotificationCenter::draw(acos::graphics::Renderer* renderer) {
-    if (!m_visible || !renderer) return;
+    if (!is_visible() || !renderer) return;
 
     renderer->blend_rect(static_cast<u32>(m_rect.x),
                         static_cast<u32>(m_rect.y),
@@ -26,6 +26,12 @@ void NotificationCenter::draw(acos::graphics::Renderer* renderer) {
 
     renderer->draw_text("Notifications", (u32)m_rect.x + 10, (u32)m_rect.y + 10, gui::g_current_theme.secondary,
                        acos::graphics::Font::Alignment::Left, acos::graphics::Font::Style::Bold);
+}
+
+void NotificationCenter::post_notification(const char* title, const char* message) {
+    if (m_count < 16) {
+        m_queue[m_count++] = {title, message, 0};
+    }
 }
 
 } // namespace acos::shell

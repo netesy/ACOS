@@ -12,7 +12,7 @@ static inline usize strlen_impl(const char* s) {
 }
 
 Button::Button(const char* label) 
-    : m_label(label), m_on_click(nullptr), m_mouse_over(false), m_press_time(0) {
+    : m_label(label), m_mouse_over(false), m_press_time(0) {
     m_rect.w = 100;
     m_rect.h = 32;
     m_flags = (u32)WidgetFlags::Visible | (u32)WidgetFlags::Enabled | (u32)WidgetFlags::Clickable;
@@ -40,10 +40,8 @@ void Button::draw(acos::graphics::Renderer* renderer) {
         alpha = 220;
     }
     
-    // Modern pill-like or rounded button
-    renderer->fill_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, g_current_theme.widget_radius, bg_color);
+    renderer->fill_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, g_current_theme.widget_radius, (bg_color & 0x00FFFFFF) | ((u32)alpha << 24));
     
-    // Subtle glow if primary/hovered
     if (m_state != WidgetState::Normal) {
         renderer->draw_shadow(m_rect.x, m_rect.y, m_rect.w, m_rect.h, 2, 60);
     }
@@ -51,7 +49,6 @@ void Button::draw(acos::graphics::Renderer* renderer) {
     renderer->draw_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, g_current_theme.widget_radius, g_current_theme.border);
     
     if (m_label) {
-        // Assume 8x16 or similar for default font for centering
         u32 char_w = 8;
         u32 char_h = 16;
         if (acos::graphics::Font::get_default()) {
@@ -85,7 +82,7 @@ void Button::handle_event(const acos::input::InputEvent& event) {
         if (m_mouse_over && button_pressed) {
             m_state = WidgetState::Pressed;
             m_press_time = 0;
-            if (m_on_click) m_on_click(this);
+            m_on_click_signal.emit();
         } else if (!button_pressed && m_state == WidgetState::Pressed) {
             m_state = m_mouse_over ? WidgetState::Hovered : WidgetState::Normal;
         }

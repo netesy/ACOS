@@ -7,6 +7,7 @@ class ListView : public Widget {
 public:
     ListView();
     void draw(acos::graphics::Renderer* renderer) override;
+    void handle_event(const acos::input::InputEvent& event) override;
     void draw_to_buffer(u32* buffer, u32 pitch);
     void add_item(const char* item);
     void clear();

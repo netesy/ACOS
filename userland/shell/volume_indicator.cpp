@@ -18,7 +18,7 @@ void VolumeIndicator::draw(acos::graphics::Renderer* renderer) {
     const u32 bar_width = (m_volume > 100 ? 100 : m_volume) / 4;
 
     renderer->draw_rect(x, y + 8, 8, 14, gui::g_current_theme.text);
-    renderer->fill_rect(x + 10, y + 6, bar_width, h - 12, gui::g_current_theme.accent_light);
+    renderer->fill_rect(x + 10, y + 6, bar_width, h - 12, gui::g_current_theme.primary);
     renderer->draw_border(x + 10, y + 6, 25, h - 12, gui::g_current_theme.border, 1);
 }
 

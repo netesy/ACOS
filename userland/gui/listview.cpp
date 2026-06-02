@@ -25,13 +25,27 @@ void ListView::draw(acos::graphics::Renderer* renderer) {
             renderer->blend_rect(m_rect.x + 4, item_y, m_rect.w - 8, item_height, g_current_theme.primary, 100);
             renderer->draw_rounded_rect(m_rect.x + 4, item_y, m_rect.w - 8, item_height, 4, g_current_theme.primary);
         }
-        renderer->draw_text(m_items[i], m_rect.x + 10, item_y + 4, g_current_theme.text);
+        renderer->draw_text(m_items[i], (u32)m_rect.x + 10, (u32)item_y + 4, g_current_theme.text);
         item_y += item_height;
     }
 }
 
-void ListView::draw_to_buffer(u32* buffer [[maybe_unused]], u32 pitch [[maybe_unused]]) {
-    // Legacy support not needed as we use the renderer
+void ListView::draw_to_buffer(u32* buffer [[maybe_unused]], u32 pitch [[maybe_unused]]) {}
+
+void ListView::handle_event(const acos::input::InputEvent& event) {
+    if (!is_enabled()) return;
+    if (event.type == acos::input::InputType::Mouse) {
+        i32 mx = (i32)((event.code >> 16) & 0xFFFF);
+        i32 my = (i32)(event.code & 0xFFFF);
+        bool pressed = (event.value & 0x01) != 0;
+        if (pressed && hit_test(mx, my)) {
+            i32 relative_y = my - m_rect.y - 5;
+            i32 index = relative_y / 24;
+            if (index >= 0 && index < (i32)m_item_count) {
+                m_selected_index = index;
+            }
+        }
+    }
 }
 
 void ListView::add_item(const char* item) {

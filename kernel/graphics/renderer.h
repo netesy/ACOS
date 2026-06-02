@@ -1,6 +1,7 @@
 #pragma once
 #include <kernel/graphics/framebuffer.h>
 #include <kernel/graphics/font.h>
+#include <kernel/graphics/types.h>
 
 namespace acos::graphics {
 
@@ -39,6 +40,14 @@ public:
 
 private:
     Framebuffer* m_fb;
+    ClipRect m_clip_rect;
+    bool m_clip_enabled;
+
+    bool is_clipped(u32 x, u32 y) const {
+        if (!m_clip_enabled) return false;
+        return x < (u32)m_clip_rect.x || x >= (u32)(m_clip_rect.x + m_clip_rect.w) ||
+               y < (u32)m_clip_rect.y || y >= (u32)(m_clip_rect.y + m_clip_rect.h);
+    }
 };
 
 } // namespace acos::graphics
