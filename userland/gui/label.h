@@ -11,19 +11,17 @@ enum class TextAlignment {
 
 class Label : public Widget {
 public:
-    Label(const char* text);
-    ~Label();
-    
-    void draw(acos::graphics::Renderer* renderer) override;
+    Label(const char* text = nullptr);
+    virtual ~Label();
 
-    void set_text(const char* text) { m_text = text; }
-    const char* text() const { return m_text; }
+    void draw(acos::graphics::Renderer* renderer) override;
     
+    void set_text(const char* text) { m_text = text; }
     void set_text_color(u32 color) { m_text_color = color; }
     void set_alignment(TextAlignment align) { m_alignment = align; }
     void set_font_size(u32 size) { m_font_size = size; }
 
-private:
+protected:
     const char* m_text;
     u32 m_text_color;
     TextAlignment m_alignment;

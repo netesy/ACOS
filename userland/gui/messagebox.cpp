@@ -8,6 +8,7 @@ MessageBox::MessageBox(const char* title, const char* message)
     : WindowWidget(title, 250, 200, 300, 150),
       m_label(message), m_ok_btn("OK") {
 
+    m_elevation = 24;
     m_label.set_alignment(TextAlignment::Center);
     add_child(&m_label);
     add_child(&m_ok_btn);
@@ -22,7 +23,7 @@ void MessageBox::draw(acos::graphics::Renderer* renderer) {
     if (!is_visible() || !renderer) return;
 
     // Dim the background
-    renderer->blend_rect(0, 0, 1920, 1080, 0x00000000, 100);
+    renderer->blend_rect(0, 0, 1920, 1080, 0x00000000, 120);
 
     WindowWidget::draw(renderer);
 }

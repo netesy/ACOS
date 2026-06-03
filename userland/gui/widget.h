@@ -58,15 +58,21 @@ public:
     WidgetState state() const { return m_state; }
     void set_state(WidgetState s) { m_state = s; }
 
+    void set_elevation(u32 elevation) { m_elevation = elevation; }
+    u32 elevation() const { return m_elevation; }
+
     bool hit_test(i32 x, i32 y) const { return m_rect.contains(x, y); }
 
 protected:
     Rect m_rect;
     Widget* m_parent;
-    Widget* m_children[32]; // Increased capacity
+    Widget* m_children[32];
     u32 m_child_count;
     u32 m_flags;
     WidgetState m_state;
+    u32 m_elevation;
+
+    void draw_shadow(acos::graphics::Renderer* renderer);
 };
 
 } // namespace acos::gui

@@ -140,6 +140,29 @@ KERNEL_SRCS = \
 	$(GUI_DIR)/combobox.cpp \
 	$(GUI_DIR)/messagebox.cpp \
 	$(GUI_DIR)/menu.cpp \
+	$(GUI_DIR)/spinbox.cpp \
+	$(GUI_DIR)/separator.cpp \
+	$(GUI_DIR)/statusbar.cpp \
+	$(GUI_DIR)/menubar.cpp \
+	$(GUI_DIR)/tooltip.cpp \
+	$(GUI_DIR)/imagewidget.cpp \
+	$(GUI_DIR)/treeview.cpp \
+	$(GUI_DIR)/gridview.cpp \
+	$(GUI_DIR)/stackwidget.cpp \
+	$(GUI_DIR)/splitter.cpp \
+	$(GUI_DIR)/canvas.cpp \
+	$(GUI_DIR)/contextmenu.cpp \
+	$(GUI_DIR)/toolbar.cpp \
+	$(GUI_DIR)/groupbox.cpp \
+	$(GUI_DIR)/dialog.cpp \
+	$(GUI_DIR)/link.cpp \
+	$(GUI_DIR)/toast.cpp \
+	$(GUI_DIR)/colorpicker.cpp \
+	$(GUI_DIR)/calendar.cpp \
+	$(GUI_DIR)/graph.cpp \
+	$(GUI_DIR)/badge.cpp \
+	$(GUI_DIR)/menuitem.cpp \
+	$(GUI_DIR)/toolbutton.cpp \
 	$(SHELL_DIR)/taskbar.cpp \
 	$(SHELL_DIR)/launcher.cpp \
 	$(SHELL_DIR)/notification_center.cpp \

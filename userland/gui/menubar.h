@@ -1,25 +1,22 @@
 #pragma once
 #include "widget.h"
-#include "signal.h"
+#include "menu.h"
 
 namespace acos::gui {
 
-class Menu : public Widget {
+class MenuBar : public Widget {
 public:
-    Menu();
-    virtual ~Menu();
-
+    MenuBar();
     void draw(acos::graphics::Renderer* renderer) override;
     void handle_event(const acos::input::InputEvent& event) override;
 
-    void add_item(const char* label);
-
-    Signal<u32> on_item_selected;
+    Menu* add_menu(const char* title);
 
 private:
-    const char* m_items[16];
+    const char* m_titles[8];
+    Menu* m_menus[8];
     u32 m_count;
-    i32 m_hovered_index;
+    i32 m_active_menu;
 };
 
 } // namespace acos::gui

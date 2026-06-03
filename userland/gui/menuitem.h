@@ -4,22 +4,16 @@
 
 namespace acos::gui {
 
-class Menu : public Widget {
+class MenuItem : public Widget {
 public:
-    Menu();
-    virtual ~Menu();
-
+    MenuItem(const char* label = nullptr);
     void draw(acos::graphics::Renderer* renderer) override;
     void handle_event(const acos::input::InputEvent& event) override;
 
-    void add_item(const char* label);
-
-    Signal<u32> on_item_selected;
+    Signal<> on_triggered;
 
 private:
-    const char* m_items[16];
-    u32 m_count;
-    i32 m_hovered_index;
+    const char* m_label;
 };
 
 } // namespace acos::gui

@@ -1,25 +1,22 @@
 #pragma once
 #include "widget.h"
-#include "signal.h"
 
 namespace acos::gui {
 
-class Menu : public Widget {
+class StackWidget : public Widget {
 public:
-    Menu();
-    virtual ~Menu();
-
+    StackWidget();
     void draw(acos::graphics::Renderer* renderer) override;
     void handle_event(const acos::input::InputEvent& event) override;
 
-    void add_item(const char* label);
-
-    Signal<u32> on_item_selected;
+    void add_widget(Widget* widget);
+    void set_current_index(u32 index);
+    u32 current_index() const { return m_current_index; }
 
 private:
-    const char* m_items[16];
+    Widget* m_pages[16];
     u32 m_count;
-    i32 m_hovered_index;
+    u32 m_current_index;
 };
 
 } // namespace acos::gui

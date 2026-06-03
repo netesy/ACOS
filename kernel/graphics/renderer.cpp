@@ -213,7 +213,11 @@ void Renderer::blend_rect(u32 x, u32 y, u32 w, u32 h, u32 color, u8 alpha) {
 }
 
 void Renderer::draw_shadow(u32 x, u32 y, u32 w, u32 h, u32 offset, u8 alpha) {
+    // Multi-layered shadow for softness
     blend_rect(x + offset, y + offset, w, h, 0xFF000000, alpha);
+    if (offset > 2) {
+        blend_rect(x + offset + 2, y + offset + 2, w, h, 0xFF000000, alpha / 2);
+    }
 }
 
 void Renderer::set_clip_rect(const ClipRect& rect) { m_clip_rect = rect; m_clip_enabled = true; }
