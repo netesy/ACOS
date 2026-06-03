@@ -1,21 +1,6 @@
-# Build artifacts
 *.o
-*.d
 *.elf
-*.bin
 *.img
-*.iso
-build/
-bin/
-obj/
-
-# Logs
-*.log
-
-# Editor backups
-*~
-*.swp
-
-# Temporary verification files
-vfs_files.txt
-all_md_files.txt
+*.efi
+*.bin
+OVMF.fd
