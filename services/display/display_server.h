@@ -53,6 +53,10 @@ public:
     acos::ipc::Channel* window_channel() { return &m_window_channel; }
     acos::ipc::Channel* surface_channel() { return &m_surface_channel; }
 
+    // Desktop background rendering
+    void set_desktop_draw(Compositor::DesktopDrawFn fn);
+    acos::graphics::Renderer* renderer();
+
 private:
     void handle_request(const acos::ipc::Message& msg);
 

@@ -12,6 +12,7 @@
 #include <services/display/display_server.h>
 #include <services/audio/audio_server.h>
 #include <userland/shell/session_manager.h>
+#include <userland/shell/desktop_shell.h>
 #include <libs/runtime/include/acos/runtime.h>
 #include <drivers/audio/virtio_sound/virtio_sound.h>
 #include <drivers/audio/hda/hda.h>
@@ -32,6 +33,13 @@ namespace acos::memory {
 acos::display::DisplayServer* g_display_server = nullptr;
 acos::audio::AudioServer* g_audio_server = nullptr;
 acos::shell::SessionManager* g_session_manager = nullptr;
+acos::shell::DesktopShell* g_desktop_shell = nullptr;
+
+static void desktop_draw_callback(acos::graphics::Renderer* renderer) {
+    if (g_desktop_shell) {
+        g_desktop_shell->draw(renderer);
+    }
+}
 
 extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     acos::hal::serial_init();
@@ -92,6 +100,15 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
         if (g_audio_server->initialize()) {
             acos::hal::serial_print("Audio Server: Initialized\n");
         }
+    }
+
+    // Initialize Desktop Shell
+    void* shell_mem = acos::memory::kmalloc(sizeof(acos::shell::DesktopShell));
+    if (shell_mem && display_ready) {
+        g_desktop_shell = new (shell_mem) acos::shell::DesktopShell();
+        g_desktop_shell->initialize();
+        g_display_server->set_desktop_draw(desktop_draw_callback);
+        acos::hal::serial_print("Desktop Shell: Initialized and wired to compositor\n");
     }
 
     // Start Session

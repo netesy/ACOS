@@ -13,14 +13,18 @@ void DesktopShell::run() {}
 void DesktopShell::draw(acos::graphics::Renderer* renderer) {
     if (!renderer) return;
 
+    u32 w = renderer->width();
+    u32 h = renderer->height();
+    if (w == 0 || h == 0) return;
+
     acos::graphics::Gradient bg_grad;
     bg_grad.start = acos::graphics::Color(10, 10, 11);
     bg_grad.end = acos::graphics::Color(26, 18, 38);
     bg_grad.horizontal = false;
-    renderer->draw_gradient_rect(0, 0, 800, 600, bg_grad);
+    renderer->draw_gradient_rect(0, 0, w, h, bg_grad);
 
     renderer->fill_circle(0, 0, 200, 0x1A00E5FF);
-    renderer->fill_circle(800, 600, 300, 0x1ABF00FF);
+    renderer->fill_circle(w, h, 300, 0x1ABF00FF);
 
     m_taskbar.draw(renderer);
     m_launcher.draw(renderer);

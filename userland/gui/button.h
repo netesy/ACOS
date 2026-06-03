@@ -17,6 +17,9 @@ public:
         m_on_click_signal.connect(receiver, (Signal<>::Slot)callback);
     }
 
+    const char* label() const { return m_label; }
+    void set_label(const char* label) { m_label = label; }
+
 private:
     const char* m_label;
     u32 m_bg_color;

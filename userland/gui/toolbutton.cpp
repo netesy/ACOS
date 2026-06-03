@@ -20,7 +20,7 @@ void ToolButton::draw(acos::graphics::Renderer* renderer) {
     }
 
     // Centered label (usually an icon char or short text)
-    renderer->draw_text(m_label, m_rect.x + 8, m_rect.y + 8, g_current_theme.text);
+    renderer->draw_text(label(), m_rect.x + 8, m_rect.y + 8, g_current_theme.text);
 }
 
 } // namespace acos::gui

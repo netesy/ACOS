@@ -38,6 +38,10 @@ public:
     void set_clip_rect(const ClipRect& rect);
     void clear_clip_rect();
 
+    // Dimensions
+    u32 width() const { return m_fb ? m_fb->width() : 0; }
+    u32 height() const { return m_fb ? m_fb->height() : 0; }
+
 private:
     Framebuffer* m_fb;
     ClipRect m_clip_rect;

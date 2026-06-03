@@ -5,8 +5,10 @@
 namespace acos::display {
 
 Compositor::Compositor(acos::graphics::Framebuffer* fb, SurfaceManager* surface_manager)
-    : m_fb(fb), m_surface_manager(surface_manager), m_windows(nullptr), m_window_count(0),
-      m_dirty_x(0), m_dirty_y(0), m_dirty_w(0), m_dirty_h(0), m_has_damage(true) {}
+    : m_fb(fb), m_surface_manager(surface_manager), m_renderer(fb),
+      m_windows(nullptr), m_window_count(0), m_desktop_draw(nullptr),
+      m_dirty_x(0), m_dirty_y(0), m_dirty_w(0), m_dirty_h(0),
+      m_has_damage(true), m_always_dirty(false) {}
 
 void Compositor::set_windows(Window** windows, usize count) {
     m_windows = windows;
@@ -38,11 +40,15 @@ void Compositor::mark_dirty(u32 x, u32 y, u32 w, u32 h) {
 }
 
 void Compositor::compose() {
-    if (!m_has_damage) return;
+    if (!m_has_damage && !m_always_dirty) return;
 
-    // Background color from Synthetic Interface: #0A0A0B
-    u32 background_color = 0xFF0A0A0B;
-    m_fb->clear(background_color);
+    // Draw desktop background first
+    if (m_desktop_draw) {
+        m_desktop_draw(&m_renderer);
+    } else {
+        // Default: ACOS Synthetic background
+        m_fb->clear(0xFF0A0A0B);
+    }
 
     u32 fb_width = m_fb->width();
     u32 fb_height = m_fb->height();

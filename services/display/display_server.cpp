@@ -47,6 +47,17 @@ void DisplayServer::run_tick() {
     }
 }
 
+void DisplayServer::set_desktop_draw(Compositor::DesktopDrawFn fn) {
+    if (m_compositor) {
+        m_compositor->set_desktop_draw(fn);
+        m_compositor->mark_always_dirty();
+    }
+}
+
+acos::graphics::Renderer* DisplayServer::renderer() {
+    return m_compositor ? m_compositor->renderer() : nullptr;
+}
+
 void DisplayServer::handle_request(const acos::ipc::Message& msg) {
     if (msg.size < sizeof(GraphicsRequest)) return;
 

@@ -10,8 +10,8 @@ public:
     void handle_event(const acos::input::InputEvent& event) override;
 
 private:
-    u32 m_year;
-    u32 m_month;
+    [[maybe_unused]] u32 m_year;
+    [[maybe_unused]] u32 m_month;
     u32 m_selected_day;
 };
 
