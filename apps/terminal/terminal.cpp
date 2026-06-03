@@ -2,7 +2,7 @@
 
 namespace acos::apps {
 
-Terminal::Terminal() : gui::WindowWidget("Terminal", 50, 50, 600, 400) {
+Terminal::Terminal() : ui::WindowWidget("Terminal", 50, 50, 600, 400) {
     add_child(&m_input_line);
     m_input_line.set_position(55, 370);
     m_input_line.set_size(590, 25);

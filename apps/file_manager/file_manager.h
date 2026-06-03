@@ -1,10 +1,10 @@
 #pragma once
-#include <userland/gui/window_widget.h>
-#include <userland/gui/listview.h>
+#include <ui/window_widget.h>
+#include <ui/listview.h>
 
 namespace acos::apps {
 
-class FileManager : public gui::WindowWidget {
+class FileManager : public ui::WindowWidget {
 public:
     FileManager();
     void browse(const char* path);
@@ -12,7 +12,7 @@ public:
     void navigate_parent();
 
 private:
-    gui::ListView m_file_list;
+    ui::ListView m_file_list;
     char m_current_path[256];
     
     // Helper methods

@@ -2,7 +2,7 @@
 
 namespace acos::apps {
 
-PackageStore::PackageStore() : gui::WindowWidget("Package Store", 50, 50, 600, 450),
+PackageStore::PackageStore() : ui::WindowWidget("Package Store", 50, 50, 600, 450),
                                m_install_btn("Install") {
     add_child(&m_pkg_list);
     add_child(&m_install_btn);

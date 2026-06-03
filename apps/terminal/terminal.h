@@ -1,16 +1,16 @@
 #pragma once
-#include <userland/gui/window_widget.h>
-#include <userland/gui/textbox.h>
+#include <ui/window_widget.h>
+#include <ui/textbox.h>
 
 namespace acos::apps {
 
-class Terminal : public gui::WindowWidget {
+class Terminal : public ui::WindowWidget {
 public:
     Terminal();
     void on_input(const char* cmd);
 
 private:
-    gui::TextBox m_input_line;
+    ui::TextBox m_input_line;
 };
 
 } // namespace acos::apps

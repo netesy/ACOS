@@ -1,16 +1,14 @@
 #pragma once
-#include <userland/gui/widget.h>
+#include <ui/widget.h>
+#include <ui/basic_widgets.h>
 
 namespace acos::shell {
 
-class VolumeIndicator : public gui::Widget {
+class VolumeIndicator : public ui::Widget {
 public:
     VolumeIndicator();
-    void draw(acos::graphics::Renderer* renderer) override;
-    void set_volume(u32 vol) { m_volume = vol; }
-
-private:
-    u32 m_volume;
+    ui::Ref<ui::LayoutNode> create_layout_node(ui::UIContext* ctx) override;
+    ui::Ref<ui::RenderObject> create_render_object(ui::UIContext* ctx) override;
 };
 
 } // namespace acos::shell

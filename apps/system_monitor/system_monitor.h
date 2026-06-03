@@ -1,17 +1,17 @@
 #pragma once
-#include <userland/gui/window_widget.h>
-#include <userland/gui/label.h>
+#include <ui/window_widget.h>
+#include <ui/label.h>
 
 namespace acos::apps {
 
-class SystemMonitor : public gui::WindowWidget {
+class SystemMonitor : public ui::WindowWidget {
 public:
     SystemMonitor();
     void refresh();
 
 private:
-    gui::Label m_cpu_label;
-    gui::Label m_mem_label;
+    ui::Label m_cpu_label;
+    ui::Label m_mem_label;
 };
 
 } // namespace acos::apps

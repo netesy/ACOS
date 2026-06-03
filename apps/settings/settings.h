@@ -1,16 +1,16 @@
 #pragma once
-#include <userland/gui/window_widget.h>
-#include <userland/gui/button.h>
+#include <ui/window_widget.h>
+#include <ui/button.h>
 
 namespace acos::apps {
 
-class Settings : public gui::WindowWidget {
+class Settings : public ui::WindowWidget {
 public:
     Settings();
 
 private:
-    gui::Button m_display_btn;
-    gui::Button m_theme_btn;
+    ui::Button m_display_btn;
+    ui::Button m_theme_btn;
     
     void on_display_clicked();
     void on_theme_clicked();

@@ -1,17 +1,14 @@
 #pragma once
-#include <userland/gui/widget.h>
+#include <ui/widget.h>
+#include <ui/basic_widgets.h>
 
 namespace acos::shell {
 
-class Launcher : public gui::Widget {
+class Launcher : public ui::Widget {
 public:
     Launcher();
-    void draw(acos::graphics::Renderer* renderer) override;
-    void show();
-    void hide();
-
-private:
-    bool m_active;
+    ui::Ref<ui::LayoutNode> create_layout_node(ui::UIContext* ctx) override;
+    ui::Ref<ui::RenderObject> create_render_object(ui::UIContext* ctx) override;
 };
 
 } // namespace acos::shell

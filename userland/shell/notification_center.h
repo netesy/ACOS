@@ -1,23 +1,14 @@
 #pragma once
-#include <userland/gui/widget.h>
+#include <ui/widget.h>
+#include <ui/basic_widgets.h>
 
 namespace acos::shell {
 
-struct Notification {
-    const char* title;
-    const char* message;
-    u32 priority;
-};
-
-class NotificationCenter : public gui::Widget {
+class NotificationCenter : public ui::Widget {
 public:
     NotificationCenter();
-    void draw(acos::graphics::Renderer* renderer) override;
-    void post_notification(const char* title, const char* message);
-
-private:
-    Notification m_queue[16];
-    usize m_count;
+    ui::Ref<ui::LayoutNode> create_layout_node(ui::UIContext* ctx) override;
+    ui::Ref<ui::RenderObject> create_render_object(ui::UIContext* ctx) override;
 };
 
 } // namespace acos::shell

@@ -1,10 +1,9 @@
 #include "desktop_shell.h"
-#include <userland/gui/theme.h>
+#include <ui/context.h>
 
 namespace acos::shell {
 
 DesktopShell::DesktopShell() {
-    gui::init_synthetic_theme();
 }
 
 void DesktopShell::initialize() {}
@@ -26,9 +25,10 @@ void DesktopShell::draw(acos::graphics::Renderer* renderer) {
     renderer->fill_circle(0, 0, 200, 0x1A00E5FF);
     renderer->fill_circle(w, h, 300, 0x1ABF00FF);
 
-    m_taskbar.draw(renderer);
-    m_launcher.draw(renderer);
-    m_notifications.draw(renderer);
+    // In the new system, DesktopShell would own a UIContext
+    // and would call ctx.paint(renderer) which would handle drawing all widgets.
+    // For now, we keep the structure but actual drawing is a no-op until
+    // the system is further implemented.
 }
 
 } // namespace acos::shell

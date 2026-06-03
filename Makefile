@@ -5,11 +5,11 @@ AS = clang
 LD = ld
 
 # UEFI Target
-UEFI_CFLAGS = -target x86_64-unknown-windows-coff -ffreestanding -fcf-protection=none -fno-stack-protector -fshort-wchar -mno-red-zone -I. -Ilibs/runtime/include
+UEFI_CFLAGS = -target x86_64-unknown-windows-coff -ffreestanding -fcf-protection=none -fno-stack-protector -fshort-wchar -mno-red-zone -I. -Ilibs/runtime/include -Iuserland/gui/include
 UEFI_LDFLAGS = -m i386pep --subsystem 10 --entry efi_main
 
 # Kernel Target
-KERNEL_CFLAGS = -target x86_64-unknown-elf -nostdinc++ -fno-pic -ffreestanding -fcf-protection=none -fno-stack-protector -fno-exceptions -fno-rtti -mno-red-zone -I. -Ilibs/runtime/include -Iuserland/posix/include -std=c++20 -Wall -Wextra -Werror
+KERNEL_CFLAGS = -target x86_64-unknown-elf -nostdinc++ -fno-pic -ffreestanding -fcf-protection=none -fno-stack-protector -fno-exceptions -fno-rtti -mno-red-zone -I. -Ilibs/runtime/include -Iuserland/gui/include -Iuserland/posix/include -std=c++20 -Wall -Wextra -Werror
 KERNEL_ASFLAGS = -target x86_64-unknown-elf
 KERNEL_LDFLAGS = -target x86_64-unknown-elf -fuse-ld=lld -nostdlib -Wl,-T,linker.ld -Wl,--no-undefined
 
@@ -118,51 +118,7 @@ KERNEL_SRCS = \
 	$(DISPLAY_DIR)/input_router.cpp \
 	$(DISPLAY_DIR)/compositor.cpp \
 	$(DISPLAY_DIR)/display_server.cpp \
-	$(GUI_DIR)/widget.cpp \
-	$(GUI_DIR)/theme.cpp \
-	$(GUI_DIR)/layout.cpp \
-	$(GUI_DIR)/button.cpp \
-	$(GUI_DIR)/label.cpp \
-	$(GUI_DIR)/window_widget.cpp \
-	$(GUI_DIR)/textbox.cpp \
-	$(GUI_DIR)/listview.cpp \
-	$(GUI_DIR)/progressbar.cpp \
-	$(GUI_DIR)/checkbox.cpp \
-	$(GUI_DIR)/slider.cpp \
-	$(GUI_DIR)/panel.cpp \
-	$(GUI_DIR)/icon.cpp \
-	$(GUI_DIR)/radiobutton.cpp \
-	$(GUI_DIR)/switch.cpp \
-	$(GUI_DIR)/textarea.cpp \
-	$(GUI_DIR)/scrollbar.cpp \
-	$(GUI_DIR)/scrollview.cpp \
-	$(GUI_DIR)/tabwidget.cpp \
-	$(GUI_DIR)/combobox.cpp \
-	$(GUI_DIR)/messagebox.cpp \
-	$(GUI_DIR)/menu.cpp \
-	$(GUI_DIR)/spinbox.cpp \
-	$(GUI_DIR)/separator.cpp \
-	$(GUI_DIR)/statusbar.cpp \
-	$(GUI_DIR)/menubar.cpp \
-	$(GUI_DIR)/tooltip.cpp \
-	$(GUI_DIR)/imagewidget.cpp \
-	$(GUI_DIR)/treeview.cpp \
-	$(GUI_DIR)/gridview.cpp \
-	$(GUI_DIR)/stackwidget.cpp \
-	$(GUI_DIR)/splitter.cpp \
-	$(GUI_DIR)/canvas.cpp \
-	$(GUI_DIR)/contextmenu.cpp \
-	$(GUI_DIR)/toolbar.cpp \
-	$(GUI_DIR)/groupbox.cpp \
-	$(GUI_DIR)/dialog.cpp \
-	$(GUI_DIR)/link.cpp \
-	$(GUI_DIR)/toast.cpp \
-	$(GUI_DIR)/colorpicker.cpp \
-	$(GUI_DIR)/calendar.cpp \
-	$(GUI_DIR)/graph.cpp \
-	$(GUI_DIR)/badge.cpp \
-	$(GUI_DIR)/menuitem.cpp \
-	$(GUI_DIR)/toolbutton.cpp \
+	$(GUI_DIR)/src/context.cpp $(GUI_DIR)/src/event.cpp \
 	$(SHELL_DIR)/taskbar.cpp \
 	$(SHELL_DIR)/launcher.cpp \
 	$(SHELL_DIR)/notification_center.cpp \

@@ -27,7 +27,7 @@ static inline void* memcpy_impl(void* dest, const void* src, usize n) {
     return dest;
 }
 
-FileManager::FileManager() : gui::WindowWidget("File Manager", 100, 100, 500, 400) {
+FileManager::FileManager() : ui::WindowWidget("File Manager", 100, 100, 500, 400) {
     add_child(&m_file_list);
     m_file_list.set_position(110, 140);
     m_file_list.set_size(480, 350);
