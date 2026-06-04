@@ -9,8 +9,6 @@ public:
     Button(const char* label = nullptr);
     virtual ~Button();
 
-    void draw(acos::graphics::Renderer* renderer) override;
-    void handle_event(const acos::input::InputEvent& event) override;
     void update(u64 delta_ms) override;
 
     void set_on_click(void (*callback)(void*), void* receiver) {

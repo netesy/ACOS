@@ -86,12 +86,4 @@ Size Flex::layout(BoxConstraints constraints) {
     return self_size;
 }
 
-void Flex::draw(acos::graphics::Renderer* renderer) {
-    for (auto& child : m_children) {
-        if (child && child->is_visible()) {
-            child->draw(renderer);
-        }
-    }
-}
-
 } // namespace acos::gui

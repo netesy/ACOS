@@ -64,6 +64,32 @@ The entry point for all system events.
 - Uses the focused widget as the target for keyboard events.
 - Executes the Capture/Bubble routing logic.
 
+## Class Diagrams (Proposed - Phase 7)
+
+```cpp
+namespace acos::gui {
+
+template<typename T>
+class Observable {
+    T m_value;
+    Vector<void(*)(const T&)> m_listeners;
+public:
+    void set(const T& value);
+    const T& get() const;
+    void subscribe(void(*listener)(const T&));
+};
+
+template<typename T>
+class State : public Observable<T> {
+    Ref<Widget> m_owner;
+public:
+    State(Ref<Widget> owner, T initial_value);
+    void set(const T& value); // Also calls owner->set_layout_dirty()
+};
+
+}
+```
+
 ## Class Diagrams (Proposed - Phase 6)
 
 ```cpp
@@ -102,9 +128,12 @@ public:
 
 // Widget evolved
 class Widget {
+public:
     // ...
     virtual Ref<RenderObject> create_render_object() = 0;
-    virtual void update_render_object(Ref<RenderObject> render_object) = 0;
+    virtual void update_render_object(Ref<RenderObject> render_object);
+    virtual void on_event(Event& event);
+    virtual Size layout(BoxConstraints constraints);
 };
 
 }
@@ -241,6 +270,21 @@ Modifiers provide a declarative way to wrap or configure widgets.
 
 ### 3. Theme System
 The `Theme` provides semantic color and shape definitions. Widgets use these tokens to ensure visual consistency.
+
+## Phase 7: Reactive State
+
+### 1. Observable<T>
+A wrapper around a value that notifies listeners when it changes.
+- **Listeners**: Can be functions or widgets.
+- **Automatic Cleanup**: Listeners are removed when they or the observable are destroyed.
+
+### 2. State<T>
+The primary way to manage component-local state.
+- **Triggering Re-renders**: When a `State<T>` value is updated, it automatically marks the associated widget as dirty (Layout or Paint).
+- **Binding**: Widgets can bind their properties directly to state variables.
+
+### 3. Data Flow
+- **Unidirectional**: State changes trigger UI updates. UI events trigger state changes.
 
 ---
 

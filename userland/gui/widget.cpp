@@ -18,15 +18,6 @@ void Widget::handle_event(Event& event) {
     on_event(event);
 }
 
-void Widget::handle_event(const acos::input::InputEvent& event) {
-    // This is now the legacy/broadcast entry point.
-    // In a fully evolved framework, this might disappear or call the dispatcher.
-    for (auto& child : m_children) {
-        if (child && child->is_enabled()) {
-            child->handle_event(event);
-        }
-    }
-}
 
 void Widget::on_event(Event& event) {
     const auto& raw = event.raw;

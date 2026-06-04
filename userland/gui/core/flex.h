@@ -32,7 +32,6 @@ public:
           m_cross_axis_alignment(CrossAxisAlignment::Start) {}
 
     Size layout(BoxConstraints constraints) override;
-    void draw(acos::graphics::Renderer* renderer) override;
 
     Ref<RenderObject> create_render_object() override;
 

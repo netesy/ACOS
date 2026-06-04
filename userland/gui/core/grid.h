@@ -45,14 +45,6 @@ public:
         return self_size;
     }
 
-    void draw(acos::graphics::Renderer* renderer) override {
-        for (auto& child : m_children) {
-            if (child && child->is_visible()) {
-                child->draw(renderer);
-            }
-        }
-    }
-
     Ref<RenderObject> create_render_object() override;
 
     // Fluent API

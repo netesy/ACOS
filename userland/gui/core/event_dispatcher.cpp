@@ -19,6 +19,10 @@ void EventDispatcher::dispatch(const acos::input::InputEvent& raw, Ref<Widget> r
     if (target) {
         Event event(raw);
         event.target = target;
+        if (raw.type == acos::input::InputType::Mouse) {
+            event.mouse_x = (i32)((raw.code >> 16) & 0xFFFF);
+            event.mouse_y = (i32)(raw.code & 0xFFFF);
+        }
         route_event(event, target);
     }
 }

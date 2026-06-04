@@ -41,8 +41,6 @@ public:
     Widget();
     virtual ~Widget();
 
-    virtual void draw(acos::graphics::Renderer* renderer) = 0;
-    virtual void handle_event(const acos::input::InputEvent& event);
     virtual void handle_event(Event& event);
     virtual void on_event(Event& event);
     virtual Size layout(BoxConstraints constraints);

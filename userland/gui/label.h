@@ -13,8 +13,6 @@ class Label : public Widget {
 public:
     Label(const char* text = nullptr);
     virtual ~Label();
-
-    void draw(acos::graphics::Renderer* renderer) override;
     
     void set_text(const char* text) { m_text = text; }
     void set_text_color(u32 color) { m_text_color = color; }

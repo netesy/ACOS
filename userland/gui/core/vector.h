@@ -8,7 +8,12 @@ template <typename T>
 class Vector {
 public:
     Vector() : m_data(nullptr), m_size(0), m_capacity(0) {}
-    ~Vector() { delete[] m_data; }
+    ~Vector() {
+        for (u32 i = 0; i < m_size; i++) {
+            m_data[i].~T();
+        }
+        operator delete[](m_data);
+    }
 
     Vector(const Vector& other) : m_data(nullptr), m_size(0), m_capacity(0) {
         reserve(other.m_capacity);
@@ -43,19 +48,22 @@ public:
 
     void reserve(u32 new_capacity) {
         if (new_capacity <= m_capacity) return;
-        T* new_data = new T[new_capacity];
+        T* new_data = static_cast<T*>(operator new[](new_capacity * sizeof(T)));
         for (u32 i = 0; i < m_size; i++) {
-            new_data[i] = m_data[i];
+            new (&new_data[i]) T(m_data[i]);
+            m_data[i].~T();
         }
-        delete[] m_data;
+        operator delete[](m_data);
         m_data = new_data;
         m_capacity = new_capacity;
     }
 
     void remove_at(u32 index) {
         if (index >= m_size) return;
+        m_data[index].~T();
         for (u32 i = index; i < m_size - 1; i++) {
-            m_data[i] = m_data[i + 1];
+            new (&m_data[i]) T(m_data[i + 1]);
+            m_data[i + 1].~T();
         }
         m_size--;
     }

@@ -18,7 +18,10 @@ struct Event {
     Ref<Widget> target;
     bool handled;
 
-    Event(const acos::input::InputEvent& r) : raw(r), phase(EventPhase::Target), handled(false) {}
+    i32 mouse_x, mouse_y;
+
+    Event(const acos::input::InputEvent& r)
+        : raw(r), phase(EventPhase::Target), handled(false), mouse_x(0), mouse_y(0) {}
 
     void stop_propagation() { handled = true; }
 };

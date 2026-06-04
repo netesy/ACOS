@@ -17,10 +17,9 @@ UIContext& UIContext::get() {
 }
 
 void UIContext::paint(acos::graphics::Renderer* renderer) {
-    // In a real framework, we'd have a root RenderObject.
-    // For now, we'll traverse the Widget tree and call draw,
-    // as Phase 5 is still in transition.
-    // Future: root_render_object->paint(renderer);
+    if (m_root_render_object) {
+        m_root_render_object->paint(renderer);
+    }
 }
 
 } // namespace acos::gui
