@@ -1,6 +1,7 @@
 #include "widget.h"
 #include "theme.h"
 #include "core/context.h"
+#include "core/event_dispatcher.h"
 
 namespace acos::gui {
 
@@ -10,18 +11,38 @@ Widget::Widget() : m_rect{0, 0, 0, 0}, m_parent(),
 }
 Widget::~Widget() {}
 
+void Widget::handle_event(Event& event) {
+    // Phase-specific logic can go here.
+    // For now, we delegate to the local event handler.
+    // We do NOT call handle_event(event.raw) because that would trigger legacy recursion.
+    on_event(event);
+}
+
 void Widget::handle_event(const acos::input::InputEvent& event) {
-    if (event.type == acos::input::InputType::Keyboard && event.code == 9) { // Tab key
-        bool found_current = false;
+    // This is now the legacy/broadcast entry point.
+    // In a fully evolved framework, this might disappear or call the dispatcher.
+    for (auto& child : m_children) {
+        if (child && child->is_enabled()) {
+            child->handle_event(event);
+        }
+    }
+}
+
+void Widget::on_event(Event& event) {
+    const auto& raw = event.raw;
+    if (raw.type == acos::input::InputType::Keyboard && raw.code == 9 && event.phase == EventPhase::Target) { // Tab key
+        // Focus navigation logic should ideally be in FocusManager,
+        // but for now we'll move it to use FocusManager.
+        Ref<Widget> next_focus;
         u32 count = m_children.size();
+        bool found_current = false;
         for (u32 i = 0; i < count; i++) {
             if (m_children[i] && m_children[i]->is_focused()) {
-                m_children[i]->set_focused(false);
                 found_current = true;
                 for (u32 j = (i + 1) % count; j != i; j = (j + 1) % count) {
-                    if (m_children[j] && (m_children[j]->is_focusable())) {
-                        m_children[j]->set_focused(true);
-                        return;
+                    if (m_children[j] && m_children[j]->is_focusable()) {
+                        next_focus = m_children[j];
+                        break;
                     }
                 }
                 break;
@@ -29,17 +50,16 @@ void Widget::handle_event(const acos::input::InputEvent& event) {
         }
         if (!found_current && count > 0) {
             for (u32 i = 0; i < count; i++) {
-                if (m_children[i] && (m_children[i]->is_focusable())) {
-                    m_children[i]->set_focused(true);
-                    return;
+                if (m_children[i] && m_children[i]->is_focusable()) {
+                    next_focus = m_children[i];
+                    break;
                 }
             }
         }
-    }
 
-    for (auto& child : m_children) {
-        if (child && child->is_enabled()) {
-            child->handle_event(event);
+        if (next_focus) {
+            UIContext::get().focus_manager().set_focus(next_focus);
+            event.stop_propagation();
         }
     }
 }

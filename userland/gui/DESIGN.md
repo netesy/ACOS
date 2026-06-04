@@ -38,6 +38,78 @@ To optimize rendering and layout, a dirty tracking system will be introduced.
 - **Propagation**: When a widget's state changes, it marks itself as dirty. Certain changes (like size) may also mark the parent as layout-dirty.
 - **UIContext Integration**: The `UIContext` will maintain a list of dirty widgets to process during the next frame.
 
+## Phase 3: Event Dispatching and Focus Management
+
+### 1. Hit Testing
+A recursive process to find the deepest widget in the tree that contains a given point.
+- `Widget::hit_test(x, y)`: Returns the deepest child at the coordinates, or itself if it contains the point but none of its children do.
+
+### 2. Event Routing (Capture & Bubble)
+Events follow a standard routing path:
+1. **Capture Phase**: Event travels from the root down to the target widget.
+2. **At Target**: Event is processed by the target widget.
+3. **Bubble Phase**: Event travels from the target widget back up to the root.
+
+Widgets can intercept events at any phase and stop propagation.
+
+### 3. Focus Manager
+Centralizes focus handling across the UI.
+- Maintains a reference to the currently focused widget.
+- Handles focus transitions (e.g., Tab navigation).
+- Dispatches focus-in and focus-out events.
+
+### 4. Event Dispatcher
+The entry point for all system events.
+- Performs hit testing for mouse events to find the target.
+- Uses the focused widget as the target for keyboard events.
+- Executes the Capture/Bubble routing logic.
+
+## Class Diagrams (Proposed - Phase 3)
+
+```cpp
+namespace acos::gui {
+
+enum class EventPhase {
+    Capture,
+    Target,
+    Bubble
+};
+
+struct Event {
+    acos::input::InputEvent raw;
+    EventPhase phase;
+    Ref<Widget> target;
+    bool handled;
+
+    void stop_propagation() { handled = true; }
+};
+
+class FocusManager {
+    Ref<Widget> m_focused;
+public:
+    void set_focus(Ref<Widget> widget);
+    Ref<Widget> focused() const;
+};
+
+class EventDispatcher {
+public:
+    void dispatch(const acos::input::InputEvent& raw, Ref<Widget> root);
+private:
+    Ref<Widget> hit_test(Ref<Widget> root, i32 x, i32 y);
+};
+
+}
+```
+
+## Ownership Diagram (Phase 3)
+
+```
+UIContext
+ ├── Region (Owns Widgets)
+ ├── FocusManager (Holds Ref<Widget>)
+ └── EventDispatcher
+```
+
 ## Performance Implications
 - **Memory Locality**: Widgets in the same `Region` are likely to be contiguous in memory, improving cache hits during tree traversals (layout, rendering).
 - **Zero Fragmentation**: Arena-based allocation avoids the fragmentation issues of a general-purpose heap.

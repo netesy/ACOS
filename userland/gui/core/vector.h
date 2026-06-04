@@ -10,6 +10,29 @@ public:
     Vector() : m_data(nullptr), m_size(0), m_capacity(0) {}
     ~Vector() { delete[] m_data; }
 
+    Vector(const Vector& other) : m_data(nullptr), m_size(0), m_capacity(0) {
+        reserve(other.m_capacity);
+        for (u32 i = 0; i < other.m_size; i++) {
+            m_data[i] = other.m_data[i];
+        }
+        m_size = other.m_size;
+    }
+
+    Vector& operator=(const Vector& other) {
+        if (this != &other) {
+            delete[] m_data;
+            m_data = nullptr;
+            m_size = 0;
+            m_capacity = 0;
+            reserve(other.m_capacity);
+            for (u32 i = 0; i < other.m_size; i++) {
+                m_data[i] = other.m_data[i];
+            }
+            m_size = other.m_size;
+        }
+        return *this;
+    }
+
     void push_back(const T& value) {
         if (m_size >= m_capacity) {
             u32 new_capacity = m_capacity == 0 ? 8 : m_capacity * 2;
@@ -38,6 +61,7 @@ public:
     }
 
     u32 size() const { return m_size; }
+    void clear() { m_size = 0; }
     T& operator[](u32 index) { return m_data[index]; }
     const T& operator[](u32 index) const { return m_data[index]; }
 

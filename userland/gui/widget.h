@@ -7,6 +7,8 @@
 
 namespace acos::gui {
 
+struct Event;
+
 struct Rect {
     i32 x, y, w, h;
     bool contains(i32 px, i32 py) const {
@@ -38,6 +40,8 @@ public:
 
     virtual void draw(acos::graphics::Renderer* renderer) = 0;
     virtual void handle_event(const acos::input::InputEvent& event);
+    virtual void handle_event(Event& event);
+    virtual void on_event(Event& event);
     virtual void update(u64 delta_ms);
 
     void set_position(i32 x, i32 y) { m_rect.x = x; m_rect.y = y; }
@@ -76,7 +80,7 @@ public:
     void set_elevation(u32 elevation) { m_elevation = elevation; }
     u32 elevation() const { return m_elevation; }
 
-    bool hit_test(i32 x, i32 y) const { return m_rect.contains(x, y); }
+    virtual bool hit_test(i32 x, i32 y) const { return m_rect.contains(x, y); }
 
 protected:
     Rect m_rect;

@@ -47,15 +47,25 @@ public:
     template <typename T>
     Ref<T> get_ref(T* ptr) {
         uptr addr = reinterpret_cast<uptr>(ptr);
-        for (u32 i = 0; i < m_capacity; i++) {
-            uptr slot_addr = reinterpret_cast<uptr>(m_slots[i].storage);
-            if (addr == slot_addr) {
-                if (m_slots[i].occupied) {
-                    return Ref<T>(this, i, m_slots[i].generation);
-                }
-                break;
-            }
+        uptr base_addr = reinterpret_cast<uptr>(m_slots);
+
+        // Basic range check
+        if (addr < base_addr || addr >= base_addr + (m_capacity * sizeof(Slot))) {
+            return Ref<T>();
         }
+
+        // Calculate index using pointer arithmetic
+        u32 index = (addr - base_addr) / sizeof(Slot);
+
+        // Verify the pointer actually points to the storage start
+        if (addr != reinterpret_cast<uptr>(m_slots[index].storage)) {
+            return Ref<T>();
+        }
+
+        if (m_slots[index].occupied) {
+            return Ref<T>(this, index, m_slots[index].generation);
+        }
+
         return Ref<T>();
     }
 
