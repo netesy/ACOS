@@ -64,6 +64,28 @@ The entry point for all system events.
 - Uses the focused widget as the target for keyboard events.
 - Executes the Capture/Bubble routing logic.
 
+## Class Diagrams (Proposed - Phase 6)
+
+```cpp
+namespace acos::gui {
+
+struct Style {
+    u32 background_color;
+    u32 border_color;
+    u32 border_width;
+    u32 border_radius;
+    u32 padding;
+    u32 margin;
+};
+
+// In Widget:
+// Widget& background(u32 color);
+// Widget& radius(u32 r);
+// Ref<Widget> padding(u32 p); // Example of a wrapper modifier
+
+}
+```
+
 ## Class Diagrams (Proposed - Phase 5)
 
 ```cpp
@@ -204,6 +226,21 @@ The `RenderObject` is the heavy-weight object responsible for layout and paintin
 - **Memory Locality**: Widgets in the same `Region` are likely to be contiguous in memory, improving cache hits during tree traversals (layout, rendering).
 - **Zero Fragmentation**: Arena-based allocation avoids the fragmentation issues of a general-purpose heap.
 - **Fast Handle Resolution**: Resolving a `Ref<T>` to a pointer is nearly as fast as a raw pointer dereference.
+
+## Phase 6: Styling, Themes, and Fluent Modifiers
+
+### 1. Styling
+Styles are separated from the widget's structural configuration.
+- **Style**: A collection of visual properties (Padding, Border, Background, Shadow).
+- **Default Theme**: Global styles that widgets fall back to if no local style is provided.
+
+### 2. Fluent Modifiers
+Modifiers provide a declarative way to wrap or configure widgets.
+- **In-place Modifiers**: Update the widget's internal style (e.g., `.color()`).
+- **Wrapper Modifiers**: Create a new wrapping widget (e.g., `.padding()` wraps the widget in a `Padding` widget).
+
+### 3. Theme System
+The `Theme` provides semantic color and shape definitions. Widgets use these tokens to ensure visual consistency.
 
 ---
 

@@ -5,6 +5,7 @@
 #include "core/ref.h"
 #include "core/vector.h"
 #include "core/layout_types.h"
+#include "core/style.h"
 
 namespace acos::gui {
 
@@ -63,6 +64,12 @@ public:
 
     Ref<Widget> self();
 
+    // Fluent Modifiers
+    Widget& background(u32 color);
+    Widget& radius(u32 r);
+    Widget& padding(u32 p);
+    Widget& elevation(u32 e);
+
     bool is_visible() const { return m_flags & (u32)WidgetFlags::Visible; }
     void set_visible(bool v);
     
@@ -84,8 +91,8 @@ public:
     WidgetState state() const { return m_state; }
     void set_state(WidgetState s) { m_state = s; }
 
-    void set_elevation(u32 elevation) { m_elevation = elevation; }
-    u32 elevation() const { return m_elevation; }
+    void set_elevation(u32 elevation) { m_style.elevation = elevation; }
+    u32 elevation() const { return m_style.elevation; }
 
     virtual bool hit_test(i32 x, i32 y) const { return m_rect.contains(x, y); }
 
@@ -95,7 +102,7 @@ protected:
     Vector<Ref<Widget>> m_children;
     u32 m_flags;
     WidgetState m_state;
-    u32 m_elevation;
+    Style m_style;
 
     void draw_shadow(acos::graphics::Renderer* renderer);
 };

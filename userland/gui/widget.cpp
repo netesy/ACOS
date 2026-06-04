@@ -7,7 +7,7 @@ namespace acos::gui {
 
 Widget::Widget() : m_rect{0, 0, 0, 0}, m_parent(),
                    m_flags((u32)WidgetFlags::Visible | (u32)WidgetFlags::Enabled | (u32)WidgetFlags::LayoutDirty | (u32)WidgetFlags::PaintDirty),
-                   m_state(WidgetState::Normal), m_elevation(0) {
+                   m_state(WidgetState::Normal), m_style() {
 }
 Widget::~Widget() {}
 
@@ -73,7 +73,10 @@ void Widget::add_child(Ref<Widget> child) {
 }
 
 void Widget::update_render_object(Ref<RenderObject> render_object) {
-    (void)render_object;
+    if (render_object) {
+        render_object->set_rect(m_rect);
+        render_object->set_style(m_style);
+    }
 }
 
 Size Widget::layout(BoxConstraints constraints) {
@@ -93,6 +96,30 @@ Size Widget::layout(BoxConstraints constraints) {
 
 Ref<Widget> Widget::self() {
     return UIContext::get().region().get_ref(this);
+}
+
+Widget& Widget::background(u32 color) {
+    m_style.background_color = color;
+    set_paint_dirty();
+    return *this;
+}
+
+Widget& Widget::radius(u32 r) {
+    m_style.border_radius = r;
+    set_paint_dirty();
+    return *this;
+}
+
+Widget& Widget::padding(u32 p) {
+    m_style.padding_left = m_style.padding_right = m_style.padding_top = m_style.padding_bottom = p;
+    set_layout_dirty();
+    return *this;
+}
+
+Widget& Widget::elevation(u32 e) {
+    m_style.elevation = e;
+    set_paint_dirty();
+    return *this;
 }
 
 void Widget::remove_child(Ref<Widget> child) {
@@ -138,10 +165,10 @@ void Widget::set_paint_dirty() {
 }
 
 void Widget::draw_shadow(acos::graphics::Renderer* renderer) {
-    if (m_elevation > 0 && renderer) {
+    if (m_style.elevation > 0 && renderer) {
         // Material design inspired shadows: depth increases offset and blur (simulated by larger area/lower alpha)
-        u32 offset = m_elevation;
-        u8 alpha = (u8)(g_current_theme.shadow_alpha / m_elevation);
+        u32 offset = m_style.elevation;
+        u8 alpha = (u8)(g_current_theme.shadow_alpha / m_style.elevation);
         renderer->draw_shadow(m_rect.x, m_rect.y, m_rect.w, m_rect.h, offset, alpha);
     }
 }

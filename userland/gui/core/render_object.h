@@ -3,13 +3,13 @@
 #include "ref.h"
 #include "vector.h"
 #include "layout_types.h"
-#include "../widget.h"
+#include "style.h"
 
 namespace acos::gui {
 
 class RenderObject {
 public:
-    RenderObject() : m_rect{0, 0, 0, 0}, m_parent() {}
+    RenderObject() : m_rect{0, 0, 0, 0}, m_parent(), m_style() {}
     virtual ~RenderObject() {}
 
     virtual void paint(acos::graphics::Renderer* renderer) = 0;
@@ -28,10 +28,14 @@ public:
 
     Ref<RenderObject> self();
 
+    void set_style(const Style& style) { m_style = style; }
+    Style style() const { return m_style; }
+
 protected:
     Rect m_rect;
     Ref<RenderObject> m_parent;
     Vector<Ref<RenderObject>> m_children;
+    Style m_style;
 };
 
 } // namespace acos::gui

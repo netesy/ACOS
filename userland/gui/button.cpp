@@ -18,7 +18,7 @@ Button::Button(const char* label)
     m_rect.h = 32;
     m_flags = (u32)WidgetFlags::Visible | (u32)WidgetFlags::Enabled | (u32)WidgetFlags::Clickable;
     m_state = WidgetState::Normal;
-    m_elevation = 2;
+    m_style.elevation = 2;
     
     m_bg_color = g_current_theme.surface;
     m_text_color = g_current_theme.text;
@@ -77,7 +77,7 @@ void Button::update(u64 delta_ms) {
         m_press_time += delta_ms;
         if (m_press_time > 100) {
             m_state = m_mouse_over ? WidgetState::Hovered : WidgetState::Normal;
-            m_elevation = m_mouse_over ? 4 : 2;
+            m_style.elevation = m_mouse_over ? 4 : 2;
         }
     }
 }
@@ -91,7 +91,7 @@ void Button::on_event(Event& event) {
         if (event.phase == EventPhase::Target) {
             if (button_pressed) {
                 m_state = WidgetState::Pressed;
-                m_elevation = 1;
+                m_style.elevation = 1;
                 m_press_time = 0;
                 m_on_click_signal.emit();
                 event.stop_propagation();
@@ -106,10 +106,10 @@ void Button::on_event(Event& event) {
         
         if (m_mouse_over && !was_over) {
             m_state = WidgetState::Hovered;
-            m_elevation = 4;
+            m_style.elevation = 4;
         } else if (!m_mouse_over && was_over) {
             m_state = WidgetState::Normal;
-            m_elevation = 2;
+            m_style.elevation = 2;
         }
     }
 }
