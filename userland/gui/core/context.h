@@ -16,6 +16,8 @@ public:
     FocusManager& focus_manager() { return m_focus_manager; }
     EventDispatcher& event_dispatcher() { return m_event_dispatcher; }
 
+    void paint(acos::graphics::Renderer* renderer);
+
 private:
     Region m_main_region;
     FocusManager m_focus_manager;

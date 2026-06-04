@@ -1,5 +1,6 @@
 #include "button.h"
 #include "theme.h"
+#include "core/event_dispatcher.h"
 #include <kernel/graphics/renderer.h>
 #include <kernel/graphics/font.h>
 
@@ -62,13 +63,44 @@ void Button::draw(acos::graphics::Renderer* renderer) {
 }
 
 void Button::handle_event(const acos::input::InputEvent& event) {
+    // Legacy support: call on_event with a synthetic Event if needed,
+    // but better to just let the dispatcher handle it now.
+    // For now, we do nothing to prevent redundant handling if dispatcher is active.
+}
+
+Ref<RenderObject> Button::create_render_object() {
+    return UIContext::get().region().alloc<RenderButton>();
+}
+
+void Button::update(u64 delta_ms) {
+    if (m_state == WidgetState::Pressed) {
+        m_press_time += delta_ms;
+        if (m_press_time > 100) {
+            m_state = m_mouse_over ? WidgetState::Hovered : WidgetState::Normal;
+            m_elevation = m_mouse_over ? 4 : 2;
+        }
+    }
+}
+
+void Button::on_event(Event& event) {
     if (!(m_flags & (u32)WidgetFlags::Enabled)) return;
-    
-    if (event.type == acos::input::InputType::Mouse) {
-        i32 mouse_x = (i32)((event.code >> 16) & 0xFFFF);
-        i32 mouse_y = (i32)(event.code & 0xFFFF);
-        bool button_pressed = (event.value & 0x01) != 0;
+
+    if (event.raw.type == acos::input::InputType::Mouse) {
+        bool button_pressed = (event.raw.value & 0x01) != 0;
         
+        if (event.phase == EventPhase::Target) {
+            if (button_pressed) {
+                m_state = WidgetState::Pressed;
+                m_elevation = 1;
+                m_press_time = 0;
+                m_on_click_signal.emit();
+                event.stop_propagation();
+            }
+        }
+
+        // Handle hovering logic
+        i32 mouse_x = event.raw.x;
+        i32 mouse_y = event.raw.y;
         bool was_over = m_mouse_over;
         m_mouse_over = hit_test(mouse_x, mouse_y);
         
@@ -78,26 +110,6 @@ void Button::handle_event(const acos::input::InputEvent& event) {
         } else if (!m_mouse_over && was_over) {
             m_state = WidgetState::Normal;
             m_elevation = 2;
-        }
-        
-        if (m_mouse_over && button_pressed) {
-            m_state = WidgetState::Pressed;
-            m_elevation = 1;
-            m_press_time = 0;
-            m_on_click_signal.emit();
-        } else if (!button_pressed && m_state == WidgetState::Pressed) {
-            m_state = m_mouse_over ? WidgetState::Hovered : WidgetState::Normal;
-            m_elevation = m_mouse_over ? 4 : 2;
-        }
-    }
-}
-
-void Button::update(u64 delta_ms) {
-    if (m_state == WidgetState::Pressed) {
-        m_press_time += delta_ms;
-        if (m_press_time > 100) {
-            m_state = m_mouse_over ? WidgetState::Hovered : WidgetState::Normal;
-            m_elevation = m_mouse_over ? 4 : 2;
         }
     }
 }
