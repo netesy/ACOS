@@ -10,7 +10,9 @@ void EventDispatcher::dispatch(const acos::input::InputEvent& raw, Ref<Widget> r
     Ref<Widget> target;
 
     if (raw.type == acos::input::InputType::Mouse) {
-        target = perform_hit_test(root, raw.x, raw.y);
+        i32 mx = (i32)((raw.code >> 16) & 0xFFFF);
+        i32 my = (i32)(raw.code & 0xFFFF);
+        target = perform_hit_test(root, mx, my);
     } else if (raw.type == acos::input::InputType::Keyboard) {
         target = UIContext::get().focus_manager().focused();
         if (!target) target = root;

@@ -4,6 +4,7 @@
 #include "vector.h"
 #include "layout_types.h"
 #include "style.h"
+#include "compositor.h"
 
 namespace acos::gui {
 
@@ -25,11 +26,15 @@ public:
 
     void set_parent(Ref<RenderObject> parent) { m_parent = parent; }
     Ref<RenderObject> parent() const { return m_parent; }
+    const Vector<Ref<RenderObject>>& children() const { return m_children; }
+    void clear_children() { m_children.clear(); }
 
     Ref<RenderObject> self();
 
     void set_style(const Style& style) { m_style = style; }
     Style style() const { return m_style; }
+
+    virtual CompositorLayer* layer() { return nullptr; }
 
 protected:
     Rect m_rect;

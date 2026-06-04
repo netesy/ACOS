@@ -25,13 +25,13 @@ public:
 
     Vector& operator=(const Vector& other) {
         if (this != &other) {
-            delete[] m_data;
+            this->~Vector();
             m_data = nullptr;
             m_size = 0;
             m_capacity = 0;
             reserve(other.m_capacity);
             for (u32 i = 0; i < other.m_size; i++) {
-                m_data[i] = other.m_data[i];
+                new (&m_data[i]) T(other.m_data[i]);
             }
             m_size = other.m_size;
         }
@@ -43,7 +43,7 @@ public:
             u32 new_capacity = m_capacity == 0 ? 8 : m_capacity * 2;
             reserve(new_capacity);
         }
-        m_data[m_size++] = value;
+        new (&m_data[m_size++]) T(value);
     }
 
     void reserve(u32 new_capacity) {

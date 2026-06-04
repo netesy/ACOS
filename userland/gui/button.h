@@ -20,9 +20,10 @@ public:
 
     // Fluent API
     Button& label(const char* l) { set_label(l); return *this; }
-    Button& on_click(void (*callback)(void*), void* receiver) { set_on_click(callback, receiver); return *this; }
+    Button& on_click(void (*callback)(void*)) { m_on_click = callback; return *this; }
 
     Ref<RenderObject> create_render_object() override;
+    void update_render_object(Ref<RenderObject> render_object) override;
 
 private:
     const char* m_label;
@@ -34,7 +35,7 @@ private:
     bool m_mouse_over;
     u64 m_press_time;
 
-    Signal<> m_on_click_signal;
+    void (*m_on_click)(void*) = nullptr;
 };
 
 } // namespace acos::gui

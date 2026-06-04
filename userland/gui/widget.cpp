@@ -95,6 +95,12 @@ Widget& Widget::background(u32 color) {
     return *this;
 }
 
+Widget& Widget::opacity(float o) {
+    m_style.opacity = o;
+    set_paint_dirty();
+    return *this;
+}
+
 Widget& Widget::radius(u32 r) {
     m_style.border_radius = r;
     set_paint_dirty();

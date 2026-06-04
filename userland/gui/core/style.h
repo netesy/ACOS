@@ -12,6 +12,7 @@ struct Style {
     u32 padding_left, padding_right, padding_top, padding_bottom;
     u32 margin_left, margin_right, margin_top, margin_bottom;
     u32 elevation;
+    float opacity;
 
     Style();
 };

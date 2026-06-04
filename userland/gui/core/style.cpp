@@ -12,6 +12,7 @@ Style::Style() {
     padding_left = padding_right = padding_top = padding_bottom = 0;
     margin_left = margin_right = margin_top = margin_bottom = 0;
     elevation = 0;
+    opacity = 1.0f;
 }
 
 } // namespace acos::gui

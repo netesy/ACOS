@@ -9,10 +9,10 @@ enum class TextAlignment {
     Right
 };
 
-class Label : public Widget {
+class Text : public Widget {
 public:
-    Label(const char* text = nullptr);
-    virtual ~Label();
+    Text(const char* text = nullptr);
+    virtual ~Text();
     
     void set_text(const char* text) { m_text = text; }
     void set_text_color(u32 color) { m_text_color = color; }
@@ -20,11 +20,12 @@ public:
     void set_font_size(u32 size) { m_font_size = size; }
 
     // Fluent API
-    Label& text(const char* t) { set_text(t); return *this; }
-    Label& color(u32 c) { set_text_color(c); return *this; }
-    Label& font_size(u32 s) { set_font_size(s); return *this; }
+    Text& text(const char* t) { set_text(t); return *this; }
+    Text& color(u32 c) { set_text_color(c); return *this; }
+    Text& font_size(u32 s) { set_font_size(s); return *this; }
 
     Ref<RenderObject> create_render_object() override;
+    void update_render_object(Ref<RenderObject> render_object) override;
 
 protected:
     const char* m_text;

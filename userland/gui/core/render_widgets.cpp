@@ -1,5 +1,5 @@
 #include "../button.h"
-#include "../label.h"
+#include "../text.h"
 #include "render_object.h"
 #include "context.h"
 #include "stack.h"
@@ -9,6 +9,8 @@ namespace acos::gui {
 
 class RenderButton : public RenderObject {
 public:
+    RenderButton() : m_label(nullptr), m_pressed(false), m_hovered(false) {}
+
     void paint(acos::graphics::Renderer* renderer) override {
         if (!renderer) return;
 
@@ -25,24 +27,38 @@ public:
     }
     void perform_layout(BoxConstraints constraints) override {}
     void set_label(const char* label) { m_label = label; }
+    void set_pressed(bool pressed) { m_pressed = pressed; }
+    void set_hovered(bool hovered) { m_hovered = hovered; }
 private:
+    bool m_pressed = false;
+    bool m_hovered = false;
     const char* m_label = nullptr;
 };
 
-class RenderLabel : public RenderObject {
+class RenderText : public RenderObject {
 public:
+    RenderText() : m_text(nullptr) {}
+
     void paint(acos::graphics::Renderer* renderer) override {
-        // Drawing logic will eventually move here from Label::draw
+        if (!renderer || !m_text) return;
+        renderer->draw_text(m_text, m_rect.x, m_rect.y, m_style.foreground_color);
     }
     void perform_layout(BoxConstraints constraints) override {}
+    void set_text(const char* text) { m_text = text; }
+private:
+    const char* m_text = nullptr;
 };
 
 Ref<RenderObject> Button::create_render_object() {
-    return UIContext::get().region().alloc<RenderButton>();
+    Ref<RenderObject> ro = UIContext::get().region().alloc<RenderButton>();
+    update_render_object(ro);
+    return ro;
 }
 
-Ref<RenderObject> Label::create_render_object() {
-    return UIContext::get().region().alloc<RenderLabel>();
+Ref<RenderObject> Text::create_render_object() {
+    Ref<RenderObject> ro = UIContext::get().region().alloc<RenderText>();
+    update_render_object(ro);
+    return ro;
 }
 
 class RenderStack : public RenderObject {

@@ -3,6 +3,7 @@
 #include "focus_manager.h"
 #include "event_dispatcher.h"
 #include "render_object.h"
+#include "animation.h"
 
 namespace acos::gui {
 
@@ -16,14 +17,20 @@ public:
     Region& region() { return m_main_region; }
     FocusManager& focus_manager() { return m_focus_manager; }
     EventDispatcher& event_dispatcher() { return m_event_dispatcher; }
+    AnimationController& animation_controller() { return m_animation_controller; }
 
     void paint(acos::graphics::Renderer* renderer);
     void set_root_render_object(Ref<RenderObject> root) { m_root_render_object = root; }
+    void set_root(Ref<Widget> root) { m_root = root; }
 
 private:
+    void sync_render_tree(Ref<Widget> widget, Ref<RenderObject>& render_object);
+
     Region m_main_region;
     FocusManager m_focus_manager;
     EventDispatcher m_event_dispatcher;
+    AnimationController m_animation_controller;
+    Ref<Widget> m_root;
     Ref<RenderObject> m_root_render_object;
     static UIContext* s_instance;
 };

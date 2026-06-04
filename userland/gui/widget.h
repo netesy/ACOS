@@ -9,6 +9,8 @@
 
 namespace acos::gui {
 
+using acos::Vector;
+
 struct Event;
 class RenderObject;
 
@@ -67,6 +69,7 @@ public:
     Widget& radius(u32 r);
     Widget& padding(u32 p);
     Widget& elevation(u32 e);
+    Widget& opacity(float o);
 
     bool is_visible() const { return m_flags & (u32)WidgetFlags::Visible; }
     void set_visible(bool v);

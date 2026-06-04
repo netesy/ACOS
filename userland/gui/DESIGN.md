@@ -64,6 +64,29 @@ The entry point for all system events.
 - Uses the focused widget as the target for keyboard events.
 - Executes the Capture/Bubble routing logic.
 
+## Class Diagrams (Proposed - Phase 8)
+
+```cpp
+namespace acos::gui {
+
+class AnimationController {
+    Vector<Ref<Animation>> m_active_animations;
+public:
+    void tick(u64 delta_ms);
+    void add(Ref<Animation> animation);
+};
+
+class Animation : public Observable<float> {
+    u64 m_duration;
+    u64 m_elapsed;
+public:
+    virtual void tick(u64 delta_ms);
+    bool is_running() const;
+};
+
+}
+```
+
 ## Class Diagrams (Proposed - Phase 7)
 
 ```cpp
@@ -285,6 +308,49 @@ The primary way to manage component-local state.
 
 ### 3. Data Flow
 - **Unidirectional**: State changes trigger UI updates. UI events trigger state changes.
+
+## Phase 8: Animation System
+
+### 1. Animation Controller
+A centralized manager for all active animations in the `UIContext`.
+- **Ticking**: Advances all animations by the frame delta time.
+- **Cleanup**: Removes animations once they complete.
+
+### 2. Animated Properties
+Animations operate on `State<T>` or directly on `RenderObject` properties.
+- **Interpolators**: Logic for smoothly transitioning between values (Linear, Ease-In, Ease-Out, etc.).
+
+### 3. Integration with Render Tree
+Animations trigger `PaintDirty` or `LayoutDirty` flags on each tick to ensure smooth visual updates.
+
+## Phase 9: Window Manager Integration
+
+### 1. OS Window Abstraction
+The `UIContext` integrates with the system window manager to create and manage native windows.
+- **Surface Binding**: Each `UIContext` is bound to a native window surface (framebuffer).
+- **Event Translation**: OS-level events (WinMsg, XEvent, etc.) are translated into `acos::input::InputEvent` and dispatched.
+
+### 2. Lifecyle Synchronization
+When the OS window is resized, the `UIContext` updates its constraints and triggers a re-layout. When the window is closed, the `UIContext` and its `Region` are destroyed.
+
+### 3. Desktop Shell Integration
+Support for window decorations, title bars, and system-level focus management.
+
+## Phase 10: Compositor Integration
+
+### 1. Layers and Surfaces
+To achieve desktop-scale performance, the `Render Tree` is divided into independently rendered layers.
+- **CompositorLayer**: Represents a hardware-backed surface (GPU texture or shared memory buffer).
+- **Surface**: The abstraction used by `RenderObject` to issue drawing commands.
+
+### 2. High-Performance Compositing
+Instead of re-rendering the entire window on every frame, the compositor only re-composites dirty layers.
+- **Opacity & Transforms**: Handled efficiently by the compositor during the composition pass.
+- **Zero-Copy**: Layers are shared between the application and the compositor process via shared memory regions.
+
+### 3. Separation of Concerns
+- **Application**: Renders `RenderObjects` into `Surfaces`.
+- **Compositor**: Composes multiple `Surfaces` into the final display output.
 
 ---
 

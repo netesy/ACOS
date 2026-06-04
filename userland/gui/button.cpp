@@ -35,6 +35,12 @@ Ref<RenderObject> Button::create_render_object() {
 
 void Button::update_render_object(Ref<RenderObject> render_object) {
     Widget::update_render_object(render_object);
+    if (render_object) {
+        RenderButton* rb = static_cast<RenderButton*>(render_object.operator->());
+        rb->set_label(m_label);
+        rb->set_pressed(m_state == WidgetState::Pressed);
+        rb->set_hovered(m_state == WidgetState::Hovered);
+    }
 }
 
 void Button::update(u64 delta_ms) {
@@ -52,13 +58,13 @@ void Button::on_event(Event& event) {
 
     if (event.raw.type == acos::input::InputType::Mouse) {
         bool button_pressed = (event.raw.value & 0x01) != 0;
-        
+
         if (event.phase == EventPhase::Target) {
             if (button_pressed) {
                 m_state = WidgetState::Pressed;
                 m_style.elevation = 1;
                 m_press_time = 0;
-                m_on_click_signal.emit();
+                if (m_on_click) m_on_click(nullptr);
                 event.stop_propagation();
             }
         }
