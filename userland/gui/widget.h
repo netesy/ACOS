@@ -2,6 +2,8 @@
 #include <acos/types.h>
 #include <kernel/input/input_device.h>
 #include <kernel/graphics/renderer.h>
+#include "core/ref.h"
+#include "core/vector.h"
 
 namespace acos::gui {
 
@@ -21,10 +23,12 @@ enum class WidgetState {
 };
 
 enum class WidgetFlags {
-    Visible = 1,
-    Enabled = 2,
-    Focusable = 4,
-    Clickable = 8
+    Visible = 1 << 0,
+    Enabled = 1 << 1,
+    Focusable = 1 << 2,
+    Clickable = 1 << 3,
+    LayoutDirty = 1 << 4,
+    PaintDirty = 1 << 5
 };
 
 class Widget {
@@ -41,10 +45,13 @@ public:
     void set_rect(const Rect& r) { m_rect = r; }
     Rect rect() const { return m_rect; }
 
-    void set_parent(Widget* parent) { m_parent = parent; }
-    Widget* parent() const { return m_parent; }
-    void add_child(Widget* child);
-    void remove_child(Widget* child);
+    void set_parent(Ref<Widget> parent) { m_parent = parent; }
+    Ref<Widget> parent() const { return m_parent; }
+    void add_child(Ref<Widget> child);
+    void remove_child(Ref<Widget> child);
+    const Vector<Ref<Widget>>& children() const { return m_children; }
+
+    Ref<Widget> self();
 
     bool is_visible() const { return m_flags & (u32)WidgetFlags::Visible; }
     void set_visible(bool v);
@@ -55,6 +62,14 @@ public:
     bool is_focused() const { return m_state == WidgetState::Focused; }
     void set_focused(bool f);
     
+    bool is_focusable() const { return m_flags & (u32)WidgetFlags::Focusable; }
+
+    bool is_layout_dirty() const { return m_flags & (u32)WidgetFlags::LayoutDirty; }
+    void set_layout_dirty();
+
+    bool is_paint_dirty() const { return m_flags & (u32)WidgetFlags::PaintDirty; }
+    void set_paint_dirty();
+
     WidgetState state() const { return m_state; }
     void set_state(WidgetState s) { m_state = s; }
 
@@ -65,9 +80,8 @@ public:
 
 protected:
     Rect m_rect;
-    Widget* m_parent;
-    Widget* m_children[32];
-    u32 m_child_count;
+    Ref<Widget> m_parent;
+    Vector<Ref<Widget>> m_children;
     u32 m_flags;
     WidgetState m_state;
     u32 m_elevation;
