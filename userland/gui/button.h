@@ -24,6 +24,8 @@ public:
     Button& label(const char* l) { set_label(l); return *this; }
     Button& on_click(void (*callback)(void*), void* receiver) { set_on_click(callback, receiver); return *this; }
 
+    Ref<RenderObject> create_render_object() override;
+
 private:
     const char* m_label;
     u32 m_bg_color;

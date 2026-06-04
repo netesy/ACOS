@@ -64,6 +64,30 @@ The entry point for all system events.
 - Uses the focused widget as the target for keyboard events.
 - Executes the Capture/Bubble routing logic.
 
+## Class Diagrams (Proposed - Phase 5)
+
+```cpp
+namespace acos::gui {
+
+class RenderObject {
+    Rect m_rect;
+    Vector<Ref<RenderObject>> m_children;
+    Ref<RenderObject> m_parent;
+public:
+    virtual void paint(acos::graphics::Renderer* renderer) = 0;
+    virtual void perform_layout(BoxConstraints constraints) = 0;
+};
+
+// Widget evolved
+class Widget {
+    // ...
+    virtual Ref<RenderObject> create_render_object() = 0;
+    virtual void update_render_object(Ref<RenderObject> render_object) = 0;
+};
+
+}
+```
+
 ## Class Diagrams (Proposed - Phase 4)
 
 ```cpp
@@ -159,7 +183,24 @@ Inspired by Flutter, ACOS uses a "Constraints go down, sizes go up" model.
 - **Stack**: Layers children on top of each other.
 - **Grid**: Arranges children in a fixed or dynamic grid.
 
+## Phase 5: Render Tree and RenderObject Architecture
+
+### 1. RenderObject
+The `RenderObject` is the heavy-weight object responsible for layout and painting. While `Widget` is an immutable configuration, the `RenderObject` persists and maintains the runtime state.
+- **Persistent State**: Holds the actual geometry, cached paint layers, and layout results.
+- **Tree Structure**: Mirror the widget tree, but only for widgets that have a visual representation.
+
+### 2. Separation of Concerns
+- **Widget Tree**: Developer-facing configuration. Lightweight, often reconstructed.
+- **Render Tree**: Runtime infrastructure. Heavyweight, persistent, optimized for performance.
+
+### 3. Painting Flow
+1. **Layout**: Update geometry in the `RenderObject` tree.
+2. **Paint**: Traverse the `RenderObject` tree and issue drawing commands to the `Renderer`.
+
 ## Performance Implications
+- **Bypassing Layout**: If only a color changes (PaintDirty), we can skip the layout pass and only re-paint.
+- **Compositing**: RenderObjects can cache their output into layers (surfaces) for fast compositing during animations.
 - **Memory Locality**: Widgets in the same `Region` are likely to be contiguous in memory, improving cache hits during tree traversals (layout, rendering).
 - **Zero Fragmentation**: Arena-based allocation avoids the fragmentation issues of a general-purpose heap.
 - **Fast Handle Resolution**: Resolving a `Ref<T>` to a pointer is nearly as fast as a raw pointer dereference.

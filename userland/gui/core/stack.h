@@ -35,6 +35,8 @@ public:
         }
     }
 
+    Ref<RenderObject> create_render_object() override;
+
     // Fluent API
     Stack& child(Ref<Widget> c) { add_child(c); return *this; }
 };

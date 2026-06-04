@@ -9,6 +9,7 @@
 namespace acos::gui {
 
 struct Event;
+class RenderObject;
 
 struct Rect {
     i32 x, y, w, h;
@@ -45,6 +46,9 @@ public:
     virtual void on_event(Event& event);
     virtual Size layout(BoxConstraints constraints);
     virtual void update(u64 delta_ms);
+
+    virtual Ref<RenderObject> create_render_object() = 0;
+    virtual void update_render_object(Ref<RenderObject> render_object);
 
     void set_position(i32 x, i32 y) { m_rect.x = x; m_rect.y = y; }
     void set_size(i32 w, i32 h) { m_rect.w = w; m_rect.h = h; }

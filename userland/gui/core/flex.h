@@ -34,6 +34,8 @@ public:
     Size layout(BoxConstraints constraints) override;
     void draw(acos::graphics::Renderer* renderer) override;
 
+    Ref<RenderObject> create_render_object() override;
+
     Flex& main_axis_alignment(MainAxisAlignment alignment) { m_main_axis_alignment = alignment; return *this; }
     Flex& cross_axis_alignment(CrossAxisAlignment alignment) { m_cross_axis_alignment = alignment; return *this; }
 

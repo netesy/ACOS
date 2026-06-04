@@ -72,6 +72,10 @@ void Widget::add_child(Ref<Widget> child) {
     }
 }
 
+void Widget::update_render_object(Ref<RenderObject> render_object) {
+    (void)render_object;
+}
+
 Size Widget::layout(BoxConstraints constraints) {
     Size size = constraints.constrain({m_rect.w, m_rect.h});
     m_rect.w = size.w;
