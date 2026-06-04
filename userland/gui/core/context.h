@@ -20,6 +20,7 @@ public:
     AnimationController& animation_controller() { return m_animation_controller; }
 
     void paint(acos::graphics::Renderer* renderer);
+    void update(u64 delta_ms);
     void set_root_render_object(Ref<RenderObject> root) { m_root_render_object = root; }
     void set_root(Ref<Widget> root) { m_root = root; }
 

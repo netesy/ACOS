@@ -6,8 +6,8 @@ namespace acos::gui {
 
 class Separator : public Widget {
 public:
+    Ref<RenderObject> create_render_object() override;
     Separator(Orientation orient = Orientation::Horizontal);
-    void draw(acos::graphics::Renderer* renderer) override;
 
 private:
     Orientation m_orientation;

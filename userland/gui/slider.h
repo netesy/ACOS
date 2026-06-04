@@ -8,12 +8,17 @@ public:
     Slider();
     virtual ~Slider();
 
-    void draw(acos::graphics::Renderer* renderer) override;
-    void handle_event(const acos::input::InputEvent& event) override;
+    Ref<RenderObject> create_render_object() override;
+    void update_render_object(Ref<RenderObject> render_object) override;
+    void on_event(Event& event) override;
 
     float value() const { return m_value; }
     void set_value(float value);
     void set_range(float min, float max);
+
+    // Fluent API
+    Slider& value(float v) { set_value(v); return *this; }
+    Slider& range(float min, float max) { set_range(min, max); return *this; }
 
 private:
     float m_value;

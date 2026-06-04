@@ -6,9 +6,8 @@ namespace acos::gui {
 
 class Splitter : public Widget {
 public:
+    Ref<RenderObject> create_render_object() override;
     Splitter(Orientation orient = Orientation::Horizontal);
-    void draw(acos::graphics::Renderer* renderer) override;
-    void handle_event(const acos::input::InputEvent& event) override;
 
     void set_widgets(Widget* first, Widget* second);
     void set_split_ratio(float ratio);

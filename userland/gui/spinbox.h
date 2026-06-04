@@ -6,11 +6,10 @@ namespace acos::gui {
 
 class SpinBox : public Widget {
 public:
+    Ref<RenderObject> create_render_object() override;
     SpinBox(i32 min = 0, i32 max = 100);
     virtual ~SpinBox();
 
-    void draw(acos::graphics::Renderer* renderer) override;
-    void handle_event(const acos::input::InputEvent& event) override;
 
     i32 value() const { return m_value; }
     void set_value(i32 value);

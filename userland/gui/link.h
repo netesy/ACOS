@@ -6,9 +6,8 @@ namespace acos::gui {
 
 class Link : public Label {
 public:
+    Ref<RenderObject> create_render_object() override;
     Link(const char* text);
-    void draw(acos::graphics::Renderer* renderer) override;
-    void handle_event(const acos::input::InputEvent& event) override;
 
     Signal<> on_clicked;
 };

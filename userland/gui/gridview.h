@@ -5,11 +5,10 @@ namespace acos::gui {
 
 class GridView : public Widget {
 public:
+    Ref<RenderObject> create_render_object() override;
     GridView(u32 columns = 1);
     virtual ~GridView();
 
-    void draw(acos::graphics::Renderer* renderer) override;
-    void handle_event(const acos::input::InputEvent& event) override;
 
     void set_columns(u32 columns) { m_columns = columns; }
     void add_cell(const char* text);

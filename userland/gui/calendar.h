@@ -5,9 +5,8 @@ namespace acos::gui {
 
 class Calendar : public Widget {
 public:
+    Ref<RenderObject> create_render_object() override;
     Calendar();
-    void draw(acos::graphics::Renderer* renderer) override;
-    void handle_event(const acos::input::InputEvent& event) override;
 
 private:
     [[maybe_unused]] u32 m_year;

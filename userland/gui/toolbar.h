@@ -5,8 +5,8 @@ namespace acos::gui {
 
 class ToolBar : public Widget {
 public:
+    Ref<RenderObject> create_render_object() override;
     ToolBar();
-    void draw(acos::graphics::Renderer* renderer) override;
 };
 
 } // namespace acos::gui

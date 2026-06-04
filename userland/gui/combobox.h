@@ -6,11 +6,10 @@ namespace acos::gui {
 
 class ComboBox : public Widget {
 public:
+    Ref<RenderObject> create_render_object() override;
     ComboBox();
     virtual ~ComboBox();
 
-    void draw(acos::graphics::Renderer* renderer) override;
-    void handle_event(const acos::input::InputEvent& event) override;
 
     void add_item(const char* item);
     const char* selected_item() const;

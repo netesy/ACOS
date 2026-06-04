@@ -27,13 +27,6 @@ void Toast::update(u64 delta_ms) {
     }
 }
 
-void Toast::draw(acos::graphics::Renderer* renderer) {
-    if (!is_visible() || !renderer) return;
 
-    renderer->draw_shadow(m_rect.x, m_rect.y, m_rect.w, m_rect.h, 4, (u8)(m_alpha / 2));
-    renderer->blend_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, 0xFF333333, (u8)(m_alpha * 0.9f));
-    renderer->draw_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, 20, g_current_theme.primary);
-    renderer->draw_text(m_message, m_rect.x + 20, m_rect.y + 12, 0xFFFFFFFF);
-}
-
+Ref<RenderObject> Toast::create_render_object() { return Ref<RenderObject>(); }
 } // namespace acos::gui

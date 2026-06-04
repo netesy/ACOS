@@ -20,18 +20,7 @@ void StackWidget::set_current_index(u32 index) {
     }
 }
 
-void StackWidget::draw(acos::graphics::Renderer* renderer) {
-    if (!is_visible() || !renderer) return;
-    if (m_current_index < m_count) {
-        m_pages[m_current_index]->set_rect(m_rect);
-        m_pages[m_current_index]->draw(renderer);
-    }
-}
 
-void StackWidget::handle_event(const acos::input::InputEvent& event) {
-    if (m_current_index < m_count) {
-        m_pages[m_current_index]->handle_event(event);
-    }
-}
 
+Ref<RenderObject> StackWidget::create_render_object() { return Ref<RenderObject>(); }
 } // namespace acos::gui

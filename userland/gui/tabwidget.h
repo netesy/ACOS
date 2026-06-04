@@ -10,11 +10,10 @@ struct Tab {
 
 class TabWidget : public Widget {
 public:
+    Ref<RenderObject> create_render_object() override;
     TabWidget();
     virtual ~TabWidget();
 
-    void draw(acos::graphics::Renderer* renderer) override;
-    void handle_event(const acos::input::InputEvent& event) override;
 
     void add_tab(const char* title, Widget* content);
     void select_tab(u32 index);

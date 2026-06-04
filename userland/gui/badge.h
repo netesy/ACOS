@@ -5,8 +5,8 @@ namespace acos::gui {
 
 class Badge : public Widget {
 public:
+    Ref<RenderObject> create_render_object() override;
     Badge(const char* text = nullptr);
-    void draw(acos::graphics::Renderer* renderer) override;
     void set_text(const char* text) { m_text = text; }
 
 private:

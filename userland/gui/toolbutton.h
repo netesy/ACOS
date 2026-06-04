@@ -5,8 +5,8 @@ namespace acos::gui {
 
 class ToolButton : public Button {
 public:
+    Ref<RenderObject> create_render_object() override;
     ToolButton(const char* label = nullptr);
-    void draw(acos::graphics::Renderer* renderer) override;
 };
 
 } // namespace acos::gui

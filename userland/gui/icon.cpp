@@ -11,24 +11,6 @@ Icon::Icon(IconType type) : m_type(type), m_color(g_current_theme.primary), m_ac
 
 Icon::~Icon() {}
 
-void Icon::draw(acos::graphics::Renderer* renderer) {
-    if (!is_visible() || !renderer) return;
-
-    if (m_active) {
-        // Draw active glow
-        renderer->fill_circle(m_rect.x + m_rect.w / 2, m_rect.y + m_rect.h / 2, m_rect.w / 2 + 4, (m_color & 0x00FFFFFF) | 0x33000000);
-    }
-
-    switch (m_type) {
-        case IconType::Terminal: draw_terminal(renderer); break;
-        case IconType::Files: draw_files(renderer); break;
-        case IconType::Settings: draw_settings(renderer); break;
-        case IconType::Code: draw_code(renderer); break;
-        default:
-            renderer->draw_rect(m_rect.x + 4, m_rect.y + 4, m_rect.w - 8, m_rect.h - 8, m_color);
-            break;
-    }
-}
 
 void Icon::draw_terminal(acos::graphics::Renderer* renderer) {
     renderer->draw_rounded_rect(m_rect.x + 2, m_rect.y + 4, m_rect.w - 4, m_rect.h - 8, 4, m_color);
@@ -63,4 +45,5 @@ void Icon::draw_code(acos::graphics::Renderer* renderer) {
     renderer->draw_line(m_rect.x + 20, m_rect.y + 6, m_rect.x + 12, m_rect.y + 26, m_color);
 }
 
+Ref<RenderObject> Icon::create_render_object() { return Ref<RenderObject>(); }
 } // namespace acos::gui

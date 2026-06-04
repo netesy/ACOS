@@ -6,9 +6,8 @@ namespace acos::gui {
 
 class ColorPicker : public Widget {
 public:
+    Ref<RenderObject> create_render_object() override;
     ColorPicker();
-    void draw(acos::graphics::Renderer* renderer) override;
-    void handle_event(const acos::input::InputEvent& event) override;
 
     u32 selected_color() const { return m_color; }
     Signal<u32> on_color_changed;

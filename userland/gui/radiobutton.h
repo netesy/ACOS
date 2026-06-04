@@ -10,13 +10,18 @@ public:
     RadioButton(const char* label = nullptr);
     virtual ~RadioButton();
 
-    void draw(acos::graphics::Renderer* renderer) override;
-    void handle_event(const acos::input::InputEvent& event) override;
+    Ref<RenderObject> create_render_object() override;
+    void update_render_object(Ref<RenderObject> render_object) override;
+    void on_event(Event& event) override;
 
     bool selected() const { return m_selected; }
     void set_selected(bool selected);
 
     void set_group(RadioButtonGroup* group) { m_group = group; }
+
+    // Fluent API
+    RadioButton& label(const char* l) { m_label = l; set_layout_dirty(); return *this; }
+    RadioButton& selected(bool s) { set_selected(s); return *this; }
 
 private:
     const char* m_label;
@@ -27,12 +32,11 @@ private:
 class RadioButtonGroup {
 public:
     RadioButtonGroup();
-    void add_button(RadioButton* button);
-    void select(RadioButton* selected_button);
+    void add_button(Ref<RadioButton> button);
+    void select(Ref<RadioButton> selected_button);
 
 private:
-    RadioButton* m_buttons[16];
-    u32 m_count;
+    Vector<Ref<RadioButton>> m_buttons;
 };
 
 } // namespace acos::gui

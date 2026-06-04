@@ -15,6 +15,12 @@ Text::Text(const char* text)
 
 Text::~Text() {}
 
+Ref<RenderObject> Text::create_render_object() {
+    Ref<RenderObject> ro = UIContext::get().region().alloc<RenderText>();
+    update_render_object(ro);
+    return ro;
+}
+
 void Text::update_render_object(Ref<RenderObject> render_object) {
     Widget::update_render_object(render_object);
     if (render_object) {

@@ -5,10 +5,10 @@ namespace acos::gui {
 
 class Canvas : public Widget {
 public:
+    Ref<RenderObject> create_render_object() override;
     Canvas();
     virtual ~Canvas();
 
-    void draw(acos::graphics::Renderer* renderer) override;
 
     // Function pointer for custom drawing
     void (*m_on_draw)(Canvas*, acos::graphics::Renderer*);

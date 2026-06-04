@@ -5,9 +5,8 @@ namespace acos::gui {
 
 class StackWidget : public Widget {
 public:
+    Ref<RenderObject> create_render_object() override;
     StackWidget();
-    void draw(acos::graphics::Renderer* renderer) override;
-    void handle_event(const acos::input::InputEvent& event) override;
 
     void add_widget(Widget* widget);
     void set_current_index(u32 index);

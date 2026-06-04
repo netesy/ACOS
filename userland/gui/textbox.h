@@ -8,18 +8,24 @@ public:
     TextBox();
     ~TextBox();
     
-    void draw(acos::graphics::Renderer* renderer) override;
-    void handle_event(const acos::input::InputEvent& event) override;
+    Ref<RenderObject> create_render_object() override;
+    void update_render_object(Ref<RenderObject> render_object) override;
+    void on_event(Event& event) override;
     void update(u64 delta_ms) override;
 
     const char* text() const { return m_buffer; }
     void set_text(const char* text);
     void clear();
     
-    void set_placeholder(const char* text) { m_placeholder = text; }
+    void set_placeholder(const char* text) { m_placeholder = text; set_paint_dirty(); }
     void set_max_length(usize len) { m_max_length = len; }
-    void set_text_color(u32 color) { m_text_color = color; }
-    void set_background_color(u32 color) { m_bg_color = color; }
+    void set_text_color(u32 color) { m_text_color = color; set_paint_dirty(); }
+    void set_background_color(u32 color) { m_bg_color = color; set_paint_dirty(); }
+
+    // Fluent API
+    TextBox& placeholder(const char* p) { set_placeholder(p); return *this; }
+    TextBox& color(u32 c) { set_text_color(c); return *this; }
+    TextBox& background(u32 b) { set_background_color(b); return *this; }
 
 private:
     char m_buffer[512];

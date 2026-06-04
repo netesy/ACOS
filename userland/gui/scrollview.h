@@ -6,11 +6,10 @@ namespace acos::gui {
 
 class ScrollView : public Widget {
 public:
+    Ref<RenderObject> create_render_object() override;
     ScrollView();
     virtual ~ScrollView();
 
-    void draw(acos::graphics::Renderer* renderer) override;
-    void handle_event(const acos::input::InputEvent& event) override;
 
     void add_content(Widget* widget);
 

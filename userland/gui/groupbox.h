@@ -5,8 +5,8 @@ namespace acos::gui {
 
 class GroupBox : public Widget {
 public:
+    Ref<RenderObject> create_render_object() override;
     GroupBox(const char* title = nullptr);
-    void draw(acos::graphics::Renderer* renderer) override;
 
 private:
     const char* m_title;

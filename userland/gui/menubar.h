@@ -6,9 +6,8 @@ namespace acos::gui {
 
 class MenuBar : public Widget {
 public:
+    Ref<RenderObject> create_render_object() override;
     MenuBar();
-    void draw(acos::graphics::Renderer* renderer) override;
-    void handle_event(const acos::input::InputEvent& event) override;
 
     Menu* add_menu(const char* title);
 

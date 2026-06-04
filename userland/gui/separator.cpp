@@ -14,13 +14,6 @@ Separator::Separator(Orientation orient) : m_orientation(orient) {
     }
 }
 
-void Separator::draw(acos::graphics::Renderer* renderer) {
-    if (!is_visible() || !renderer) return;
-    if (m_orientation == Orientation::Horizontal) {
-        renderer->draw_line(m_rect.x, m_rect.y, m_rect.x + m_rect.w, m_rect.y, g_current_theme.border);
-    } else {
-        renderer->draw_line(m_rect.x, m_rect.y, m_rect.x, m_rect.y + m_rect.h, g_current_theme.border);
-    }
-}
 
+Ref<RenderObject> Separator::create_render_object() { return Ref<RenderObject>(); }
 } // namespace acos::gui

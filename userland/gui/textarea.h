@@ -5,11 +5,10 @@ namespace acos::gui {
 
 class TextArea : public Widget {
 public:
+    Ref<RenderObject> create_render_object() override;
     TextArea();
     virtual ~TextArea();
 
-    void draw(acos::graphics::Renderer* renderer) override;
-    void handle_event(const acos::input::InputEvent& event) override;
     void update(u64 delta_ms) override;
 
     void set_text(const char* text);

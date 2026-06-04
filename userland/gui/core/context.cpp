@@ -17,14 +17,20 @@ UIContext& UIContext::get() {
 }
 
 void UIContext::paint(acos::graphics::Renderer* renderer) {
+    if (!renderer) return;
+
     if (m_root) {
-        // Sync widget tree to render tree
         sync_render_tree(m_root, m_root_render_object);
     }
 
     if (m_root_render_object) {
+        m_root_render_object->perform_layout(BoxConstraints::tight(renderer->width(), renderer->height()));
         m_root_render_object->paint(renderer);
     }
+}
+
+void UIContext::update(u64 delta_ms) {
+    m_animation_controller.tick(delta_ms);
 }
 
 void UIContext::sync_render_tree(Ref<Widget> widget, Ref<RenderObject>& render_object) {

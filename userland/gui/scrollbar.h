@@ -10,11 +10,10 @@ enum class Orientation {
 
 class ScrollBar : public Widget {
 public:
+    Ref<RenderObject> create_render_object() override;
     ScrollBar(Orientation orientation = Orientation::Vertical);
     virtual ~ScrollBar();
 
-    void draw(acos::graphics::Renderer* renderer) override;
-    void handle_event(const acos::input::InputEvent& event) override;
 
     i32 value() const { return m_value; }
     void set_value(i32 value);

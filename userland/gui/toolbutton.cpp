@@ -9,18 +9,7 @@ ToolButton::ToolButton(const char* label) : Button(label) {
     m_rect.h = 32;
 }
 
-void ToolButton::draw(acos::graphics::Renderer* renderer) {
-    if (!is_visible() || !renderer) return;
 
-    if (m_state == WidgetState::Hovered) {
-        renderer->blend_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, g_current_theme.surface, 150);
-        renderer->draw_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, g_current_theme.primary);
-    } else if (m_state == WidgetState::Pressed) {
-        renderer->blend_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, g_current_theme.primary, 100);
-    }
-
-    // Centered label (usually an icon char or short text)
-    renderer->draw_text(label(), m_rect.x + 8, m_rect.y + 8, g_current_theme.text);
-}
-
+Ref<RenderObject> Toolbutton::create_render_object() { return Ref<RenderObject>(); }
+Ref<RenderObject> ToolButton::create_render_object() { return Ref<RenderObject>(); }
 } // namespace acos::gui

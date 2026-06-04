@@ -7,10 +7,10 @@ namespace acos::gui {
 
 class MessageBox : public WindowWidget {
 public:
+    Ref<RenderObject> create_render_object() override;
     MessageBox(const char* title, const char* message);
     virtual ~MessageBox();
 
-    void draw(acos::graphics::Renderer* renderer) override;
 
 private:
     Label m_label;

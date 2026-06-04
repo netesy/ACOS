@@ -16,10 +16,10 @@ enum class IconType {
 
 class Icon : public Widget {
 public:
+    Ref<RenderObject> create_render_object() override;
     Icon(IconType type);
     virtual ~Icon();
 
-    void draw(acos::graphics::Renderer* renderer) override;
 
     void set_color(u32 color) { m_color = color; }
     void set_active(bool active) { m_active = active; }

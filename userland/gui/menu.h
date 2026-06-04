@@ -6,11 +6,10 @@ namespace acos::gui {
 
 class Menu : public Widget {
 public:
+    Ref<RenderObject> create_render_object() override;
     Menu();
     virtual ~Menu();
 
-    void draw(acos::graphics::Renderer* renderer) override;
-    void handle_event(const acos::input::InputEvent& event) override;
 
     void add_item(const char* label);
 

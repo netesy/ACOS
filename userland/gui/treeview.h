@@ -12,9 +12,8 @@ struct TreeItem {
 
 class TreeView : public Widget {
 public:
+    Ref<RenderObject> create_render_object() override;
     TreeView();
-    void draw(acos::graphics::Renderer* renderer) override;
-    void handle_event(const acos::input::InputEvent& event) override;
     void add_root_item(const char* label);
 
 private:

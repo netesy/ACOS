@@ -5,8 +5,8 @@ namespace acos::gui {
 
 class Graph : public Widget {
 public:
+    Ref<RenderObject> create_render_object() override;
     Graph();
-    void draw(acos::graphics::Renderer* renderer) override;
     void add_value(float val);
 
 private:

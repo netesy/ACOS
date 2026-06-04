@@ -19,13 +19,7 @@ MessageBox::MessageBox(const char* title, const char* message)
 
 MessageBox::~MessageBox() {}
 
-void MessageBox::draw(acos::graphics::Renderer* renderer) {
-    if (!is_visible() || !renderer) return;
 
-    // Dim the background
-    renderer->blend_rect(0, 0, 1920, 1080, 0x00000000, 120);
-
-    WindowWidget::draw(renderer);
-}
-
+Ref<RenderObject> Messagebox::create_render_object() { return Ref<RenderObject>(); }
+Ref<RenderObject> MessageBox::create_render_object() { return Ref<RenderObject>(); }
 } // namespace acos::gui

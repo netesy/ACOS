@@ -18,12 +18,6 @@ Dialog::Dialog(const char* title, i32 w, i32 h)
 
 Dialog::~Dialog() {}
 
-void Dialog::draw(acos::graphics::Renderer* renderer) {
-    if (!is_visible() || !renderer) return;
-    // Dim background
-    renderer->blend_rect(0, 0, 1920, 1080, 0x00000000, 120);
-    WindowWidget::draw(renderer);
-}
 
 void Dialog::set_on_accept(void (*callback)(void*), void* receiver) {
     m_accept_btn.set_on_click(callback, receiver);
@@ -33,4 +27,5 @@ void Dialog::set_on_cancel(void (*callback)(void*), void* receiver) {
     m_cancel_btn.set_on_click(callback, receiver);
 }
 
+Ref<RenderObject> Dialog::create_render_object() { return Ref<RenderObject>(); }
 } // namespace acos::gui

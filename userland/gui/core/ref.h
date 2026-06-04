@@ -36,6 +36,11 @@ public:
     u32 generation() const { return m_generation; }
     Region* region() const { return m_region; }
 
+    template <typename U>
+    Ref<U> static_cast_to() const {
+        return Ref<U>(m_region, m_index, m_generation);
+    }
+
 private:
     void* resolve() const {
         return RefBaseResolve(m_region, m_index, m_generation);
