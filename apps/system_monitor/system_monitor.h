@@ -1,6 +1,6 @@
 #pragma once
-#include <ui/window_widget.h>
-#include <ui/label.h>
+#include <window_widget.h>
+#include <label.h>
 
 namespace acos::apps {
 

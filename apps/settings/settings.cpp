@@ -1,16 +1,16 @@
 #include "settings.h"
-#include <ui/theme.h>
-#include <ui/label.h>
-#include <ui/button.h>
-#include <ui/progressbar.h>
-#include <ui/checkbox.h>
-#include <ui/slider.h>
-#include <ui/layout.h>
-#include <ui/tabwidget.h>
-#include <ui/panel.h>
-#include <ui/switch.h>
-#include <ui/combobox.h>
-#include <ui/textarea.h>
+#include <theme.h>
+#include <label.h>
+#include <button.h>
+#include <progressbar.h>
+#include <checkbox.h>
+#include <slider.h>
+#include <layout.h>
+#include <tabwidget.h>
+#include <panel.h>
+#include <switch.h>
+#include <combobox.h>
+#include <textarea.h>
 
 namespace acos::apps {
 

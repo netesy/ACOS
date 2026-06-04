@@ -1,7 +1,7 @@
 #pragma once
-#include <ui/window_widget.h>
-#include <ui/listview.h>
-#include <ui/button.h>
+#include <window_widget.h>
+#include <listview.h>
+#include <button.h>
 
 namespace acos::apps {
 

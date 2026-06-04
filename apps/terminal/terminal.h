@@ -1,6 +1,6 @@
 #pragma once
-#include <ui/window_widget.h>
-#include <ui/textbox.h>
+#include <window_widget.h>
+#include <textbox.h>
 
 namespace acos::apps {
 

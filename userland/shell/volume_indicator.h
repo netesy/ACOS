@@ -1,6 +1,6 @@
 #pragma once
-#include <ui/widget.h>
-#include <ui/basic_widgets.h>
+#include "widget.h"
+#include "basic_widgets.h"
 
 namespace acos::shell {
 

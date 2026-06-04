@@ -1,6 +1,6 @@
 #pragma once
-#include <ui/window_widget.h>
-#include <ui/button.h>
+#include <window_widget.h>
+#include <button.h>
 
 namespace acos::apps {
 

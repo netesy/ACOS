@@ -4,24 +4,19 @@ UEFI_CXX = clang++
 AS = clang
 LD = ld
 
-# UEFI Target
-UEFI_CFLAGS = -target x86_64-unknown-windows-coff -ffreestanding -fcf-protection=none -fno-stack-protector -fshort-wchar -mno-red-zone -I. -Ilibs/runtime/include -Iuserland/gui/include
+UEFI_CFLAGS = -target x86_64-unknown-windows-coff -ffreestanding -fcf-protection=none -fno-stack-protector -fshort-wchar -mno-red-zone -I. -Ilibs/runtime/include
 UEFI_LDFLAGS = -m i386pep --subsystem 10 --entry efi_main
 
-# Kernel Target
-KERNEL_CFLAGS = -target x86_64-unknown-elf -nostdinc++ -fno-pic -ffreestanding -fcf-protection=none -fno-stack-protector -fno-exceptions -fno-rtti -mno-red-zone -I. -Ilibs/runtime/include -Iuserland/gui/include -Iuserland/posix/include -std=c++20 -Wall -Wextra -Werror
+KERNEL_CFLAGS = -target x86_64-unknown-elf -nostdinc++ -fno-pic -ffreestanding -fcf-protection=none -fno-stack-protector -fno-exceptions -fno-rtti -mno-red-zone -I. -Ilibs/runtime/include -Iuserland/gui -Iuserland/posix/include -std=c++20 -Wall -Wextra -Werror
 KERNEL_ASFLAGS = -target x86_64-unknown-elf
 KERNEL_LDFLAGS = -target x86_64-unknown-elf -fuse-ld=lld -nostdlib -Wl,-T,linker.ld -Wl,--no-undefined
 
-# Userland PIE Build Flags
 USER_CFLAGS = $(KERNEL_CFLAGS) -fPIE
 USER_LDFLAGS = -pie -nostdlib
 
-# Shared Library Build Flags
 SHARED_CFLAGS = $(KERNEL_CFLAGS) -fPIC
 SHARED_LDFLAGS = -shared -nostdlib
 
-# Files
 BOOT_EFI   = acos_boot.efi
 KERNEL_ELF = kernel.elf
 DISK_IMG   = acos.img
@@ -32,7 +27,6 @@ MKFS_VFAT  ?= $(firstword $(shell command -v mkfs.vfat 2>/dev/null) $(wildcard /
 MMD        ?= $(shell command -v mmd 2>/dev/null)
 MCOPY      ?= $(shell command -v mcopy 2>/dev/null)
 
-# Directories
 BOOT_DIR   = boot
 KERNEL_DIR = kernel
 HAL_DIR    = $(KERNEL_DIR)/hal
@@ -61,7 +55,6 @@ COMPAT_LINUX_DIR = compat/linux
 LIBC_DIR    = libc
 APPS_DIR    = apps
 
-# Sources
 BOOT_SRCS = $(BOOT_DIR)/main.cpp
 
 KERNEL_SRCS = \
@@ -118,7 +111,18 @@ KERNEL_SRCS = \
 	$(DISPLAY_DIR)/input_router.cpp \
 	$(DISPLAY_DIR)/compositor.cpp \
 	$(DISPLAY_DIR)/display_server.cpp \
-	$(GUI_DIR)/src/context.cpp $(GUI_DIR)/src/event.cpp \
+	$(GUI_DIR)/context.cpp \
+	$(GUI_DIR)/widget.cpp \
+	$(GUI_DIR)/event.cpp \
+	$(GUI_DIR)/render_object.cpp \
+	$(GUI_DIR)/layout_node.cpp \
+	$(GUI_DIR)/focus_manager.cpp \
+	$(GUI_DIR)/animation.cpp \
+	$(GUI_DIR)/window_manager.cpp \
+	$(GUI_DIR)/theme.cpp \
+	$(GUI_DIR)/window.cpp \
+	$(GUI_DIR)/text.cpp \
+	$(GUI_DIR)/button.cpp \
 	$(SHELL_DIR)/taskbar.cpp \
 	$(SHELL_DIR)/launcher.cpp \
 	$(SHELL_DIR)/notification_center.cpp \
@@ -188,10 +192,6 @@ KERNEL_ASM_SRCS = \
 BOOT_OBJS   = $(BOOT_SRCS:.cpp=.o)
 KERNEL_OBJS = $(KERNEL_SRCS:.cpp=.o) $(KERNEL_ASM_SRCS:.S=.o)
 
-# ----------------------------------------------------
-# Build Targets
-# ----------------------------------------------------
-
 all: image
 
 image: $(DISK_IMG)
@@ -202,33 +202,16 @@ $(BOOT_EFI): $(BOOT_OBJS)
 $(KERNEL_ELF): $(KERNEL_OBJS)
 	ld -T linker.ld -o $@ $^
 
-# ----------------------------------------------------
-# Disk Image Creation
-# ----------------------------------------------------
-
-OBJS = $(BOOT_OBJS) $(KERNEL_OBJS)
-
 $(DISK_IMG): $(BOOT_EFI) $(KERNEL_ELF)
 	@echo "[IMG] Creating FAT32 disk image..."
 	dd if=/dev/zero of=$(DISK_IMG) bs=1M count=64
-	@if [ -n "$(MKFS_VFAT)" ]; then \
-		$(MKFS_VFAT) -F 32 $(DISK_IMG); \
-	else \
-		echo "[IMG] Warning: mkfs.vfat not found; leaving unformatted raw image."; \
-	fi
+	@if [ -n "$(MKFS_VFAT)" ]; then $(MKFS_VFAT) -F 32 $(DISK_IMG); fi
 	@if [ -n "$(MMD)" ] && [ -n "$(MCOPY)" ] && [ -n "$(MKFS_VFAT)" ]; then \
 		$(MMD) -i $(DISK_IMG) ::/EFI; \
 		$(MMD) -i $(DISK_IMG) ::/EFI/BOOT; \
 		$(MCOPY) -i $(DISK_IMG) $(BOOT_EFI) ::/EFI/BOOT/BOOTX64.EFI; \
 		$(MCOPY) -i $(DISK_IMG) $(KERNEL_ELF) ::/kernel.elf; \
-	else \
-		echo "[IMG] Warning: mtools and mkfs.vfat are required to populate the FAT32 image."; \
 	fi
-	@echo "[IMG] Done."
-
-# ----------------------------------------------------
-# Compilation Rules
-# ----------------------------------------------------
 
 %.o: %.cpp
 	$(CXX) $(KERNEL_CFLAGS) -c $< -o $@
@@ -238,36 +221,6 @@ $(DISK_IMG): $(BOOT_EFI) $(KERNEL_ELF)
 
 $(BOOT_DIR)/main.o: $(BOOT_DIR)/main.cpp
 	$(UEFI_CXX) $(UEFI_CFLAGS) -c $< -o $@
-
-# ----------------------------------------------------
-# Run
-# ----------------------------------------------------
-
-run: $(DISK_IMG)
-	@if command -v $(QEMU) >/dev/null 2>&1; then \
-		if [ -n "$(QEMU_FIRMWARE)" ]; then \
-			if [ -d /mnt/wslg ]; then \
-				export DISPLAY=:0; \
-				export WAYLAND_DISPLAY=wayland-0; \
-				export XDG_RUNTIME_DIR=/mnt/wslg/runtime-dir; \
-				echo "[RUN] WSLg detected: DISPLAY=$$DISPLAY WAYLAND_DISPLAY=$$WAYLAND_DISPLAY"; \
-			fi; \
-			$(QEMU) $(QEMU_FLAGS) -bios "$(QEMU_FIRMWARE)"; \
-		else \
-			echo "[RUN] Warning: OVMF firmware not found; cannot launch UEFI VM."; \
-			exit 1; \
-		fi; \
-	else \
-		echo "[RUN] Warning: $(QEMU) not found; skipping VM launch."; \
-		exit 1; \
-	fi
-
-
-run-win: $(DISK_IMG)
-	qemu-system-x86_64.exe \
-		-L "C:/Program Files/qemu" \
-		-drive if=pflash,format=raw,readonly=on,file="C:\Program Files\qemu\share\edk2-x86_64-code.fd" \
-		-drive format=raw,file=$(DISK_IMG)
 
 clean:
 	rm -f $(BOOT_EFI) $(KERNEL_ELF) $(DISK_IMG)

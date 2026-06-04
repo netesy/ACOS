@@ -1,6 +1,6 @@
 #pragma once
-#include <ui/window_widget.h>
-#include <ui/listview.h>
+#include <window_widget.h>
+#include <listview.h>
 
 namespace acos::apps {
 

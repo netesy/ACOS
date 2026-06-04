@@ -1,8 +1,8 @@
 #pragma once
-#include <ui/widget.h>
-#include <ui/label.h>
-#include <ui/listview.h>
-#include "kernel/graphics/renderer.h"
+#include "widget.h"
+#include "label.h"
+#include "listview.h"
+#include <kernel/graphics/renderer.h>
 
 namespace acos::apps {
 
@@ -11,8 +11,8 @@ public:
     AudioSettings();
     void draw(acos::graphics::Renderer* renderer);
 
-    ui::Ref<ui::LayoutNode> create_layout_node([[maybe_unused]] ui::UIContext* ctx) override { return ui::Ref<ui::LayoutNode>::null(); }
-    ui::Ref<ui::RenderObject> create_render_object([[maybe_unused]] ui::UIContext* ctx) override { return ui::Ref<ui::RenderObject>::null(); }
+    ui::Ref<ui::LayoutNode> create_layout_node(ui::UIContext* ctx) override;
+    ui::Ref<ui::RenderObject> create_render_object(ui::UIContext* ctx) override;
 
 private:
     ui::Label m_title;
