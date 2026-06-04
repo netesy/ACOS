@@ -64,6 +64,37 @@ The entry point for all system events.
 - Uses the focused widget as the target for keyboard events.
 - Executes the Capture/Bubble routing logic.
 
+## Class Diagrams (Proposed - Phase 4)
+
+```cpp
+namespace acos::gui {
+
+struct Size {
+    i32 w, h;
+};
+
+struct BoxConstraints {
+    i32 min_w, max_w;
+    i32 min_h, max_h;
+
+    static BoxConstraints loose(i32 max_w, i32 max_h);
+    static BoxConstraints tight(i32 w, i32 h);
+};
+
+// In Widget class:
+// virtual Size layout(BoxConstraints constraints);
+
+class Flex : public Widget {
+    // Axis: Horizontal/Vertical
+    // MainAxisAlignment
+    // CrossAxisAlignment
+public:
+    Size layout(BoxConstraints constraints) override;
+};
+
+}
+```
+
 ## Class Diagrams (Proposed - Phase 3)
 
 ```cpp
@@ -109,6 +140,24 @@ UIContext
  ├── FocusManager (Holds Ref<Widget>)
  └── EventDispatcher
 ```
+
+## Phase 4: Constraint Layout Engine
+
+### 1. BoxConstraints
+Inspired by Flutter, ACOS uses a "Constraints go down, sizes go up" model.
+- `BoxConstraints`: Defines minimum and maximum width and height.
+- `Size`: A simple width and height pair.
+
+### 2. Layout Flow
+1. **Parent** passes `BoxConstraints` to **Child**.
+2. **Child** determines its own **Size** within those constraints.
+3. **Child** passes its **Size** back to **Parent**.
+4. **Parent** uses the child's size to position the child and determine its own size.
+
+### 3. Layout Widgets
+- **Row/Column (Flex)**: Distributes children along a primary axis. Supports flexible sizing (expanding to fill space).
+- **Stack**: Layers children on top of each other.
+- **Grid**: Arranges children in a fixed or dynamic grid.
 
 ## Performance Implications
 - **Memory Locality**: Widgets in the same `Region` are likely to be contiguous in memory, improving cache hits during tree traversals (layout, rendering).

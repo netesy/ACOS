@@ -4,6 +4,7 @@
 #include <kernel/graphics/renderer.h>
 #include "core/ref.h"
 #include "core/vector.h"
+#include "core/layout_types.h"
 
 namespace acos::gui {
 
@@ -42,6 +43,7 @@ public:
     virtual void handle_event(const acos::input::InputEvent& event);
     virtual void handle_event(Event& event);
     virtual void on_event(Event& event);
+    virtual Size layout(BoxConstraints constraints);
     virtual void update(u64 delta_ms);
 
     void set_position(i32 x, i32 y) { m_rect.x = x; m_rect.y = y; }
@@ -70,6 +72,7 @@ public:
 
     bool is_layout_dirty() const { return m_flags & (u32)WidgetFlags::LayoutDirty; }
     void set_layout_dirty();
+    void clear_layout_dirty() { m_flags &= ~(u32)WidgetFlags::LayoutDirty; }
 
     bool is_paint_dirty() const { return m_flags & (u32)WidgetFlags::PaintDirty; }
     void set_paint_dirty();

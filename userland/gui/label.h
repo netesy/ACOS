@@ -21,6 +21,11 @@ public:
     void set_alignment(TextAlignment align) { m_alignment = align; }
     void set_font_size(u32 size) { m_font_size = size; }
 
+    // Fluent API
+    Label& text(const char* t) { set_text(t); return *this; }
+    Label& color(u32 c) { set_text_color(c); return *this; }
+    Label& font_size(u32 s) { set_font_size(s); return *this; }
+
 protected:
     const char* m_text;
     u32 m_text_color;

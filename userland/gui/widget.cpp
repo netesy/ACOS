@@ -72,6 +72,21 @@ void Widget::add_child(Ref<Widget> child) {
     }
 }
 
+Size Widget::layout(BoxConstraints constraints) {
+    Size size = constraints.constrain({m_rect.w, m_rect.h});
+    m_rect.w = size.w;
+    m_rect.h = size.h;
+
+    for (auto& child : m_children) {
+        if (child && child->is_visible()) {
+            child->layout(BoxConstraints::loose(size.w, size.h));
+        }
+    }
+
+    clear_layout_dirty();
+    return size;
+}
+
 Ref<Widget> Widget::self() {
     return UIContext::get().region().get_ref(this);
 }

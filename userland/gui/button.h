@@ -20,6 +20,10 @@ public:
     const char* label() const { return m_label; }
     void set_label(const char* label) { m_label = label; }
 
+    // Fluent API
+    Button& label(const char* l) { set_label(l); return *this; }
+    Button& on_click(void (*callback)(void*), void* receiver) { set_on_click(callback, receiver); return *this; }
+
 private:
     const char* m_label;
     u32 m_bg_color;
