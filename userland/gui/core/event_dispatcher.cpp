@@ -7,70 +7,54 @@ namespace acos::gui {
 void EventDispatcher::dispatch(const acos::input::InputEvent& raw, Ref<Widget> root) {
     if (!root) return;
 
-    Ref<Widget> target;
+    Event event(raw);
 
     if (raw.type == acos::input::InputType::Mouse) {
-        i32 mx = (i32)((raw.code >> 16) & 0xFFFF);
-        i32 my = (i32)(raw.code & 0xFFFF);
-        target = perform_hit_test(root, mx, my);
-    } else if (raw.type == acos::input::InputType::Keyboard) {
-        target = UIContext::get().focus_manager().focused();
-        if (!target) target = root;
-    }
+        event.mouse_x = (raw.code >> 16) & 0xFFFF;
+        event.mouse_y = raw.code & 0xFFFF;
 
-    if (target) {
-        Event event(raw);
-        event.target = target;
-        if (raw.type == acos::input::InputType::Mouse) {
-            event.mouse_x = (i32)((raw.code >> 16) & 0xFFFF);
-            event.mouse_y = (i32)(raw.code & 0xFFFF);
+        Ref<Widget> target = perform_hit_test(root, event.mouse_x, event.mouse_y);
+        if (target) {
+            event.target = target;
+            route_event(event, target);
         }
-        route_event(event, target);
+    } else {
+        Ref<Widget> focused = UIContext::get().focus_manager().focused();
+        if (focused) {
+            event.target = focused;
+            route_event(event, focused);
+        } else {
+            route_event(event, root);
+        }
     }
 }
 
 Ref<Widget> EventDispatcher::perform_hit_test(Ref<Widget> root, i32 x, i32 y) {
-    if (!root->hit_test(x, y)) return Ref<Widget>();
+    if (!root || !root->is_visible() || !root->hit_test(x, y)) return Ref<Widget>();
 
     const auto& children = root->children();
-    // Hit test from top to bottom (reverse order of children for correct Z-order)
-    for (i32 i = children.size() - 1; i >= 0; i--) {
-        Ref<Widget> child = children[i];
-        if (child && child->is_visible()) {
-            Ref<Widget> hit = perform_hit_test(child, x, y);
-            if (hit) return hit;
-        }
+    for (int i = (int)children.size() - 1; i >= 0; i--) {
+        Ref<Widget> target = perform_hit_test(children[i], x, y);
+        if (target) return target;
     }
 
     return root;
 }
 
 void EventDispatcher::route_event(Event& event, Ref<Widget> target) {
-    // Collect path from root to target
-    Vector<Ref<Widget>> path;
-    Ref<Widget> current = target;
-    while (current) {
-        path.push_back(current);
-        current = current->parent();
-    }
+    if (!target) return;
 
-    // Phase 1: Capture (Root to Target Parent)
-    event.phase = EventPhase::Capture;
-    for (i32 i = path.size() - 1; i > 0; i--) {
-        path[i]->handle_event(event);
-        if (event.handled) return;
-    }
-
-    // Phase 2: Target
+    // Simplified bubble-only routing for now
     event.phase = EventPhase::Target;
-    path[0]->handle_event(event);
+    target->handle_event(event);
+
     if (event.handled) return;
 
-    // Phase 3: Bubble (Target Parent to Root)
     event.phase = EventPhase::Bubble;
-    for (u32 i = 1; i < path.size(); i++) {
-        path[i]->handle_event(event);
-        if (event.handled) return;
+    Ref<Widget> parent = target->parent();
+    while (parent && !event.handled) {
+        parent->handle_event(event);
+        parent = parent->parent();
     }
 }
 

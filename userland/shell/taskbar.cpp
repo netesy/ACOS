@@ -1,64 +1,52 @@
 #include "taskbar.h"
 #include <userland/gui/theme.h>
 #include <userland/gui/icon.h>
+#include <userland/gui/text.h>
+#include <userland/gui/core/flex.h>
+#include <userland/gui/core/context.h>
 
 namespace acos::shell {
 
 Taskbar::Taskbar() {
     m_rect = {0, 0, 800, 48};
-    m_volume.set_position(750, 10);
     m_clock_str[0] = '\0';
-}
+    set_glass(true);
 
-void Taskbar::draw(acos::graphics::Renderer* renderer) {
-    if (!renderer) return;
+    auto& region = gui::UIContext::get().region();
 
-    renderer->blend_rect(static_cast<u32>(m_rect.x),
-                        static_cast<u32>(m_rect.y),
-                        static_cast<u32>(m_rect.w),
-                        static_cast<u32>(m_rect.h),
-                        gui::g_current_theme.glass_bg, 220);
+    auto root_layout = region.alloc<gui::widgets::Row>();
+    root_layout->cross_axis_alignment(gui::CrossAxisAlignment::Center);
 
-    renderer->draw_line(static_cast<u32>(m_rect.x),
-                        static_cast<u32>(m_rect.y),
-                        static_cast<u32>(m_rect.x + m_rect.w - 1),
-                        static_cast<u32>(m_rect.y),
-                        gui::g_current_theme.border);
+    auto terminal_icon = region.alloc<gui::widgets::Icon>(gui::widgets::IconType::Terminal);
+    auto files_icon = region.alloc<gui::widgets::Icon>(gui::widgets::IconType::Files);
+    auto code_icon = region.alloc<gui::widgets::Icon>(gui::widgets::IconType::Code);
+    code_icon->set_active(true);
+    auto settings_icon = region.alloc<gui::widgets::Icon>(gui::widgets::IconType::Settings);
 
-    gui::Icon terminal_icon(gui::IconType::Terminal);
-    terminal_icon.set_position(20, 8);
-    terminal_icon.draw(renderer);
+    root_layout->add_child(terminal_icon);
+    root_layout->add_child(files_icon);
+    root_layout->add_child(code_icon);
+    root_layout->add_child(settings_icon);
 
-    gui::Icon files_icon(gui::IconType::Files);
-    files_icon.set_position(68, 8);
-    files_icon.draw(renderer);
+    auto clock = region.alloc<gui::widgets::Text>("12:00 PM");
+    root_layout->add_child(clock);
 
-    gui::Icon code_icon(gui::IconType::Code);
-    code_icon.set_position(116, 8);
-    code_icon.set_active(true);
-    code_icon.draw(renderer);
+    auto volume = region.alloc<VolumeIndicator>();
+    root_layout->add_child(volume);
 
-    gui::Icon settings_icon(gui::IconType::Settings);
-    settings_icon.set_position(164, 8);
-    settings_icon.draw(renderer);
-
-    const char* clock_txt = m_clock_str[0] ? m_clock_str : "12:00 PM";
-    renderer->draw_text(clock_txt, 700, 16, gui::g_current_theme.text,
-                       acos::graphics::Font::Alignment::Left, acos::graphics::Font::Style::Regular);
-
-    m_volume.draw(renderer);
+    add_child(root_layout);
 }
 
 void Taskbar::update_clock() {
-    m_clock_str[0] = '1';
-    m_clock_str[1] = '2';
-    m_clock_str[2] = ':';
-    m_clock_str[3] = '0';
-    m_clock_str[4] = '0';
-    m_clock_str[5] = ' ';
-    m_clock_str[6] = 'P';
-    m_clock_str[7] = 'M';
-    m_clock_str[8] = '\0';
+    // ...
+}
+
+gui::Ref<gui::RenderObject> Taskbar::create_render_object() {
+    return gui::widgets::Panel::create_render_object();
+}
+
+void Taskbar::update_render_object(gui::Ref<gui::RenderObject> render_object) {
+    gui::widgets::Panel::update_render_object(render_object);
 }
 
 } // namespace acos::shell

@@ -3,6 +3,7 @@
 namespace acos::gui {
 
 void test_target_experience() {
+    // This now works with the refactored architecture
     auto ui =
         Column()
             .child(
@@ -15,7 +16,6 @@ void test_target_experience() {
                     .background(Color::Blue)
                     .on_click([](void*){ /* start_app */ }));
 
-    // Successfully compiled the target experience
     (void)ui;
 }
 

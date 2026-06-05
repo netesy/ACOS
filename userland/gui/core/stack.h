@@ -28,6 +28,7 @@ public:
     }
 
     Ref<RenderObject> create_render_object() override;
+    void update_render_object(Ref<RenderObject> render_object) override;
 
     // Internal Fluent API
     Stack& child(Ref<Widget> c) { add_child(c); return *this; }

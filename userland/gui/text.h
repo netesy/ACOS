@@ -14,7 +14,7 @@ public:
     Text(const char* text = nullptr);
     virtual ~Text();
     
-    void set_text(const char* text) { m_text = text; }
+    void set_text(const char* text);
     void set_text_color(u32 color) { m_text_color = color; }
     void set_alignment(TextAlignment align) { m_alignment = align; }
     void set_font_size(u32 size) { m_font_size = size; }
@@ -28,10 +28,10 @@ public:
     void update_render_object(Ref<RenderObject> render_object) override;
 
 protected:
-    const char* m_text;
+    char m_text_buffer[128];
     u32 m_text_color;
     TextAlignment m_alignment;
     u32 m_font_size;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

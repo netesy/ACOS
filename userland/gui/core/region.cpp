@@ -1,10 +1,9 @@
 #include "region.h"
-#include <acos/runtime.h>
 
 namespace acos::gui {
 
 Region::Region(u32 capacity) : m_capacity(capacity) {
-    m_slots = new Slot[capacity];
+    m_slots = static_cast<Slot*>(acos::memory::kmalloc(sizeof(Slot) * capacity));
     for (u32 i = 0; i < capacity; i++) {
         m_slots[i].generation = 0;
         m_slots[i].occupied = false;
@@ -18,7 +17,7 @@ Region::~Region() {
             m_slots[i].destructor(m_slots[i].storage);
         }
     }
-    delete[] m_slots;
+    acos::memory::kfree(m_slots);
 }
 
 u32 Region::find_free_slot() {

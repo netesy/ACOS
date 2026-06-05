@@ -1,8 +1,6 @@
 #pragma once
-#include "taskbar.h"
-#include "launcher.h"
-#include "notification_center.h"
 #include <kernel/graphics/renderer.h>
+#include <userland/gui/core/context.h>
 
 namespace acos::shell {
 
@@ -14,9 +12,7 @@ public:
     void draw(acos::graphics::Renderer* renderer);
 
 private:
-    Taskbar m_taskbar;
-    Launcher m_launcher;
-    NotificationCenter m_notifications;
+    gui::UIContext m_ui_context;
 };
 
 } // namespace acos::shell

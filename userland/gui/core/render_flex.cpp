@@ -1,5 +1,6 @@
 #include "flex.h"
 #include "render_object.h"
+#include "context.h"
 
 namespace acos::gui::widgets {
 
@@ -45,7 +46,7 @@ public:
         m_rect.w = self_size.w;
         m_rect.h = self_size.h;
 
-        // Positioning logic (simplified for space)
+        // Positioning logic
         i32 current_main = 0;
         for (auto& child : m_children) {
             if (!child) continue;
@@ -68,4 +69,4 @@ Ref<RenderObject> Flex::create_render_object() {
     return UIContext::get().region().alloc<RenderFlex>(m_axis);
 }
 
-} // namespace acos::gui::widgets::widgets
+} // namespace acos::gui::widgets

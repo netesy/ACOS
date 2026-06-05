@@ -7,11 +7,13 @@
 #include "../radiobutton.h"
 #include "../progressbar.h"
 #include "../panel.h"
+#include "../icon.h"
 #include "render_object.h"
 #include "context.h"
 #include "stack.h"
 #include "grid.h"
 #include "render_widgets.h"
+#include "../theme.h"
 
 namespace acos::gui::widgets {
 
@@ -36,6 +38,34 @@ void RenderText::paint(acos::graphics::Renderer* renderer) {
 }
 void RenderText::perform_layout(BoxConstraints constraints) { (void)constraints; }
 void RenderText::set_text(const char* text) { m_text = text; }
+
+RenderIcon::RenderIcon() : m_type(IconType::Terminal), m_active(false) {}
+void RenderIcon::paint(acos::graphics::Renderer* renderer) {
+    if (!renderer) return;
+    u32 color = m_active ? g_current_theme.primary : g_current_theme.text;
+
+    switch(m_type) {
+        case IconType::Terminal:
+            renderer->draw_rounded_rect(m_rect.x + 4, m_rect.y + 4, m_rect.w - 8, m_rect.h - 8, 2, color);
+            renderer->draw_text(">", m_rect.x + 8, m_rect.y + 8, color);
+            break;
+        case IconType::Files:
+            renderer->fill_rect(m_rect.x + 6, m_rect.y + 6, m_rect.w - 12, m_rect.h - 12, color);
+            break;
+        case IconType::Code:
+            renderer->draw_text("</>", m_rect.x + 4, m_rect.y + 8, color);
+            break;
+        case IconType::Settings:
+            renderer->draw_circle(m_rect.x + m_rect.w/2, m_rect.y + m_rect.h/2, m_rect.w/3, color);
+            break;
+        default:
+            renderer->draw_rect(m_rect.x + 4, m_rect.y + 4, m_rect.w - 8, m_rect.h - 8, color);
+            break;
+    }
+}
+void RenderIcon::perform_layout(BoxConstraints constraints) { (void)constraints; }
+void RenderIcon::set_type(IconType type) { m_type = type; }
+void RenderIcon::set_active(bool active) { m_active = active; }
 
 RenderTextBox::RenderTextBox() : m_text(nullptr), m_placeholder(nullptr), m_cursor(0), m_cursor_visible(false) {}
 void RenderTextBox::paint(acos::graphics::Renderer* renderer) {
@@ -146,7 +176,7 @@ void RenderStack::perform_layout(BoxConstraints constraints) {
     for (auto& child : m_children) if (child) child->perform_layout(constraints);
 }
 
-RenderGrid::RenderGrid() {}
+RenderGrid::RenderGrid() : m_columns(1), m_spacing(0) {}
 void RenderGrid::paint(acos::graphics::Renderer* renderer) {
     for (auto& child : m_children) if (child) child->paint(renderer);
 }
@@ -175,4 +205,87 @@ Ref<RenderObject> Grid::create_render_object() {
     return UIContext::get().region().alloc<RenderGrid>();
 }
 
+void Stack::update_render_object(Ref<RenderObject> render_object) {
+    Widget::update_render_object(render_object);
+}
+
+void Grid::update_render_object(Ref<RenderObject> render_object) {
+    Widget::update_render_object(render_object);
+    auto rg = static_cast<RenderGrid*>(render_object.operator->());
+    if (rg) {
+        rg->set_columns(m_columns);
+        rg->set_spacing(m_spacing);
+    }
+}
+
 } // namespace acos::gui::widgets
+
+RenderListView::RenderListView() : m_count(0), m_selected(-1) {}
+void RenderListView::paint(acos::graphics::Renderer* renderer) {
+    if (!renderer) return;
+    renderer->blend_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.background_color, 150);
+    renderer->draw_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.border_radius, m_style.border_color);
+
+    i32 item_h = 24;
+    for (usize i = 0; i < m_count; i++) {
+        if (i == (usize)m_selected) {
+            renderer->fill_rect(m_rect.x + 2, m_rect.y + 2 + i * item_h, m_rect.w - 4, item_h, g_current_theme.primary);
+        }
+        renderer->draw_text(m_items[i], m_rect.x + 8, m_rect.y + 4 + i * item_h, m_style.foreground_color);
+    }
+}
+void RenderListView::perform_layout(BoxConstraints constraints) { (void)constraints; }
+void RenderListView::set_items(const char** items, usize count) {
+    m_count = count > 64 ? 64 : count;
+    for (usize i = 0; i < m_count; i++) m_items[i] = items[i];
+}
+void RenderListView::set_selected(i32 index) { m_selected = index; }
+
+Ref<RenderObject> ListView::create_render_object() {
+    return UIContext::get().region().alloc<RenderListView>();
+}
+
+void ListView::update_render_object(Ref<RenderObject> render_object) {
+    Widget::update_render_object(render_object);
+    auto rl = static_cast<RenderListView*>(render_object.operator->());
+    if (rl) {
+        rl->set_items(m_items, m_item_count);
+        rl->set_selected(m_selected_index);
+    }
+}
+
+RenderTextArea::RenderTextArea() { m_text[0] = '\0'; }
+void RenderTextArea::paint(acos::graphics::Renderer* renderer) {
+    if (!renderer) return;
+    renderer->blend_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.background_color, 120);
+    renderer->draw_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.border_radius, m_style.border_color);
+
+    // Simple multi-line text rendering (manual wrap or newline split)
+    i32 cur_x = m_rect.x + 8;
+    i32 cur_y = m_rect.y + 8;
+    char line_buf[128];
+    usize line_pos = 0;
+
+    for (usize i = 0; m_text[i]; i++) {
+        if (m_text[i] == '\n' || line_pos >= 127) {
+            line_buf[line_pos] = '\0';
+            renderer->draw_text(line_buf, cur_x, cur_y, m_style.foreground_color);
+            cur_y += 18;
+            line_pos = 0;
+            if (cur_y > m_rect.y + m_rect.h - 18) break;
+        } else {
+            line_buf[line_pos++] = m_text[i];
+        }
+    }
+    if (line_pos > 0 && cur_y <= m_rect.y + m_rect.h - 18) {
+        line_buf[line_pos] = '\0';
+        renderer->draw_text(line_buf, cur_x, cur_y, m_style.foreground_color);
+    }
+}
+void RenderTextArea::perform_layout(BoxConstraints constraints) { (void)constraints; }
+void RenderTextArea::set_text(const char* text) {
+    if (!text) { m_text[0] = '\0'; return; }
+    usize i = 0;
+    while (text[i] && i < 2047) { m_text[i] = text[i]; i++; }
+    m_text[i] = '\0';
+}

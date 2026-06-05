@@ -1,5 +1,6 @@
 #pragma once
 #include "render_object.h"
+#include "../icon.h"
 
 namespace acos::gui::widgets {
 
@@ -25,6 +26,18 @@ public:
     void set_text(const char* text);
 private:
     const char* m_text;
+};
+
+class RenderIcon : public RenderObject {
+public:
+    RenderIcon();
+    void paint(acos::graphics::Renderer* renderer) override;
+    void perform_layout(BoxConstraints constraints) override;
+    void set_type(IconType type);
+    void set_active(bool active);
+private:
+    IconType m_type;
+    bool m_active;
 };
 
 class RenderCheckBox : public RenderObject {
@@ -85,4 +98,56 @@ private:
     float m_value, m_min, m_max;
 };
 
+class RenderPanel : public RenderObject {
+public:
+    RenderPanel();
+    void paint(acos::graphics::Renderer* renderer) override;
+    void perform_layout(BoxConstraints constraints) override;
+    void set_glass(bool glass);
+private:
+    bool m_is_glass;
+};
+
+class RenderStack : public RenderObject {
+public:
+    RenderStack();
+    void paint(acos::graphics::Renderer* renderer) override;
+    void perform_layout(BoxConstraints constraints) override;
+};
+
+class RenderGrid : public RenderObject {
+public:
+    RenderGrid();
+    void paint(acos::graphics::Renderer* renderer) override;
+    void perform_layout(BoxConstraints constraints) override;
+    void set_columns(u32 columns) { m_columns = columns; }
+    void set_spacing(i32 spacing) { m_spacing = spacing; }
+private:
+    u32 m_columns;
+    i32 m_spacing;
+};
+
 } // namespace acos::gui::widgets
+
+class RenderListView : public RenderObject {
+public:
+    RenderListView();
+    void paint(acos::graphics::Renderer* renderer) override;
+    void perform_layout(BoxConstraints constraints) override;
+    void set_items(const char** items, usize count);
+    void set_selected(i32 index);
+private:
+    const char* m_items[64];
+    usize m_count;
+    i32 m_selected;
+};
+
+class RenderTextArea : public RenderObject {
+public:
+    RenderTextArea();
+    void paint(acos::graphics::Renderer* renderer) override;
+    void perform_layout(BoxConstraints constraints) override;
+    void set_text(const char* text);
+private:
+    char m_text[2048];
+};

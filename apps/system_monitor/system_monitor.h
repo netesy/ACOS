@@ -1,6 +1,6 @@
 #pragma once
 #include <userland/gui/window_widget.h>
-#include <userland/gui/label.h>
+#include <userland/gui/text.h>
 
 namespace acos::apps {
 
@@ -10,8 +10,8 @@ public:
     void refresh();
 
 private:
-    gui::Label m_cpu_label;
-    gui::Label m_mem_label;
+    gui::Ref<gui::widgets::Text> m_cpu_label;
+    gui::Ref<gui::widgets::Text> m_mem_label;
 };
 
 } // namespace acos::apps

@@ -122,7 +122,7 @@ KERNEL_SRCS = \
 	$(GUI_DIR)/theme.cpp \
 	$(GUI_DIR)/layout.cpp \
 	$(GUI_DIR)/button.cpp \
-	$(GUI_DIR)/label.cpp \
+	$(GUI_DIR)/text.cpp \
 	$(GUI_DIR)/window_widget.cpp \
 	$(GUI_DIR)/textbox.cpp \
 	$(GUI_DIR)/listview.cpp \
@@ -130,6 +130,17 @@ KERNEL_SRCS = \
 	$(GUI_DIR)/checkbox.cpp \
 	$(GUI_DIR)/slider.cpp \
 	$(GUI_DIR)/panel.cpp \
+	$(GUI_DIR)/core/render_widgets.cpp \
+	$(GUI_DIR)/core/render_flex.cpp \
+	$(GUI_DIR)/core/flex.cpp \
+	$(GUI_DIR)/core/context.cpp \
+	$(GUI_DIR)/core/event_dispatcher.cpp \
+	$(GUI_DIR)/core/focus_manager.cpp \
+	$(GUI_DIR)/core/animation.cpp \
+	$(GUI_DIR)/core/ref.cpp \
+	$(GUI_DIR)/core/region.cpp \
+	$(GUI_DIR)/core/style.cpp \
+	$(GUI_DIR)/core/render_object.cpp \
 	$(GUI_DIR)/icon.cpp \
 	$(GUI_DIR)/radiobutton.cpp \
 	$(GUI_DIR)/switch.cpp \
