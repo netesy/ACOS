@@ -1,7 +1,7 @@
 #pragma once
 #include "widget.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class ProgressBar : public Widget {
 public:
@@ -16,7 +16,7 @@ public:
 
     void set_range(float min, float max);
 
-    // Fluent API
+    // Internal Fluent API
     ProgressBar& value(float v) { set_value(v); return *this; }
     ProgressBar& range(float min, float max) { set_range(min, max); return *this; }
 
@@ -26,4 +26,4 @@ private:
     float m_max;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

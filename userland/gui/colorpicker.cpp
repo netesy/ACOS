@@ -2,7 +2,7 @@
 #include "theme.h"
 #include <kernel/graphics/renderer.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 ColorPicker::ColorPicker() : m_color(0xFFFFFFFF) {
     m_rect.w = 150;
@@ -13,4 +13,4 @@ ColorPicker::ColorPicker() : m_color(0xFFFFFFFF) {
 
 Ref<RenderObject> Colorpicker::create_render_object() { return Ref<RenderObject>(); }
 Ref<RenderObject> ColorPicker::create_render_object() { return Ref<RenderObject>(); }
-} // namespace acos::gui
+} // namespace acos::gui::widgets

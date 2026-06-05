@@ -1,7 +1,7 @@
 #pragma once
 #include "widget.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class ListView : public Widget {
 public:
@@ -19,4 +19,4 @@ private:
     i32 m_selected_index;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

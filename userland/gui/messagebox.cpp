@@ -2,7 +2,7 @@
 #include "theme.h"
 #include <kernel/graphics/renderer.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 MessageBox::MessageBox(const char* title, const char* message)
     : WindowWidget(title, 250, 200, 300, 150),
@@ -22,4 +22,4 @@ MessageBox::~MessageBox() {}
 
 Ref<RenderObject> Messagebox::create_render_object() { return Ref<RenderObject>(); }
 Ref<RenderObject> MessageBox::create_render_object() { return Ref<RenderObject>(); }
-} // namespace acos::gui
+} // namespace acos::gui::widgets

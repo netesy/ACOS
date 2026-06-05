@@ -2,7 +2,7 @@
 #include "theme.h"
 #include <kernel/graphics/renderer.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 ScrollView::ScrollView() : m_v_scroll(Orientation::Vertical), m_content(nullptr) {
     m_rect = {0, 0, 200, 200};
@@ -18,6 +18,6 @@ void ScrollView::add_content(Widget* widget) {
 
 
 
-Ref<RenderObject> Scrollview::create_render_object() { return Ref<RenderObject>(); }
 Ref<RenderObject> ScrollView::create_render_object() { return Ref<RenderObject>(); }
-} // namespace acos::gui
+Ref<RenderObject> ScrollView::create_render_object() { return Ref<RenderObject>(); }
+} // namespace acos::gui::widgets

@@ -3,7 +3,7 @@
 #include "core/event_dispatcher.h"
 #include <kernel/graphics/renderer.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 Switch::Switch(const char* label) : m_label(label), m_on(false) {
     m_rect.w = 120;
@@ -40,4 +40,4 @@ void Switch::on_event(Event& event) {
     }
 }
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

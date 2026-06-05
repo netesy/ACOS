@@ -1,7 +1,7 @@
 #pragma once
 #include <acos/types.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 struct Theme {
     // ACOS Synthetic Interface colors
@@ -41,4 +41,4 @@ void init_default_theme();
 void init_dark_theme();
 void init_light_theme();
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

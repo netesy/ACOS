@@ -2,7 +2,7 @@
 #include "theme.h"
 #include <kernel/graphics/renderer.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 Toast::Toast(const char* message) : m_message(message), m_timer(0), m_duration(0), m_alpha(0) {
     m_rect = {300, 500, 200, 40};
@@ -29,4 +29,4 @@ void Toast::update(u64 delta_ms) {
 
 
 Ref<RenderObject> Toast::create_render_object() { return Ref<RenderObject>(); }
-} // namespace acos::gui
+} // namespace acos::gui::widgets

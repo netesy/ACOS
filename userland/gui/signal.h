@@ -1,7 +1,7 @@
 #pragma once
 #include <acos/types.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 template <typename... Args>
 class Signal {
@@ -32,4 +32,4 @@ private:
     u32 m_count;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

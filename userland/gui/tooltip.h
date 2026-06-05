@@ -1,7 +1,7 @@
 #pragma once
 #include "widget.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class Tooltip : public Widget {
 public:
@@ -13,4 +13,4 @@ private:
     const char* m_text;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

@@ -3,7 +3,7 @@
 #include <kernel/graphics/renderer.h>
 #include <kernel/graphics/font.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 static inline usize strlen_impl(const char* s) {
     usize len = 0;
@@ -55,6 +55,6 @@ void TextArea::set_text(const char* text) {
     m_cursor_pos = (u32)len;
 }
 
-Ref<RenderObject> Textarea::create_render_object() { return Ref<RenderObject>(); }
 Ref<RenderObject> TextArea::create_render_object() { return Ref<RenderObject>(); }
-} // namespace acos::gui
+Ref<RenderObject> TextArea::create_render_object() { return Ref<RenderObject>(); }
+} // namespace acos::gui::widgets

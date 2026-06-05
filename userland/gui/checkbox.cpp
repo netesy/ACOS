@@ -2,7 +2,7 @@
 #include "theme.h"
 #include <kernel/graphics/renderer.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 CheckBox::CheckBox(const char* label) : m_label(label), m_checked(false) {
     m_rect.w = 120;
@@ -39,4 +39,4 @@ void CheckBox::on_event(Event& event) {
     }
 }
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

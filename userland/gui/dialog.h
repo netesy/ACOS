@@ -2,7 +2,7 @@
 #include "window_widget.h"
 #include "button.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class Dialog : public WindowWidget {
 public:
@@ -19,4 +19,4 @@ protected:
     Button m_cancel_btn;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

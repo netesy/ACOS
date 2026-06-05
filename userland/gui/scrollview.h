@@ -2,7 +2,7 @@
 #include "widget.h"
 #include "scrollbar.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class ScrollView : public Widget {
 public:
@@ -18,4 +18,4 @@ private:
     Widget* m_content;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

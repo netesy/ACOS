@@ -2,7 +2,7 @@
 #include "theme.h"
 #include <kernel/graphics/renderer.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 MenuItem::MenuItem(const char* label) : m_label(label) {
     m_rect.h = 24;
@@ -12,4 +12,4 @@ MenuItem::MenuItem(const char* label) : m_label(label) {
 
 Ref<RenderObject> Menuitem::create_render_object() { return Ref<RenderObject>(); }
 Ref<RenderObject> MenuItem::create_render_object() { return Ref<RenderObject>(); }
-} // namespace acos::gui
+} // namespace acos::gui::widgets

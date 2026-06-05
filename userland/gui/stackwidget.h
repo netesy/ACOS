@@ -1,7 +1,7 @@
 #pragma once
 #include "widget.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class StackWidget : public Widget {
 public:
@@ -18,4 +18,4 @@ private:
     u32 m_current_index;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

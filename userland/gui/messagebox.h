@@ -3,7 +3,7 @@
 #include "button.h"
 #include "label.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class MessageBox : public WindowWidget {
 public:
@@ -17,4 +17,4 @@ private:
     Button m_ok_btn;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

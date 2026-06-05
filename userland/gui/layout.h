@@ -1,7 +1,7 @@
 #pragma once
 #include "widget.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class Layout {
 public:
@@ -10,4 +10,4 @@ public:
     static void apply_grid(Widget* parent, Widget** children, usize count, u32 columns, i32 padding = 5);
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

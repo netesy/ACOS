@@ -14,6 +14,9 @@ public:
     Ref(Region* region, u32 index, u32 generation)
         : m_region(region), m_index(index), m_generation(generation) {}
 
+    template <typename U>
+    Ref(const Ref<U>& other) : m_region(other.region()), m_index(other.index()), m_generation(other.generation()) {}
+
     T* operator->() const {
         return static_cast<T*>(resolve());
     }
@@ -21,6 +24,7 @@ public:
     T& operator*() const {
         return *static_cast<T*>(resolve());
     }
+
 
     bool is_valid() const {
         return resolve() != nullptr;

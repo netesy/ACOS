@@ -1,7 +1,7 @@
 #pragma once
 #include "widget.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class Switch : public Widget {
 public:
@@ -15,7 +15,7 @@ public:
     bool on() const { return m_on; }
     void set_on(bool on) { m_on = on; set_paint_dirty(); }
 
-    // Fluent API
+    // Internal Fluent API
     Switch& label(const char* l) { m_label = l; set_layout_dirty(); return *this; }
     Switch& on(bool o) { set_on(o); return *this; }
 
@@ -24,4 +24,4 @@ private:
     bool m_on;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

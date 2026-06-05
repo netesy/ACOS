@@ -2,8 +2,9 @@
 #include "theme.h"
 #include <kernel/graphics/renderer.h>
 #include <kernel/graphics/font.h>
+#include "core/render_widgets.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 Text::Text(const char* text)
     : m_text(text), m_text_color(g_current_theme.text),
@@ -29,4 +30,4 @@ void Text::update_render_object(Ref<RenderObject> render_object) {
     }
 }
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

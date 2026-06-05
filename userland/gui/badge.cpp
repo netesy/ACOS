@@ -2,7 +2,7 @@
 #include "theme.h"
 #include <kernel/graphics/renderer.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 Badge::Badge(const char* text) : m_text(text) {
     m_rect.w = 20;
@@ -11,4 +11,4 @@ Badge::Badge(const char* text) : m_text(text) {
 
 
 Ref<RenderObject> Badge::create_render_object() { return Ref<RenderObject>(); }
-} // namespace acos::gui
+} // namespace acos::gui::widgets

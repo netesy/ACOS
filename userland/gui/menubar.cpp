@@ -2,7 +2,7 @@
 #include "theme.h"
 #include <kernel/graphics/renderer.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 MenuBar::MenuBar() : m_count(0), m_active_menu(-1) {
     m_rect.h = 30;
@@ -22,4 +22,4 @@ Menu* MenuBar::add_menu(const char* title) {
 
 Ref<RenderObject> Menubar::create_render_object() { return Ref<RenderObject>(); }
 Ref<RenderObject> MenuBar::create_render_object() { return Ref<RenderObject>(); }
-} // namespace acos::gui
+} // namespace acos::gui::widgets

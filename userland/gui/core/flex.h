@@ -24,6 +24,8 @@ enum class Axis {
     Vertical
 };
 
+namespace acos::gui::widgets {
+
 class Flex : public Widget {
 public:
     Flex(Axis axis)
@@ -48,7 +50,7 @@ class Row : public Flex {
 public:
     Row() : Flex(Axis::Horizontal) {}
 
-    // Fluent API
+    // Internal Fluent API
     Row& child(Ref<Widget> c) { add_child(c); return *this; }
 };
 
@@ -56,8 +58,8 @@ class Column : public Flex {
 public:
     Column() : Flex(Axis::Vertical) {}
 
-    // Fluent API
+    // Internal Fluent API
     Column& child(Ref<Widget> c) { add_child(c); return *this; }
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

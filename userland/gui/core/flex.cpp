@@ -1,6 +1,6 @@
 #include "flex.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 Size Flex::layout(BoxConstraints constraints) {
     i32 main_total = 0;
@@ -86,4 +86,4 @@ Size Flex::layout(BoxConstraints constraints) {
     return self_size;
 }
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

@@ -1,7 +1,7 @@
 #include "flex.h"
 #include "render_object.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class RenderFlex : public RenderObject {
 public:
@@ -68,4 +68,4 @@ Ref<RenderObject> Flex::create_render_object() {
     return UIContext::get().region().alloc<RenderFlex>(m_axis);
 }
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets::widgets

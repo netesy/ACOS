@@ -2,7 +2,7 @@
 #include "widget.h"
 #include "signal.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class SpinBox : public Widget {
 public:
@@ -24,4 +24,4 @@ private:
     bool m_down_hovered;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

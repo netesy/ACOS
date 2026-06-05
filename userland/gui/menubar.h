@@ -2,7 +2,7 @@
 #include "widget.h"
 #include "menu.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class MenuBar : public Widget {
 public:
@@ -18,4 +18,4 @@ private:
     i32 m_active_menu;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

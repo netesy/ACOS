@@ -1,7 +1,7 @@
 #pragma once
 #include "widget.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 enum class IconType {
     Terminal,
@@ -35,4 +35,4 @@ private:
     void draw_code(acos::graphics::Renderer* renderer);
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

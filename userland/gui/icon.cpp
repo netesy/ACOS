@@ -2,7 +2,7 @@
 #include "theme.h"
 #include <kernel/graphics/renderer.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 Icon::Icon(IconType type) : m_type(type), m_color(g_current_theme.primary), m_active(false) {
     m_rect.w = 32;
@@ -46,4 +46,4 @@ void Icon::draw_code(acos::graphics::Renderer* renderer) {
 }
 
 Ref<RenderObject> Icon::create_render_object() { return Ref<RenderObject>(); }
-} // namespace acos::gui
+} // namespace acos::gui::widgets

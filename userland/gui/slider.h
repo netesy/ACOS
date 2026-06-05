@@ -1,7 +1,7 @@
 #pragma once
 #include "widget.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class Slider : public Widget {
 public:
@@ -16,7 +16,7 @@ public:
     void set_value(float value);
     void set_range(float min, float max);
 
-    // Fluent API
+    // Internal Fluent API
     Slider& value(float v) { set_value(v); return *this; }
     Slider& range(float min, float max) { set_range(min, max); return *this; }
 
@@ -27,4 +27,4 @@ private:
     bool m_dragging;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

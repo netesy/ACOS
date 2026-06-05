@@ -2,7 +2,7 @@
 #include "theme.h"
 #include <kernel/graphics/renderer.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 ProgressBar::ProgressBar() : m_value(0.0f), m_min(0.0f), m_max(100.0f) {
     m_rect.w = 200;
@@ -40,4 +40,4 @@ void ProgressBar::update_render_object(Ref<RenderObject> render_object) {
     }
 }
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

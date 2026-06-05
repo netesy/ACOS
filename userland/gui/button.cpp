@@ -3,8 +3,9 @@
 #include "core/event_dispatcher.h"
 #include <kernel/graphics/renderer.h>
 #include <kernel/graphics/font.h>
+#include "core/render_widgets.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 static inline usize strlen_impl(const char* s) {
     usize len = 0;
@@ -19,18 +20,14 @@ Button::Button(const char* label)
     m_flags = (u32)WidgetFlags::Visible | (u32)WidgetFlags::Enabled | (u32)WidgetFlags::Clickable;
     m_state = WidgetState::Normal;
     m_style.elevation = 2;
-    
-    m_bg_color = g_current_theme.surface;
-    m_text_color = g_current_theme.text;
-    m_hover_color = g_current_theme.primary;
-    m_pressed_color = g_current_theme.secondary;
 }
 
 Button::~Button() {}
 
-
 Ref<RenderObject> Button::create_render_object() {
-    return UIContext::get().region().alloc<RenderButton>();
+    Ref<RenderObject> ro = UIContext::get().region().alloc<RenderButton>();
+    update_render_object(ro);
+    return ro;
 }
 
 void Button::update_render_object(Ref<RenderObject> render_object) {
@@ -55,26 +52,18 @@ void Button::update(u64 delta_ms) {
 
 void Button::on_event(Event& event) {
     if (!(m_flags & (u32)WidgetFlags::Enabled)) return;
-
     if (event.raw.type == acos::input::InputType::Mouse) {
         bool button_pressed = (event.raw.value & 0x01) != 0;
-
-        if (event.phase == EventPhase::Target) {
-            if (button_pressed) {
-                m_state = WidgetState::Pressed;
-                m_style.elevation = 1;
-                m_press_time = 0;
-                if (m_on_click) m_on_click(nullptr);
-                event.stop_propagation();
-            }
+        if (event.phase == EventPhase::Target && button_pressed) {
+            m_state = WidgetState::Pressed;
+            m_style.elevation = 1;
+            m_press_time = 0;
+            if (m_on_click) m_on_click(nullptr);
+            event.stop_propagation();
         }
-
-        // Handle hovering logic
-        i32 mouse_x = event.mouse_x;
-        i32 mouse_y = event.mouse_y;
+        i32 mouse_x = event.mouse_x, mouse_y = event.mouse_y;
         bool was_over = m_mouse_over;
         m_mouse_over = hit_test(mouse_x, mouse_y);
-        
         if (m_mouse_over && !was_over) {
             m_state = WidgetState::Hovered;
             m_style.elevation = 4;
@@ -85,4 +74,4 @@ void Button::on_event(Event& event) {
     }
 }
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

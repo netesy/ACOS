@@ -2,13 +2,13 @@
 #include "theme.h"
 #include <kernel/graphics/renderer.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 StatusBar::StatusBar() : m_text("Ready") {
     m_rect.h = 24;
 }
 
 
-Ref<RenderObject> Statusbar::create_render_object() { return Ref<RenderObject>(); }
 Ref<RenderObject> StatusBar::create_render_object() { return Ref<RenderObject>(); }
-} // namespace acos::gui
+Ref<RenderObject> StatusBar::create_render_object() { return Ref<RenderObject>(); }
+} // namespace acos::gui::widgets

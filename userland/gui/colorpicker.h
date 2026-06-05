@@ -2,7 +2,7 @@
 #include "widget.h"
 #include "signal.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class ColorPicker : public Widget {
 public:
@@ -16,4 +16,4 @@ private:
     u32 m_color;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

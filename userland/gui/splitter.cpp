@@ -2,7 +2,7 @@
 #include "theme.h"
 #include <kernel/graphics/renderer.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 Splitter::Splitter(Orientation orient) : m_orient(orient), m_first(nullptr), m_second(nullptr), m_ratio(0.5f), m_dragging(false) {}
 
@@ -22,4 +22,4 @@ void Splitter::set_split_ratio(float ratio) {
 
 
 Ref<RenderObject> Splitter::create_render_object() { return Ref<RenderObject>(); }
-} // namespace acos::gui
+} // namespace acos::gui::widgets

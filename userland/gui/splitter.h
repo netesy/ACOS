@@ -2,7 +2,7 @@
 #include "widget.h"
 #include "scrollbar.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class Splitter : public Widget {
 public:
@@ -20,4 +20,4 @@ private:
     bool m_dragging;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

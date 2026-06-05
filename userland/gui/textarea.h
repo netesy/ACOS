@@ -1,7 +1,7 @@
 #pragma once
 #include "widget.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class TextArea : public Widget {
 public:
@@ -25,4 +25,4 @@ private:
     void backspace();
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

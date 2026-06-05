@@ -1,7 +1,7 @@
 #pragma once
 #include "../widget.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class Grid : public Widget {
 public:
@@ -47,7 +47,7 @@ public:
 
     Ref<RenderObject> create_render_object() override;
 
-    // Fluent API
+    // Internal Fluent API
     Grid& child(Ref<Widget> c) { add_child(c); return *this; }
 
 private:
@@ -55,4 +55,4 @@ private:
     i32 m_spacing;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

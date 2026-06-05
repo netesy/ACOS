@@ -3,7 +3,7 @@
 #include <kernel/graphics/renderer.h>
 #include <kernel/graphics/font.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 ListView::ListView() : m_item_count(0), m_selected_index(-1) {
     m_rect.w = 200;
@@ -28,4 +28,4 @@ void ListView::clear() {
 
 Ref<RenderObject> Listview::create_render_object() { return Ref<RenderObject>(); }
 Ref<RenderObject> ListView::create_render_object() { return Ref<RenderObject>(); }
-} // namespace acos::gui
+} // namespace acos::gui::widgets

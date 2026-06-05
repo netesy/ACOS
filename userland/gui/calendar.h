@@ -1,7 +1,7 @@
 #pragma once
 #include "widget.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class Calendar : public Widget {
 public:
@@ -14,4 +14,4 @@ private:
     u32 m_selected_day;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

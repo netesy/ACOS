@@ -2,7 +2,7 @@
 #include "theme.h"
 #include <kernel/graphics/renderer.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 Tooltip::Tooltip() : m_text(nullptr) {
     m_rect.w = 120;
@@ -11,6 +11,6 @@ Tooltip::Tooltip() : m_text(nullptr) {
 }
 
 
-Ref<RenderObject> Tooltip::create_render_object() { return Ref<RenderObject>(); }
 Ref<RenderObject> ToolTip::create_render_object() { return Ref<RenderObject>(); }
-} // namespace acos::gui
+Ref<RenderObject> ToolTip::create_render_object() { return Ref<RenderObject>(); }
+} // namespace acos::gui::widgets

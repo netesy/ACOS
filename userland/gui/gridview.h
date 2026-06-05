@@ -1,7 +1,7 @@
 #pragma once
 #include "widget.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class GridView : public Widget {
 public:
@@ -21,4 +21,4 @@ private:
     u32 m_cell_count;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

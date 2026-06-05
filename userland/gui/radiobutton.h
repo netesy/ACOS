@@ -1,7 +1,7 @@
 #pragma once
 #include "widget.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class RadioButtonGroup;
 
@@ -19,7 +19,7 @@ public:
 
     void set_group(RadioButtonGroup* group) { m_group = group; }
 
-    // Fluent API
+    // Internal Fluent API
     RadioButton& label(const char* l) { m_label = l; set_layout_dirty(); return *this; }
     RadioButton& selected(bool s) { set_selected(s); return *this; }
 
@@ -39,4 +39,4 @@ private:
     Vector<Ref<RadioButton>> m_buttons;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

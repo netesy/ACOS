@@ -1,7 +1,7 @@
 #pragma once
 #include "render_object.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class RenderButton : public RenderObject {
 public:
@@ -85,4 +85,4 @@ private:
     float m_value, m_min, m_max;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

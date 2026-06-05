@@ -1,6 +1,6 @@
 #include "stackwidget.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 StackWidget::StackWidget() : m_count(0), m_current_index(0) {}
 
@@ -23,4 +23,4 @@ void StackWidget::set_current_index(u32 index) {
 
 
 Ref<RenderObject> StackWidget::create_render_object() { return Ref<RenderObject>(); }
-} // namespace acos::gui
+} // namespace acos::gui::widgets

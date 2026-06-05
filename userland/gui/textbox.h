@@ -1,7 +1,7 @@
 #pragma once
 #include "widget.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class TextBox : public Widget {
 public:
@@ -22,7 +22,7 @@ public:
     void set_text_color(u32 color) { m_text_color = color; set_paint_dirty(); }
     void set_background_color(u32 color) { m_bg_color = color; set_paint_dirty(); }
 
-    // Fluent API
+    // Internal Fluent API
     TextBox& placeholder(const char* p) { set_placeholder(p); return *this; }
     TextBox& color(u32 c) { set_text_color(c); return *this; }
     TextBox& background(u32 b) { set_background_color(b); return *this; }
@@ -38,4 +38,4 @@ private:
     bool m_cursor_visible;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

@@ -2,7 +2,7 @@
 #include "widget.h"
 #include "listview.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class ComboBox : public Widget {
 public:
@@ -20,4 +20,4 @@ private:
     const char* m_current_text;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

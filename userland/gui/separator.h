@@ -2,7 +2,7 @@
 #include "widget.h"
 #include "scrollbar.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class Separator : public Widget {
 public:
@@ -13,4 +13,4 @@ private:
     Orientation m_orientation;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

@@ -1,7 +1,7 @@
 #pragma once
 #include "widget.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class Canvas : public Widget {
 public:
@@ -15,4 +15,4 @@ public:
     void* m_user_data;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

@@ -2,7 +2,7 @@
 #include "theme.h"
 #include <kernel/graphics/renderer.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 ToolButton::ToolButton(const char* label) : Button(label) {
     m_rect.w = 32;
@@ -10,6 +10,6 @@ ToolButton::ToolButton(const char* label) : Button(label) {
 }
 
 
-Ref<RenderObject> Toolbutton::create_render_object() { return Ref<RenderObject>(); }
 Ref<RenderObject> ToolButton::create_render_object() { return Ref<RenderObject>(); }
-} // namespace acos::gui
+Ref<RenderObject> ToolButton::create_render_object() { return Ref<RenderObject>(); }
+} // namespace acos::gui::widgets

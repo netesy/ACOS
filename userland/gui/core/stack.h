@@ -1,7 +1,7 @@
 #pragma once
 #include "../widget.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class Stack : public Widget {
 public:
@@ -29,8 +29,8 @@ public:
 
     Ref<RenderObject> create_render_object() override;
 
-    // Fluent API
+    // Internal Fluent API
     Stack& child(Ref<Widget> c) { add_child(c); return *this; }
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

@@ -1,7 +1,7 @@
 #include "dialog.h"
 #include "theme.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 Dialog::Dialog(const char* title, i32 w, i32 h)
     : WindowWidget(title, 200, 150, w, h),
@@ -28,4 +28,4 @@ void Dialog::set_on_cancel(void (*callback)(void*), void* receiver) {
 }
 
 Ref<RenderObject> Dialog::create_render_object() { return Ref<RenderObject>(); }
-} // namespace acos::gui
+} // namespace acos::gui::widgets

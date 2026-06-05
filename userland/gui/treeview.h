@@ -1,7 +1,7 @@
 #pragma once
 #include "widget.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 struct TreeItem {
     const char* label;
@@ -23,4 +23,4 @@ private:
     void draw_item(acos::graphics::Renderer* renderer, TreeItem* item, i32& y, i32 indent);
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

@@ -13,7 +13,7 @@
 #include "grid.h"
 #include "render_widgets.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 RenderButton::RenderButton() : m_label(nullptr), m_pressed(false), m_hovered(false) {}
 void RenderButton::paint(acos::graphics::Renderer* renderer) {
@@ -64,7 +64,7 @@ void RenderCheckBox::paint(acos::graphics::Renderer* renderer) {
     renderer->draw_rounded_rect(bx, by, box_size, box_size, 4, m_style.border_color);
     if (m_checked) {
         renderer->draw_line(bx + 4, by + 4, bx + box_size - 4, by + box_size - 4, m_style.foreground_color);
-        renderer->draw_line(bx + 4, by + box_size - 4, bx + box_size - 4, by + 4, m_style.foreground_color);
+        renderer->draw_line(bx + 4, by + box_size - 4, bx + box_size - 4, by + box_size - 4, m_style.foreground_color);
     }
     if (m_label) renderer->draw_text(m_label, bx + box_size + 8, m_rect.y + (m_rect.h / 2) - 8, m_style.foreground_color);
 }
@@ -138,6 +138,35 @@ void RenderProgressBar::perform_layout(BoxConstraints constraints) { (void)const
 void RenderProgressBar::set_value(float v) { m_value = v; }
 void RenderProgressBar::set_range(float min, float max) { m_min = min; m_max = max; }
 
+RenderStack::RenderStack() {}
+void RenderStack::paint(acos::graphics::Renderer* renderer) {
+    for (auto& child : m_children) if (child) child->paint(renderer);
+}
+void RenderStack::perform_layout(BoxConstraints constraints) {
+    for (auto& child : m_children) if (child) child->perform_layout(constraints);
+}
+
+RenderGrid::RenderGrid() {}
+void RenderGrid::paint(acos::graphics::Renderer* renderer) {
+    for (auto& child : m_children) if (child) child->paint(renderer);
+}
+void RenderGrid::perform_layout(BoxConstraints constraints) {
+    for (auto& child : m_children) if (child) child->perform_layout(constraints);
+}
+
+RenderPanel::RenderPanel() : m_is_glass(false) {}
+void RenderPanel::paint(acos::graphics::Renderer* renderer) {
+    if (!renderer) return;
+    if (m_is_glass) renderer->blend_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.background_color, 150);
+    else renderer->fill_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.border_radius, m_style.background_color);
+    renderer->draw_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.border_radius, m_style.border_color);
+    for (auto& child : m_children) if (child) child->paint(renderer);
+}
+void RenderPanel::perform_layout(BoxConstraints constraints) {
+    for (auto& child : m_children) if (child) child->perform_layout(constraints);
+}
+void RenderPanel::set_glass(bool glass) { m_is_glass = glass; }
+
 Ref<RenderObject> Stack::create_render_object() {
     return UIContext::get().region().alloc<RenderStack>();
 }
@@ -146,4 +175,4 @@ Ref<RenderObject> Grid::create_render_object() {
     return UIContext::get().region().alloc<RenderGrid>();
 }
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

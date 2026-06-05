@@ -2,7 +2,7 @@
 #include "theme.h"
 #include <kernel/graphics/renderer.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 Separator::Separator(Orientation orient) : m_orientation(orient) {
     if (m_orientation == Orientation::Horizontal) {
@@ -16,4 +16,4 @@ Separator::Separator(Orientation orient) : m_orientation(orient) {
 
 
 Ref<RenderObject> Separator::create_render_object() { return Ref<RenderObject>(); }
-} // namespace acos::gui
+} // namespace acos::gui::widgets

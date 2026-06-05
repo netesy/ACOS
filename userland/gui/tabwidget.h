@@ -1,7 +1,7 @@
 #pragma once
 #include "widget.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 struct Tab {
     const char* title;
@@ -24,4 +24,4 @@ private:
     u32 m_selected_tab;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

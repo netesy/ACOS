@@ -2,7 +2,7 @@
 #include "theme.h"
 #include <kernel/graphics/renderer.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 ScrollBar::ScrollBar(Orientation orientation)
     : m_orientation(orientation), m_value(0), m_min(0), m_max(100), m_page_size(10),
@@ -33,6 +33,6 @@ void ScrollBar::set_range(i32 min, i32 max, i32 page_size) {
 
 
 
-Ref<RenderObject> Scrollbar::create_render_object() { return Ref<RenderObject>(); }
 Ref<RenderObject> ScrollBar::create_render_object() { return Ref<RenderObject>(); }
-} // namespace acos::gui
+Ref<RenderObject> ScrollBar::create_render_object() { return Ref<RenderObject>(); }
+} // namespace acos::gui::widgets

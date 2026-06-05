@@ -3,7 +3,7 @@
 #include <kernel/graphics/renderer.h>
 #include <kernel/graphics/font.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 static inline usize strlen_impl(const char* s) {
     usize len = 0;
@@ -105,4 +105,4 @@ void TextBox::clear() {
     m_cursor = 0;
 }
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

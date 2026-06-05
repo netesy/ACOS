@@ -2,7 +2,7 @@
 #include "widget.h"
 #include "signal.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class MenuItem : public Widget {
 public:
@@ -15,4 +15,4 @@ private:
     const char* m_label;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

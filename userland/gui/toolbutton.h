@@ -1,7 +1,7 @@
 #pragma once
 #include "button.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class ToolButton : public Button {
 public:
@@ -9,4 +9,4 @@ public:
     ToolButton(const char* label = nullptr);
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

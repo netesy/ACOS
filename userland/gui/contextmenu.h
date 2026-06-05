@@ -1,7 +1,7 @@
 #pragma once
 #include "menu.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class ContextMenu : public Menu {
 public:
@@ -9,4 +9,4 @@ public:
     void popup(i32 x, i32 y);
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

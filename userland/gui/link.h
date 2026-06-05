@@ -2,7 +2,7 @@
 #include "label.h"
 #include "signal.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class Link : public Label {
 public:
@@ -12,4 +12,4 @@ public:
     Signal<> on_clicked;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

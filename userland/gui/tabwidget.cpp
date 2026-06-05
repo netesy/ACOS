@@ -2,7 +2,7 @@
 #include "theme.h"
 #include <kernel/graphics/renderer.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 TabWidget::TabWidget() : m_tab_count(0), m_selected_tab(0) {
     m_rect = {0, 0, 300, 200};
@@ -30,4 +30,4 @@ void TabWidget::select_tab(u32 index) {
 
 
 Ref<RenderObject> TabWidget::create_render_object() { return Ref<RenderObject>(); }
-} // namespace acos::gui
+} // namespace acos::gui::widgets

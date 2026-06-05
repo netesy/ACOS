@@ -1,7 +1,7 @@
 #pragma once
 #include "widget.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class CheckBox : public Widget {
 public:
@@ -15,7 +15,7 @@ public:
     bool checked() const { return m_checked; }
     void set_checked(bool checked) { m_checked = checked; set_paint_dirty(); }
 
-    // Fluent API
+    // Internal Fluent API
     CheckBox& label(const char* l) { m_label = l; set_layout_dirty(); return *this; }
     CheckBox& checked(bool c) { set_checked(c); return *this; }
 
@@ -24,4 +24,4 @@ private:
     bool m_checked;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

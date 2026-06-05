@@ -2,7 +2,7 @@
 #include "theme.h"
 #include <kernel/graphics/renderer.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 Graph::Graph() : m_count(0) {
     m_rect.w = 200;
@@ -20,4 +20,4 @@ void Graph::add_value(float val) {
 
 
 Ref<RenderObject> Graph::create_render_object() { return Ref<RenderObject>(); }
-} // namespace acos::gui
+} // namespace acos::gui::widgets

@@ -1,7 +1,7 @@
 #pragma once
 #include "widget.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class GroupBox : public Widget {
 public:
@@ -12,4 +12,4 @@ private:
     const char* m_title;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

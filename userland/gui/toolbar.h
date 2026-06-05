@@ -1,7 +1,7 @@
 #pragma once
 #include "widget.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class ToolBar : public Widget {
 public:
@@ -9,4 +9,4 @@ public:
     ToolBar();
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

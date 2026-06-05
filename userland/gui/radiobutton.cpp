@@ -2,7 +2,7 @@
 #include "theme.h"
 #include <kernel/graphics/renderer.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 RadioButton::RadioButton(const char* label)
     : m_label(label), m_selected(false), m_group(nullptr) {
@@ -66,4 +66,4 @@ void RadioButtonGroup::select(Ref<RadioButton> selected_button) {
     }
 }
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

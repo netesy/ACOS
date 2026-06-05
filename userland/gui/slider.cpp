@@ -2,7 +2,7 @@
 #include "theme.h"
 #include <kernel/graphics/renderer.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 Slider::Slider() : m_value(0.0f), m_min(0.0f), m_max(100.0f), m_dragging(false) {
     m_rect.w = 200;
@@ -61,4 +61,4 @@ void Slider::on_event(Event& event) {
     }
 }
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

@@ -2,7 +2,7 @@
 #include "theme.h"
 #include <kernel/graphics/renderer.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 Link::Link(const char* text) : Label(text) {
     m_rect.h = 20;
@@ -12,4 +12,4 @@ Link::Link(const char* text) : Label(text) {
 
 
 Ref<RenderObject> Link::create_render_object() { return Ref<RenderObject>(); }
-} // namespace acos::gui
+} // namespace acos::gui::widgets

@@ -2,7 +2,7 @@
 #include "widget.h"
 #include "signal.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class Menu : public Widget {
 public:
@@ -21,4 +21,4 @@ private:
     i32 m_hovered_index;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

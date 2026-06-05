@@ -2,7 +2,7 @@
 #include "theme.h"
 #include <kernel/graphics/renderer.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 SpinBox::SpinBox(i32 min, i32 max)
     : m_value(min), m_min(min), m_max(max), m_up_hovered(false), m_down_hovered(false) {
@@ -24,6 +24,6 @@ void SpinBox::set_value(i32 v) {
 
 
 
-Ref<RenderObject> Spinbox::create_render_object() { return Ref<RenderObject>(); }
 Ref<RenderObject> SpinBox::create_render_object() { return Ref<RenderObject>(); }
-} // namespace acos::gui
+Ref<RenderObject> SpinBox::create_render_object() { return Ref<RenderObject>(); }
+} // namespace acos::gui::widgets

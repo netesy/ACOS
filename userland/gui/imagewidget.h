@@ -1,7 +1,7 @@
 #pragma once
 #include "widget.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class ImageWidget : public Widget {
 public:
@@ -14,4 +14,4 @@ private:
     u32 m_img_w, m_img_h;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

@@ -2,7 +2,7 @@
 #include "theme.h"
 #include <kernel/graphics/renderer.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 Panel::Panel() : m_bg_color(g_current_theme.surface), m_is_glass(false) {
     m_rect = {0, 0, 100, 100};
@@ -25,4 +25,4 @@ void Panel::update_render_object(Ref<RenderObject> render_object) {
     }
 }
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

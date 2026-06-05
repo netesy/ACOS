@@ -1,7 +1,7 @@
 #pragma once
 #include "widget.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 enum class Orientation {
     Horizontal,
@@ -29,4 +29,4 @@ private:
     i32 m_drag_start;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

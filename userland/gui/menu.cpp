@@ -2,7 +2,7 @@
 #include "theme.h"
 #include <kernel/graphics/renderer.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 Menu::Menu() : m_count(0), m_hovered_index(-1) {
     m_rect.w = 150;
@@ -22,4 +22,4 @@ void Menu::add_item(const char* label) {
 
 
 Ref<RenderObject> Menu::create_render_object() { return Ref<RenderObject>(); }
-} // namespace acos::gui
+} // namespace acos::gui::widgets

@@ -2,7 +2,7 @@
 #include "theme.h"
 #include <kernel/graphics/renderer.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 ComboBox::ComboBox() : m_expanded(false), m_current_text("Select...") {
     m_rect.w = 150;
@@ -24,4 +24,4 @@ const char* ComboBox::selected_item() const {
 
 Ref<RenderObject> Combobox::create_render_object() { return Ref<RenderObject>(); }
 Ref<RenderObject> ComboBox::create_render_object() { return Ref<RenderObject>(); }
-} // namespace acos::gui
+} // namespace acos::gui::widgets

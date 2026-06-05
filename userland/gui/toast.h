@@ -1,7 +1,7 @@
 #pragma once
 #include "widget.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 class Toast : public Widget {
 public:
@@ -18,4 +18,4 @@ private:
     u8 m_alpha;
 };
 
-} // namespace acos::gui
+} // namespace acos::gui::widgets

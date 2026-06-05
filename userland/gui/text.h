@@ -1,7 +1,7 @@
 #pragma once
 #include "widget.h"
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 enum class TextAlignment {
     Left,
@@ -19,7 +19,7 @@ public:
     void set_alignment(TextAlignment align) { m_alignment = align; }
     void set_font_size(u32 size) { m_font_size = size; }
 
-    // Fluent API
+    // Internal Fluent API
     Text& text(const char* t) { set_text(t); return *this; }
     Text& color(u32 c) { set_text_color(c); return *this; }
     Text& font_size(u32 s) { set_font_size(s); return *this; }

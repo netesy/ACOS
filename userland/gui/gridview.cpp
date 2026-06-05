@@ -2,7 +2,7 @@
 #include "theme.h"
 #include <kernel/graphics/renderer.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 GridView::GridView(u32 columns) : m_columns(columns), m_cell_count(0) {
     m_rect.w = 400;
@@ -22,6 +22,6 @@ void GridView::add_cell(const char* text) {
 
 
 
-Ref<RenderObject> Gridview::create_render_object() { return Ref<RenderObject>(); }
 Ref<RenderObject> GridView::create_render_object() { return Ref<RenderObject>(); }
-} // namespace acos::gui
+Ref<RenderObject> GridView::create_render_object() { return Ref<RenderObject>(); }
+} // namespace acos::gui::widgets

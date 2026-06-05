@@ -2,7 +2,7 @@
 #include "theme.h"
 #include <kernel/graphics/renderer.h>
 
-namespace acos::gui {
+namespace acos::gui::widgets {
 
 TreeView::TreeView() : m_root_count(0) {
     m_rect.w = 200;
@@ -32,6 +32,6 @@ void TreeView::draw_item(acos::graphics::Renderer* renderer, TreeItem* item, i32
 }
 
 
-Ref<RenderObject> Treeview::create_render_object() { return Ref<RenderObject>(); }
 Ref<RenderObject> TreeView::create_render_object() { return Ref<RenderObject>(); }
-} // namespace acos::gui
+Ref<RenderObject> TreeView::create_render_object() { return Ref<RenderObject>(); }
+} // namespace acos::gui::widgets
