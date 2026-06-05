@@ -1,16 +1,17 @@
 #include "tooltip.h"
-#include "theme.h"
-#include <kernel/graphics/renderer.h>
+#include "core/render_object.h"
+#include "core/context.h"
 
 namespace acos::gui::widgets {
 
-Tooltip::Tooltip() : m_text(nullptr) {
-    m_rect.w = 120;
-    m_rect.h = 24;
-    m_elevation = 16;
+Tooltip::Tooltip() {
+    m_rect = {0, 0, 100, 100};
 }
 
+Tooltip::~Tooltip() {}
 
-Ref<RenderObject> ToolTip::create_render_object() { return Ref<RenderObject>(); }
-Ref<RenderObject> ToolTip::create_render_object() { return Ref<RenderObject>(); }
+Ref<RenderObject> Tooltip::create_render_object() {
+    return Ref<RenderObject>();
+}
+
 } // namespace acos::gui::widgets

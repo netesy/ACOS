@@ -1,14 +1,17 @@
 #include "contextmenu.h"
+#include "core/render_object.h"
+#include "core/context.h"
 
 namespace acos::gui::widgets {
 
 ContextMenu::ContextMenu() {
-    set_visible(false);
+    m_rect = {0, 0, 100, 100};
 }
 
-void ContextMenu::popup(i32 x, i32 y) {
-    set_position(x, y);
-    set_visible(true);
+ContextMenu::~ContextMenu() {}
+
+Ref<RenderObject> ContextMenu::create_render_object() {
+    return Ref<RenderObject>();
 }
 
 } // namespace acos::gui::widgets

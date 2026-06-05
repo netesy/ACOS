@@ -1,15 +1,17 @@
 #include "toolbutton.h"
-#include "theme.h"
-#include <kernel/graphics/renderer.h>
+#include "core/render_object.h"
+#include "core/context.h"
 
 namespace acos::gui::widgets {
 
-ToolButton::ToolButton(const char* label) : Button(label) {
-    m_rect.w = 32;
-    m_rect.h = 32;
+ToolButton::ToolButton() {
+    m_rect = {0, 0, 100, 100};
 }
 
+ToolButton::~ToolButton() {}
 
-Ref<RenderObject> ToolButton::create_render_object() { return Ref<RenderObject>(); }
-Ref<RenderObject> ToolButton::create_render_object() { return Ref<RenderObject>(); }
+Ref<RenderObject> ToolButton::create_render_object() {
+    return Ref<RenderObject>();
+}
+
 } // namespace acos::gui::widgets

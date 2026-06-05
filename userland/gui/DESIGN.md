@@ -352,6 +352,35 @@ Instead of re-rendering the entire window on every frame, the compositor only re
 - **Application**: Renders `RenderObjects` into `Surfaces`.
 - **Compositor**: Composes multiple `Surfaces` into the final display output.
 
+## Phase 11: Functional Software Compositor
+
+### 1. The Composition Pipeline
+The software compositor implements a multi-layer blending engine.
+- **Layer Stacking**: Layers are maintained in a prioritized Z-order.
+- **Blending**: Supports Per-pixel Alpha and Global Opacity.
+- **Surface Mapping**: Surfaces (raw pixel buffers) are mapped into the compositor's address space for zero-copy access.
+
+### 2. Implementation Details
+- `SoftwareSurface`: Wraps a heap-allocated or shared-memory pixel buffer.
+- `SoftwareLayer`: Stores position, visibility, opacity, and a pointer to a `SoftwareSurface`.
+- `CompositorEngine`: The core loop that iterates through layers and performs alpha-blending onto the final display output.
+
+### 3. Performance & Optimizations
+- **Bypass Blending**: If a layer is fully opaque and covers the entire background, previous layers can be skipped.
+- **Dirty Region Tracking**: Only recompose the bounding box of all changed layers.
+- **Clipping**: Ensure layers don't draw outside window or display boundaries.
+
+## Phase 12: Developer Experience Refinement
+
+### 1. Fluent Factory API
+Short-named factory functions in `namespace acos::gui` (e.g., `Text()`, `Button()`, `Column()`) allow for concise UI tree definition.
+
+### 2. Specialized Handles
+Factory functions return specialized `Ref<T>` wrappers (e.g., `TextRef`, `ColumnRef`) that expose widget-specific property modifiers via the `.` operator.
+
+### 3. Namespace Separation
+Implementation details and internal widget classes are moved to `namespace acos::gui::widgets`, keeping the primary developer API clean.
+
 ---
 
 ## Class Diagrams (Proposed)

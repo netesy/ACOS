@@ -1,14 +1,17 @@
 #include "statusbar.h"
-#include "theme.h"
-#include <kernel/graphics/renderer.h>
+#include "core/render_object.h"
+#include "core/context.h"
 
 namespace acos::gui::widgets {
 
-StatusBar::StatusBar() : m_text("Ready") {
-    m_rect.h = 24;
+StatusBar::StatusBar() {
+    m_rect = {0, 0, 100, 100};
 }
 
+StatusBar::~StatusBar() {}
 
-Ref<RenderObject> StatusBar::create_render_object() { return Ref<RenderObject>(); }
-Ref<RenderObject> StatusBar::create_render_object() { return Ref<RenderObject>(); }
+Ref<RenderObject> StatusBar::create_render_object() {
+    return Ref<RenderObject>();
+}
+
 } // namespace acos::gui::widgets

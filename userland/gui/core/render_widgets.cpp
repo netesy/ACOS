@@ -64,7 +64,7 @@ void RenderCheckBox::paint(acos::graphics::Renderer* renderer) {
     renderer->draw_rounded_rect(bx, by, box_size, box_size, 4, m_style.border_color);
     if (m_checked) {
         renderer->draw_line(bx + 4, by + 4, bx + box_size - 4, by + box_size - 4, m_style.foreground_color);
-        renderer->draw_line(bx + 4, by + box_size - 4, bx + box_size - 4, by + box_size - 4, m_style.foreground_color);
+        renderer->draw_line(bx + 4, by + box_size - 4, bx + box_size - 4, by + 4, m_style.foreground_color);
     }
     if (m_label) renderer->draw_text(m_label, bx + box_size + 8, m_rect.y + (m_rect.h / 2) - 8, m_style.foreground_color);
 }

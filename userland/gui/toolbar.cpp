@@ -1,14 +1,17 @@
 #include "toolbar.h"
-#include "theme.h"
-#include <kernel/graphics/renderer.h>
+#include "core/render_object.h"
+#include "core/context.h"
 
 namespace acos::gui::widgets {
 
 ToolBar::ToolBar() {
-    m_rect.h = 40;
+    m_rect = {0, 0, 100, 100};
 }
 
+ToolBar::~ToolBar() {}
 
-Ref<RenderObject> ToolBar::create_render_object() { return Ref<RenderObject>(); }
-Ref<RenderObject> ToolBar::create_render_object() { return Ref<RenderObject>(); }
+Ref<RenderObject> ToolBar::create_render_object() {
+    return Ref<RenderObject>();
+}
+
 } // namespace acos::gui::widgets

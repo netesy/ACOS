@@ -4,6 +4,7 @@
 #include "event_dispatcher.h"
 #include "render_object.h"
 #include "animation.h"
+#include "compositor_engine.h"
 
 namespace acos::gui {
 
@@ -18,6 +19,7 @@ public:
     FocusManager& focus_manager() { return m_focus_manager; }
     EventDispatcher& event_dispatcher() { return m_event_dispatcher; }
     AnimationController& animation_controller() { return m_animation_controller; }
+    void set_compositor(SoftwareCompositor* compositor) { m_compositor = compositor; }
 
     void paint(acos::graphics::Renderer* renderer);
     void update(u64 delta_ms);
@@ -33,6 +35,7 @@ private:
     AnimationController m_animation_controller;
     Ref<Widget> m_root;
     Ref<RenderObject> m_root_render_object;
+    SoftwareCompositor* m_compositor = nullptr;
     static UIContext* s_instance;
 };
 
