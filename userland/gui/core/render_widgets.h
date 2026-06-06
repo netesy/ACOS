@@ -166,4 +166,25 @@ private:
     bool m_cursor_visible;
 };
 
+class RenderGraph : public RenderObject {
+public:
+    RenderGraph();
+    void paint(::acos::graphics::Renderer* renderer) override;
+    void perform_layout(BoxConstraints constraints) override;
+    void set_data(const float* data, ::acos::u32 count);
+private:
+    float m_data[64];
+    ::acos::u32 m_count;
+};
+
+class RenderBadge : public RenderObject {
+public:
+    RenderBadge();
+    void paint(::acos::graphics::Renderer* renderer) override;
+    void perform_layout(BoxConstraints constraints) override;
+    void set_text(const char* text);
+private:
+    const char* m_text;
+};
+
 } // namespace acos::gui::widgets

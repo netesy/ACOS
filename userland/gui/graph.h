@@ -6,6 +6,7 @@ namespace acos::gui::widgets {
 class Graph : public Widget {
 public:
     Ref<RenderObject> create_render_object() override;
+    void update_render_object(Ref<RenderObject> render_object) override;
     Graph();
     virtual ~Graph();
     void add_value(float val);

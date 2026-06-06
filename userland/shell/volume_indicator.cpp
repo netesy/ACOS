@@ -19,8 +19,8 @@ public:
         renderer->draw_rect(x, y, vol_w, h, 0xFF00FF00);
     }
     void perform_layout(gui::BoxConstraints constraints) override {
-        m_rect.w = constraints.max_w;
-        m_rect.h = constraints.max_h;
+        m_rect.w = constraints.constrain({100, 20}).w;
+        m_rect.h = constraints.constrain({100, 20}).h;
     }
     void set_volume(u32 vol) { m_volume = vol; }
 private:
