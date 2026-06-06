@@ -4,8 +4,8 @@
 
 namespace acos::gui::widgets {
 
-MessageBox::MessageBox() {
-    m_rect = {0, 0, 100, 100};
+MessageBox::MessageBox(const char* title, const char* message) : WindowWidget(title, 200, 200, 300, 150) {
+    (void)message;
 }
 
 MessageBox::~MessageBox() {}

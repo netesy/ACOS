@@ -7,15 +7,16 @@ class Toast : public Widget {
 public:
     Ref<RenderObject> create_render_object() override;
     Toast(const char* message);
-    void update(u64 delta_ms) override;
+    virtual ~Toast();
+    void update(::acos::u64 delta_ms) override;
 
-    void show(u32 duration_ms = 3000);
+    void show(::acos::u32 duration_ms = 3000);
 
 private:
-    const char* m_message;
-    u32 m_timer;
-    u32 m_duration;
-    u8 m_alpha;
+    [[maybe_unused]] const char* m_message;
+    [[maybe_unused]] ::acos::u32 m_timer;
+    [[maybe_unused]] ::acos::u32 m_duration;
+    [[maybe_unused]] ::acos::u8 m_alpha;
 };
 
 } // namespace acos::gui::widgets

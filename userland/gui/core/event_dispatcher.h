@@ -13,14 +13,14 @@ enum class EventPhase {
 };
 
 struct Event {
-    const acos::input::InputEvent& raw;
+    const ::acos::input::InputEvent& raw;
     EventPhase phase;
     Ref<Widget> target;
     bool handled;
 
-    i32 mouse_x, mouse_y;
+    ::acos::i32 mouse_x, mouse_y;
 
-    Event(const acos::input::InputEvent& r)
+    Event(const ::acos::input::InputEvent& r)
         : raw(r), phase(EventPhase::Target), handled(false), mouse_x(0), mouse_y(0) {}
 
     void stop_propagation() { handled = true; }
@@ -28,10 +28,10 @@ struct Event {
 
 class EventDispatcher {
 public:
-    void dispatch(const acos::input::InputEvent& raw, Ref<Widget> root);
+    void dispatch(const ::acos::input::InputEvent& raw, Ref<Widget> root);
 
 private:
-    Ref<Widget> perform_hit_test(Ref<Widget> root, i32 x, i32 y);
+    Ref<Widget> perform_hit_test(Ref<Widget> root, ::acos::i32 x, ::acos::i32 y);
     void route_event(Event& event, Ref<Widget> target);
 };
 

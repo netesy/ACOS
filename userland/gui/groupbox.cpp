@@ -4,7 +4,7 @@
 
 namespace acos::gui::widgets {
 
-GroupBox::GroupBox() {
+GroupBox::GroupBox(const char* title) : m_title(title) {
     m_rect = {0, 0, 100, 100};
 }
 

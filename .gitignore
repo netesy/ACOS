@@ -4,3 +4,8 @@
 *.efi
 *.bin
 OVMF.fd
+*.o
+*.elf
+*.efi
+*.img
+bin/

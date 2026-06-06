@@ -7,6 +7,7 @@ class StatusBar : public Widget {
 public:
     Ref<RenderObject> create_render_object() override;
     StatusBar();
+    virtual ~StatusBar();
     void set_text(const char* text) { m_text = text; }
 
 private:

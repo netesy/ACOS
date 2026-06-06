@@ -24,31 +24,31 @@ enum class Axis {
     Vertical
 };
 
-namespace acos::gui::widgets {
+namespace widgets {
 
 class Flex : public Widget {
 public:
-    Flex(Axis axis)
+    Flex(::acos::gui::Axis axis)
         : m_axis(axis),
-          m_main_axis_alignment(MainAxisAlignment::Start),
-          m_cross_axis_alignment(CrossAxisAlignment::Start) {}
+          m_main_axis_alignment(::acos::gui::MainAxisAlignment::Start),
+          m_cross_axis_alignment(::acos::gui::CrossAxisAlignment::Start) {}
 
     Size layout(BoxConstraints constraints) override;
 
     Ref<RenderObject> create_render_object() override;
 
-    Flex& main_axis_alignment(MainAxisAlignment alignment) { m_main_axis_alignment = alignment; return *this; }
-    Flex& cross_axis_alignment(CrossAxisAlignment alignment) { m_cross_axis_alignment = alignment; return *this; }
+    Flex& main_axis_alignment(::acos::gui::MainAxisAlignment alignment) { m_main_axis_alignment = alignment; return *this; }
+    Flex& cross_axis_alignment(::acos::gui::CrossAxisAlignment alignment) { m_cross_axis_alignment = alignment; return *this; }
 
 protected:
-    Axis m_axis;
-    MainAxisAlignment m_main_axis_alignment;
-    CrossAxisAlignment m_cross_axis_alignment;
+    ::acos::gui::Axis m_axis;
+    ::acos::gui::MainAxisAlignment m_main_axis_alignment;
+    ::acos::gui::CrossAxisAlignment m_cross_axis_alignment;
 };
 
 class Row : public Flex {
 public:
-    Row() : Flex(Axis::Horizontal) {}
+    Row() : Flex(::acos::gui::Axis::Horizontal) {}
 
     // Internal Fluent API
     Row& child(Ref<Widget> c) { add_child(c); return *this; }
@@ -56,10 +56,11 @@ public:
 
 class Column : public Flex {
 public:
-    Column() : Flex(Axis::Vertical) {}
+    Column() : Flex(::acos::gui::Axis::Vertical) {}
 
     // Internal Fluent API
     Column& child(Ref<Widget> c) { add_child(c); return *this; }
 };
 
-} // namespace acos::gui::widgets
+} // namespace widgets
+} // namespace acos::gui

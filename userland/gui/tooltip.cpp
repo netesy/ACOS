@@ -4,8 +4,8 @@
 
 namespace acos::gui::widgets {
 
-Tooltip::Tooltip() {
-    m_rect = {0, 0, 100, 100};
+Tooltip::Tooltip() : m_text(nullptr) {
+    m_rect = {0, 0, 100, 24};
 }
 
 Tooltip::~Tooltip() {}

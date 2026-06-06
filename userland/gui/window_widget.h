@@ -1,12 +1,11 @@
 #pragma once
 #include "widget.h"
-#include <services/display/window.h>
 
 namespace acos::gui {
 
 class WindowWidget : public Widget {
 public:
-    WindowWidget(const char* title, i32 x, i32 y, i32 w, i32 h);
+    WindowWidget(const char* title, ::acos::i32 x, ::acos::i32 y, ::acos::i32 w, ::acos::i32 h);
     ~WindowWidget();
 
     Ref<RenderObject> create_render_object() override;
@@ -15,8 +14,8 @@ public:
     void show();
 
 private:
-    const char* m_title;
-    [[maybe_unused]] u64 m_window_handle;
+    [[maybe_unused]] const char* m_title;
+    [[maybe_unused]] ::acos::u64 m_window_handle;
 };
 
 } // namespace acos::gui

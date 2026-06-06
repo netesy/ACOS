@@ -14,19 +14,18 @@ public:
     ScrollBar(Orientation orientation = Orientation::Vertical);
     virtual ~ScrollBar();
 
-
-    i32 value() const { return m_value; }
-    void set_value(i32 value);
-    void set_range(i32 min, i32 max, i32 page_size);
+    ::acos::i32 value() const { return m_value; }
+    void set_value(::acos::i32 value);
+    void set_range(::acos::i32 min, ::acos::i32 max, ::acos::i32 page_size);
 
 private:
-    Orientation m_orientation;
-    i32 m_value;
-    i32 m_min;
-    i32 m_max;
-    i32 m_page_size;
-    bool m_dragging;
-    i32 m_drag_start;
+    [[maybe_unused]] Orientation m_orientation;
+    ::acos::i32 m_value;
+    ::acos::i32 m_min;
+    ::acos::i32 m_max;
+    ::acos::i32 m_page_size;
+    [[maybe_unused]] bool m_dragging;
+    [[maybe_unused]] ::acos::i32 m_drag_start;
 };
 
 } // namespace acos::gui::widgets

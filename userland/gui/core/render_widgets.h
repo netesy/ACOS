@@ -1,13 +1,14 @@
 #pragma once
 #include "render_object.h"
 #include "../icon.h"
+#include "layout_types.h"
 
 namespace acos::gui::widgets {
 
 class RenderButton : public RenderObject {
 public:
     RenderButton();
-    void paint(acos::graphics::Renderer* renderer) override;
+    void paint(::acos::graphics::Renderer* renderer) override;
     void perform_layout(BoxConstraints constraints) override;
     void set_label(const char* label);
     void set_pressed(bool pressed);
@@ -21,7 +22,7 @@ private:
 class RenderText : public RenderObject {
 public:
     RenderText();
-    void paint(acos::graphics::Renderer* renderer) override;
+    void paint(::acos::graphics::Renderer* renderer) override;
     void perform_layout(BoxConstraints constraints) override;
     void set_text(const char* text);
 private:
@@ -31,7 +32,7 @@ private:
 class RenderIcon : public RenderObject {
 public:
     RenderIcon();
-    void paint(acos::graphics::Renderer* renderer) override;
+    void paint(::acos::graphics::Renderer* renderer) override;
     void perform_layout(BoxConstraints constraints) override;
     void set_type(IconType type);
     void set_active(bool active);
@@ -43,7 +44,7 @@ private:
 class RenderCheckBox : public RenderObject {
 public:
     RenderCheckBox();
-    void paint(acos::graphics::Renderer* renderer) override;
+    void paint(::acos::graphics::Renderer* renderer) override;
     void perform_layout(BoxConstraints constraints) override;
     void set_label(const char* label);
     void set_checked(bool checked);
@@ -55,7 +56,7 @@ private:
 class RenderSlider : public RenderObject {
 public:
     RenderSlider();
-    void paint(acos::graphics::Renderer* renderer) override;
+    void paint(::acos::graphics::Renderer* renderer) override;
     void perform_layout(BoxConstraints constraints) override;
     void set_value(float v);
     void set_range(float min, float max);
@@ -66,7 +67,7 @@ private:
 class RenderSwitch : public RenderObject {
 public:
     RenderSwitch();
-    void paint(acos::graphics::Renderer* renderer) override;
+    void paint(::acos::graphics::Renderer* renderer) override;
     void perform_layout(BoxConstraints constraints) override;
     void set_label(const char* label);
     void set_on(bool on);
@@ -78,7 +79,7 @@ private:
 class RenderRadioButton : public RenderObject {
 public:
     RenderRadioButton();
-    void paint(acos::graphics::Renderer* renderer) override;
+    void paint(::acos::graphics::Renderer* renderer) override;
     void perform_layout(BoxConstraints constraints) override;
     void set_label(const char* label);
     void set_selected(bool selected);
@@ -90,7 +91,7 @@ private:
 class RenderProgressBar : public RenderObject {
 public:
     RenderProgressBar();
-    void paint(acos::graphics::Renderer* renderer) override;
+    void paint(::acos::graphics::Renderer* renderer) override;
     void perform_layout(BoxConstraints constraints) override;
     void set_value(float v);
     void set_range(float min, float max);
@@ -101,7 +102,7 @@ private:
 class RenderPanel : public RenderObject {
 public:
     RenderPanel();
-    void paint(acos::graphics::Renderer* renderer) override;
+    void paint(::acos::graphics::Renderer* renderer) override;
     void perform_layout(BoxConstraints constraints) override;
     void set_glass(bool glass);
 private:
@@ -111,43 +112,58 @@ private:
 class RenderStack : public RenderObject {
 public:
     RenderStack();
-    void paint(acos::graphics::Renderer* renderer) override;
+    void paint(::acos::graphics::Renderer* renderer) override;
     void perform_layout(BoxConstraints constraints) override;
 };
 
 class RenderGrid : public RenderObject {
 public:
     RenderGrid();
-    void paint(acos::graphics::Renderer* renderer) override;
+    void paint(::acos::graphics::Renderer* renderer) override;
     void perform_layout(BoxConstraints constraints) override;
-    void set_columns(u32 columns) { m_columns = columns; }
-    void set_spacing(i32 spacing) { m_spacing = spacing; }
+    void set_columns(::acos::u32 columns) { m_columns = columns; }
+    void set_spacing(::acos::i32 spacing) { m_spacing = spacing; }
 private:
-    u32 m_columns;
-    i32 m_spacing;
+    ::acos::u32 m_columns;
+    ::acos::i32 m_spacing;
 };
-
-} // namespace acos::gui::widgets
 
 class RenderListView : public RenderObject {
 public:
     RenderListView();
-    void paint(acos::graphics::Renderer* renderer) override;
+    void paint(::acos::graphics::Renderer* renderer) override;
     void perform_layout(BoxConstraints constraints) override;
-    void set_items(const char** items, usize count);
-    void set_selected(i32 index);
+    void set_items(const char** items, ::acos::usize count);
+    void set_selected(::acos::i32 index);
 private:
     const char* m_items[64];
-    usize m_count;
-    i32 m_selected;
+    ::acos::usize m_count;
+    ::acos::i32 m_selected;
 };
 
 class RenderTextArea : public RenderObject {
 public:
     RenderTextArea();
-    void paint(acos::graphics::Renderer* renderer) override;
+    void paint(::acos::graphics::Renderer* renderer) override;
     void perform_layout(BoxConstraints constraints) override;
     void set_text(const char* text);
 private:
     char m_text[2048];
 };
+
+class RenderTextBox : public RenderObject {
+public:
+    RenderTextBox();
+    void paint(::acos::graphics::Renderer* renderer) override;
+    void perform_layout(BoxConstraints constraints) override;
+    void set_text(const char* text);
+    void set_placeholder(const char* placeholder);
+    void set_cursor(::acos::u32 cursor, bool visible);
+private:
+    const char* m_text;
+    const char* m_placeholder;
+    ::acos::u32 m_cursor;
+    bool m_cursor_visible;
+};
+
+} // namespace acos::gui::widgets

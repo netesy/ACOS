@@ -8,9 +8,10 @@ class Separator : public Widget {
 public:
     Ref<RenderObject> create_render_object() override;
     Separator(Orientation orient = Orientation::Horizontal);
+    virtual ~Separator();
 
 private:
-    Orientation m_orientation;
+    [[maybe_unused]] Orientation m_orientation;
 };
 
 } // namespace acos::gui::widgets

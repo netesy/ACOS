@@ -7,6 +7,7 @@ class Tooltip : public Widget {
 public:
     Ref<RenderObject> create_render_object() override;
     Tooltip();
+    virtual ~Tooltip();
     void set_text(const char* text) { m_text = text; }
 
 private:

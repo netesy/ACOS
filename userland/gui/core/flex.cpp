@@ -5,13 +5,11 @@
 namespace acos::gui::widgets {
 
 Size Flex::layout(BoxConstraints constraints) {
-    i32 main_total = 0;
-    i32 cross_max = 0;
-    u32 visible_children = 0;
+    ::acos::i32 main_total = 0;
+    ::acos::i32 cross_max = 0;
 
     for (auto& child : m_children) {
         if (!child || !child->is_visible()) continue;
-        visible_children++;
 
         BoxConstraints child_constraints;
         if (m_axis == Axis::Horizontal) {
@@ -35,7 +33,7 @@ Size Flex::layout(BoxConstraints constraints) {
     m_rect.w = self_size.w;
     m_rect.h = self_size.h;
 
-    i32 current_main = 0;
+    ::acos::i32 current_main = 0;
     for (auto& child : m_children) {
         if (!child || !child->is_visible()) continue;
         Size child_size = {child->rect().w, child->rect().h};

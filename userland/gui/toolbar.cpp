@@ -5,7 +5,7 @@
 namespace acos::gui::widgets {
 
 ToolBar::ToolBar() {
-    m_rect = {0, 0, 100, 100};
+    m_rect = {0, 0, 800, 32};
 }
 
 ToolBar::~ToolBar() {}

@@ -24,7 +24,6 @@ private:
     float m_value;
     float m_min;
     float m_max;
-    bool m_dragging;
 };
 
 } // namespace acos::gui::widgets

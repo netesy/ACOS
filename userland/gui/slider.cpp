@@ -5,7 +5,7 @@
 
 namespace acos::gui::widgets {
 
-Slider::Slider() : m_value(0), m_min(0), m_max(100), m_dragging(false) {
+Slider::Slider() : m_value(0), m_min(0), m_max(100) {
     m_rect = {0, 0, 150, 24};
 }
 

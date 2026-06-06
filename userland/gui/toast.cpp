@@ -4,11 +4,19 @@
 
 namespace acos::gui::widgets {
 
-Toast::Toast() {
-    m_rect = {0, 0, 100, 100};
+Toast::Toast(const char* message) : m_message(message), m_timer(0), m_duration(3000), m_alpha(0) {
+    m_rect = {0, 0, 200, 50};
 }
 
 Toast::~Toast() {}
+
+void Toast::update(::acos::u64 delta_ms) {
+    (void)delta_ms;
+}
+
+void Toast::show(::acos::u32 duration_ms) {
+    m_duration = duration_ms;
+}
 
 Ref<RenderObject> Toast::create_render_object() {
     return Ref<RenderObject>();

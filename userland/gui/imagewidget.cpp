@@ -4,7 +4,7 @@
 
 namespace acos::gui::widgets {
 
-ImageWidget::ImageWidget() {
+ImageWidget::ImageWidget() : m_data(nullptr), m_img_w(0), m_img_h(0) {
     m_rect = {0, 0, 100, 100};
 }
 

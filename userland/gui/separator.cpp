@@ -4,8 +4,8 @@
 
 namespace acos::gui::widgets {
 
-Separator::Separator() {
-    m_rect = {0, 0, 100, 100};
+Separator::Separator(Orientation orient) : m_orientation(orient) {
+    m_rect = {0, 0, 100, 2};
 }
 
 Separator::~Separator() {}

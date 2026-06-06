@@ -6,13 +6,13 @@
 
 namespace acos::gui::widgets {
 
-Button::Button(const char* label) : m_label(label), m_mouse_over(false), m_press_time(0) {
+Button::Button(const char* label) : m_label(label), m_mouse_over(false) {
     m_rect = {0, 0, 100, 32};
 }
 
 Button::~Button() {}
 
-void Button::update(u64 delta_ms) {
+void Button::update(::acos::u64 delta_ms) {
     Widget::update(delta_ms);
 }
 
@@ -32,9 +32,9 @@ void Button::update_render_object(Ref<RenderObject> render_object) {
 
 void Button::on_event(Event& event) {
     const auto& raw = event.raw;
-    if (raw.type == acos::input::InputType::Mouse) {
-        i32 mx = (raw.code >> 16) & 0xFFFF;
-        i32 my = raw.code & 0xFFFF;
+    if (raw.type == ::acos::input::InputType::Mouse) {
+        ::acos::i32 mx = event.mouse_x;
+        ::acos::i32 my = event.mouse_y;
         bool pressed = (raw.value & 0x01) != 0;
 
         if (m_rect.contains(mx, my)) {

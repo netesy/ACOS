@@ -4,14 +4,14 @@
 
 namespace acos::gui {
 
-void EventDispatcher::dispatch(const acos::input::InputEvent& raw, Ref<Widget> root) {
+void EventDispatcher::dispatch(const ::acos::input::InputEvent& raw, Ref<Widget> root) {
     if (!root) return;
 
     Event event(raw);
 
-    if (raw.type == acos::input::InputType::Mouse) {
-        event.mouse_x = (raw.code >> 16) & 0xFFFF;
-        event.mouse_y = raw.code & 0xFFFF;
+    if (raw.type == ::acos::input::InputType::Mouse) {
+        event.mouse_x = (::acos::i32)((raw.code >> 16) & 0xFFFF);
+        event.mouse_y = (::acos::i32)(raw.code & 0xFFFF);
 
         Ref<Widget> target = perform_hit_test(root, event.mouse_x, event.mouse_y);
         if (target) {
@@ -29,7 +29,7 @@ void EventDispatcher::dispatch(const acos::input::InputEvent& raw, Ref<Widget> r
     }
 }
 
-Ref<Widget> EventDispatcher::perform_hit_test(Ref<Widget> root, i32 x, i32 y) {
+Ref<Widget> EventDispatcher::perform_hit_test(Ref<Widget> root, ::acos::i32 x, ::acos::i32 y) {
     if (!root || !root->is_visible() || !root->hit_test(x, y)) return Ref<Widget>();
 
     const auto& children = root->children();
@@ -44,7 +44,6 @@ Ref<Widget> EventDispatcher::perform_hit_test(Ref<Widget> root, i32 x, i32 y) {
 void EventDispatcher::route_event(Event& event, Ref<Widget> target) {
     if (!target) return;
 
-    // Simplified bubble-only routing for now
     event.phase = EventPhase::Target;
     target->handle_event(event);
 

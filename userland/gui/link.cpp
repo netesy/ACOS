@@ -4,8 +4,7 @@
 
 namespace acos::gui::widgets {
 
-Link::Link() {
-    m_rect = {0, 0, 100, 100};
+Link::Link(const char* text) : Label(text) {
 }
 
 Link::~Link() {}
