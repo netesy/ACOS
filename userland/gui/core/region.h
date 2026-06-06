@@ -25,7 +25,7 @@ class Region {
         ::acos::u32 generation;
         bool occupied;
         void (*destructor)(void*);
-        alignas(16) ::acos::u8 storage[4096];
+        alignas(16) ::acos::u8 storage[8192];
     };
 
 public:

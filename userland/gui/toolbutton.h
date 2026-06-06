@@ -7,6 +7,7 @@ class ToolButton : public Button {
 public:
     Ref<RenderObject> create_render_object() override;
     ToolButton(const char* label = nullptr);
+    virtual ~ToolButton();
 };
 
 } // namespace acos::gui::widgets

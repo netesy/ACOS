@@ -1,4 +1,5 @@
 #include "taskbar.h"
+#include <userland/gui/panel.h>
 #include <userland/gui/theme.h>
 #include <userland/gui/icon.h>
 #include <userland/gui/text.h>

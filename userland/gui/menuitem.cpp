@@ -4,7 +4,7 @@
 
 namespace acos::gui::widgets {
 
-MenuItem::MenuItem() {
+MenuItem::MenuItem(const char* label) : m_label(label) {
     m_rect = {0, 0, 100, 100};
 }
 

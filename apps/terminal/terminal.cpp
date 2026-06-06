@@ -1,5 +1,6 @@
 #include "terminal.h"
 #include <userland/gui/core/context.h>
+#include <userland/gui/textarea.h>
 #include <libs/runtime/include/acos/runtime.h>
 
 namespace acos::apps {
@@ -42,11 +43,11 @@ void Terminal::on_input(const char* cmd) {
     append_output(cmd);
     append_output("\n");
 
-    if (strcmp_impl(cmd, "help") == 0) {
+    if (::strcmp(cmd, "help") == 0) {
         append_output("Available commands: help, ls, clear, about, exit\n");
-    } else if (strcmp_impl(cmd, "about") == 0) {
+    } else if (::strcmp(cmd, "about") == 0) {
         append_output("ACOS Operating System - Built for high performance.\n");
-    } else if (strcmp_impl(cmd, "clear") == 0) {
+    } else if (::strcmp(cmd, "clear") == 0) {
         m_history_buffer[0] = '\0';
         m_output_area->set_text("$ ");
     } else {

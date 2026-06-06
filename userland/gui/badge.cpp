@@ -4,7 +4,7 @@
 
 namespace acos::gui::widgets {
 
-Badge::Badge() {
+Badge::Badge(const char* text) : m_text(text) {
     m_rect = {0, 0, 100, 100};
 }
 

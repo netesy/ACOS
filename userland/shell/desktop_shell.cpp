@@ -8,7 +8,7 @@ namespace acos::shell {
 
 static Launcher* s_launcher = nullptr;
 
-static void toggle_launcher(void*) {
+[[maybe_unused]] static void toggle_launcher(void*) {
     if (s_launcher) {
         if (s_launcher->is_visible()) s_launcher->hide();
         else s_launcher->show();
@@ -16,7 +16,7 @@ static void toggle_launcher(void*) {
 }
 
 DesktopShell::DesktopShell() {
-    gui::init_synthetic_theme();
+    gui::widgets::init_synthetic_theme();
 }
 
 void DesktopShell::initialize() {

@@ -7,10 +7,11 @@ class Badge : public Widget {
 public:
     Ref<RenderObject> create_render_object() override;
     Badge(const char* text = nullptr);
+    virtual ~Badge();
     void set_text(const char* text) { m_text = text; }
 
 private:
-    const char* m_text;
+    [[maybe_unused]] const char* m_text;
 };
 
 } // namespace acos::gui::widgets

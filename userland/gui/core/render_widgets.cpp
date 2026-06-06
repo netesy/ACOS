@@ -279,29 +279,5 @@ void Grid::update_render_object(Ref<RenderObject> render_object) {
     }
 }
 
-Ref<RenderObject> ListView::create_render_object() {
-    return UIContext::get().region().alloc<RenderListView>();
-}
-
-void ListView::update_render_object(Ref<RenderObject> render_object) {
-    Widget::update_render_object(render_object);
-    auto rl = static_cast<RenderListView*>(render_object.operator->());
-    if (rl) {
-        rl->set_items(m_items, m_item_count);
-        rl->set_selected(m_selected_index);
-    }
-}
-
-Ref<RenderObject> TextArea::create_render_object() {
-    return UIContext::get().region().alloc<RenderTextArea>();
-}
-
-void TextArea::update_render_object(Ref<RenderObject> render_object) {
-    Widget::update_render_object(render_object);
-    auto rt = static_cast<RenderTextArea*>(render_object.operator->());
-    if (rt) {
-        rt->set_text(m_buffer);
-    }
-}
 
 } // namespace acos::gui::widgets

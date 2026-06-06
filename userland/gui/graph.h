@@ -7,6 +7,7 @@ class Graph : public Widget {
 public:
     Ref<RenderObject> create_render_object() override;
     Graph();
+    virtual ~Graph();
     void add_value(float val);
 
 private:

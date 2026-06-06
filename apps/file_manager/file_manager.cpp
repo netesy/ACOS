@@ -1,5 +1,8 @@
 #include "file_manager.h"
 #include <userland/gui/core/context.h>
+#include <userland/gui/button.h>
+#include <userland/gui/listview.h>
+#include <userland/gui/core/flex.h>
 #include <libs/runtime/include/acos/runtime.h>
 #include <kernel/vfs/vfs.h>
 

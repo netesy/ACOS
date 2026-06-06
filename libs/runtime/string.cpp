@@ -18,6 +18,14 @@ extern "C" void* memset(void* s, int c, acos::usize n) {
     return s;
 }
 
+extern "C" int strcmp(const char* s1, const char* s2) {
+    while (*s1 && (*s1 == *s2)) {
+        s1++;
+        s2++;
+    }
+    return *(const unsigned char*)s1 - *(const unsigned char*)s2;
+}
+
 extern "C" void __cxa_pure_virtual() {
     while (1) {
         __asm__("hlt");
@@ -40,6 +48,14 @@ void operator delete(void* ptr) noexcept {
     if (ptr) {
         acos::memory::kfree(ptr);
     }
+}
+
+void* operator new[](acos::usize size) {
+    return operator new(size);
+}
+
+void operator delete[](void* ptr) noexcept {
+    operator delete(ptr);
 }
 
 void operator delete(void* ptr, acos::usize size) noexcept {

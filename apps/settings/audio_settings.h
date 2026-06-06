@@ -1,5 +1,6 @@
 #pragma once
 #include <userland/gui/widget.h>
+#include <userland/gui/panel.h>
 #include <userland/gui/text.h>
 #include <userland/gui/listview.h>
 

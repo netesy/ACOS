@@ -8,6 +8,7 @@ class ColorPicker : public Widget {
 public:
     Ref<RenderObject> create_render_object() override;
     ColorPicker();
+    virtual ~ColorPicker();
 
     u32 selected_color() const { return m_color; }
     Signal<u32> on_color_changed;

@@ -4,7 +4,7 @@
 
 namespace acos::gui::widgets {
 
-ToolButton::ToolButton() {
+ToolButton::ToolButton(const char* label) : Button(label) {
     m_rect = {0, 0, 100, 100};
 }
 
