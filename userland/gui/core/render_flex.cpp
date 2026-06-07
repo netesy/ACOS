@@ -56,10 +56,14 @@ public:
         m_rect.h = self_size.h;
 
         ::acos::i32 main_offset = 0;
+        ::acos::i32 between_spacing = m_spacing;
+
         if (m_main_align == ::acos::gui::MainAxisAlignment::Center) {
             main_offset = (m_axis == ::acos::gui::Axis::Horizontal ? m_rect.w - main_total : m_rect.h - main_total) / 2;
         } else if (m_main_align == ::acos::gui::MainAxisAlignment::End) {
             main_offset = (m_axis == ::acos::gui::Axis::Horizontal ? m_rect.w - main_total : m_rect.h - main_total);
+        } else if (m_main_align == ::acos::gui::MainAxisAlignment::SpaceBetween && visible_count > 1) {
+            between_spacing = (m_axis == ::acos::gui::Axis::Horizontal ? m_rect.w - (main_total - (::acos::i32)(visible_count - 1) * m_spacing) : m_rect.h - (main_total - (::acos::i32)(visible_count - 1) * m_spacing)) / (::acos::i32)(visible_count - 1);
         }
 
         ::acos::i32 current_main = main_offset;
@@ -76,10 +80,10 @@ public:
 
             if (m_axis == ::acos::gui::Axis::Horizontal) {
                 child->set_rect({m_rect.x + current_main, m_rect.y + cross_offset, child_size.w, child_size.h});
-                current_main += child_size.w + m_spacing;
+                current_main += child_size.w + between_spacing;
             } else {
                 child->set_rect({m_rect.x + cross_offset, m_rect.y + current_main, child_size.w, child_size.h});
-                current_main += child_size.h + m_spacing;
+                current_main += child_size.h + between_spacing;
             }
         }
     }

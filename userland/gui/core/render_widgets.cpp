@@ -29,7 +29,14 @@ void RenderButton::paint(::acos::graphics::Renderer* renderer) {
     if (m_label) renderer->draw_text(m_label, m_rect.x + 10, m_rect.y + 8, m_style.foreground_color);
 }
 void RenderButton::perform_layout(BoxConstraints constraints) {
-    Size size = constraints.constrain({m_rect.w, m_rect.h});
+    u32 mw = 80, mh = 32;
+    if (m_label) {
+        u32 lw, lh;
+        ::acos::graphics::Font::measure_string_default(m_label, lw, lh);
+        mw = lw + 24;
+        mh = lh + 16;
+    }
+    Size size = constraints.constrain({(i32)mw, (i32)mh});
     m_rect.w = size.w;
     m_rect.h = size.h;
 }
@@ -58,7 +65,11 @@ void RenderText::paint(::acos::graphics::Renderer* renderer) {
     renderer->draw_text(m_text, (u32)x, (u32)y, m_style.foreground_color, font_align);
 }
 void RenderText::perform_layout(BoxConstraints constraints) {
-    Size size = constraints.constrain({m_rect.w, m_rect.h});
+    u32 mw = 0, mh = 0;
+    if (m_text) {
+        ::acos::graphics::Font::measure_string_default(m_text, mw, mh);
+    }
+    Size size = constraints.constrain({(i32)mw, (i32)mh});
     m_rect.w = size.w;
     m_rect.h = size.h;
 }
@@ -67,6 +78,11 @@ void RenderText::set_text(const char* text) { m_text = text; }
 RenderIcon::RenderIcon() : m_type(IconType::Terminal), m_active(false) {}
 void RenderIcon::paint(::acos::graphics::Renderer* renderer) {
     if (!renderer) return;
+
+    if (m_style.background_color != 0) {
+        renderer->fill_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.border_radius, m_style.background_color);
+    }
+
     ::acos::u32 color = m_active ? g_current_theme.primary : g_current_theme.text;
 
     switch(m_type) {
@@ -82,6 +98,19 @@ void RenderIcon::paint(::acos::graphics::Renderer* renderer) {
             break;
         case IconType::Settings:
             renderer->draw_circle(m_rect.x + m_rect.w/2, m_rect.y + m_rect.h/2, m_rect.w/3, color);
+            break;
+        case IconType::Monitor:
+            renderer->draw_rect(m_rect.x + 6, m_rect.y + 6, m_rect.w - 12, m_rect.h - 16, color);
+            renderer->fill_rect(m_rect.x + 12, m_rect.y + m_rect.h - 10, m_rect.w - 24, 4, color);
+            break;
+        case IconType::Network:
+            renderer->draw_line(m_rect.x + 16, m_rect.y + 24, m_rect.x + 16, m_rect.y + 8, color);
+            renderer->draw_line(m_rect.x + 12, m_rect.y + 24, m_rect.x + 12, m_rect.y + 14, color);
+            renderer->draw_line(m_rect.x + 20, m_rect.y + 24, m_rect.x + 20, m_rect.y + 14, color);
+            break;
+        case IconType::Battery:
+            renderer->draw_rect(m_rect.x + 8, m_rect.y + 10, m_rect.w - 18, m_rect.h - 20, color);
+            renderer->fill_rect(m_rect.x + m_rect.w - 10, m_rect.y + 14, 3, 4, color);
             break;
         default:
             renderer->draw_rect(m_rect.x + 4, m_rect.y + 4, m_rect.w - 8, m_rect.h - 8, color);

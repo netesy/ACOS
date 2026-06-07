@@ -38,20 +38,42 @@ Size Flex::layout(BoxConstraints constraints) {
         }
     }
 
-    Size self_size = constraints.constrain(m_axis == Axis::Horizontal ? Size{main_total, cross_max} : Size{cross_max, main_total});
+    ::acos::i32 main_max = (m_axis == Axis::Horizontal ? constraints.max_w : constraints.max_h);
+    if (main_max >= BoxConstraints::Infinity) main_max = main_total;
+
+    Size self_size = constraints.constrain(m_axis == Axis::Horizontal ? Size{main_max, cross_max} : Size{cross_max, main_max});
     m_rect.w = self_size.w;
     m_rect.h = self_size.h;
 
-    ::acos::i32 current_main = 0;
+    ::acos::i32 main_offset = 0;
+    ::acos::i32 between_spacing = m_spacing;
+
+    if (m_main_axis_alignment == MainAxisAlignment::Center) {
+        main_offset = (m_axis == Axis::Horizontal ? m_rect.w - main_total : m_rect.h - main_total) / 2;
+    } else if (m_main_axis_alignment == MainAxisAlignment::End) {
+        main_offset = (m_axis == Axis::Horizontal ? m_rect.w - main_total : m_rect.h - main_total);
+    } else if (m_main_axis_alignment == MainAxisAlignment::SpaceBetween && visible_count > 1) {
+        between_spacing = (m_axis == Axis::Horizontal ? m_rect.w - (main_total - (::acos::i32)(visible_count - 1) * m_spacing) : m_rect.h - (main_total - (::acos::i32)(visible_count - 1) * m_spacing)) / (::acos::i32)(visible_count - 1);
+    }
+
+    ::acos::i32 current_main = main_offset;
     for (auto& child : m_children) {
         if (!child || !child->is_visible()) continue;
         Size child_size = {child->rect().w, child->rect().h};
+
+        ::acos::i32 cross_offset = 0;
+        if (m_cross_axis_alignment == CrossAxisAlignment::Center) {
+            cross_offset = (m_axis == Axis::Horizontal ? m_rect.h - child_size.h : m_rect.w - child_size.w) / 2;
+        } else if (m_cross_axis_alignment == CrossAxisAlignment::End) {
+            cross_offset = (m_axis == Axis::Horizontal ? m_rect.h - child_size.h : m_rect.w - child_size.w);
+        }
+
         if (m_axis == Axis::Horizontal) {
-            child->set_position(m_rect.x + current_main, m_rect.y);
-            current_main += child_size.w + m_spacing;
+            child->set_position(m_rect.x + current_main, m_rect.y + cross_offset);
+            current_main += child_size.w + between_spacing;
         } else {
-            child->set_position(m_rect.x, m_rect.y + current_main);
-            current_main += child_size.h + m_spacing;
+            child->set_position(m_rect.x + cross_offset, m_rect.y + current_main);
+            current_main += child_size.h + between_spacing;
         }
     }
 

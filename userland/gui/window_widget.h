@@ -10,10 +10,12 @@ public:
 
     Ref<RenderObject> create_render_object() override;
     void update_render_object(Ref<RenderObject> render_object) override;
+    void add_child(Ref<Widget> child) override;
 
     void show();
 
 private:
+    Ref<Widget> m_content_panel;
     [[maybe_unused]] const char* m_title;
     [[maybe_unused]] ::acos::u64 m_window_handle;
 };

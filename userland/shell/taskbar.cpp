@@ -5,6 +5,7 @@
 #include <userland/gui/text.h>
 #include <userland/gui/core/flex.h>
 #include <userland/gui/core/context.h>
+#include "desktop_shell.h"
 
 namespace acos::shell {
 
@@ -19,10 +20,20 @@ Taskbar::Taskbar() {
     root_layout->main_axis_alignment(gui::MainAxisAlignment::Center);
     root_layout->cross_axis_alignment(gui::CrossAxisAlignment::Center);
 
-    root_layout->add_child(region.alloc<gui::widgets::Icon>(gui::widgets::IconType::Terminal).static_cast_to<gui::Widget>());
-    root_layout->add_child(region.alloc<gui::widgets::Icon>(gui::widgets::IconType::Files).static_cast_to<gui::Widget>());
-    root_layout->add_child(region.alloc<gui::widgets::Icon>(gui::widgets::IconType::Code).static_cast_to<gui::Widget>());
-    root_layout->add_child(region.alloc<gui::widgets::Icon>(gui::widgets::IconType::Settings).static_cast_to<gui::Widget>());
+    auto term_icon = region.alloc<gui::widgets::Icon>(gui::widgets::IconType::Terminal);
+    term_icon->on_click([](void*){ DesktopShell::get().launch_terminal(); });
+    root_layout->add_child(term_icon.static_cast_to<gui::Widget>());
+
+    auto file_icon = region.alloc<gui::widgets::Icon>(gui::widgets::IconType::Files);
+    file_icon->on_click([](void*){ DesktopShell::get().launch_file_manager(); });
+    root_layout->add_child(file_icon.static_cast_to<gui::Widget>());
+
+    auto code_icon = region.alloc<gui::widgets::Icon>(gui::widgets::IconType::Code);
+    root_layout->add_child(code_icon.static_cast_to<gui::Widget>());
+
+    auto settings_icon = region.alloc<gui::widgets::Icon>(gui::widgets::IconType::Settings);
+    settings_icon->on_click([](void*){ DesktopShell::get().launch_settings(); });
+    root_layout->add_child(settings_icon.static_cast_to<gui::Widget>());
 
     add_child(root_layout.static_cast_to<gui::Widget>());
 }

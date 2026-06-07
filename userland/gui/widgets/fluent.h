@@ -22,7 +22,7 @@ public:
     using Ref<T>::Ref;
     FluentRef(const Ref<T>& other) : Ref<T>(other) {}
 
-    FluentRef<T>& background(u32 color) { if (this->is_valid()) this->operator->()->background(color); return *this; }
+    FluentRef<T>& background(u32 color) { if (this->is_valid()) this->operator->()->set_background_color(color); return *this; }
     FluentRef<T>& radius(u32 r) { if (this->is_valid()) this->operator->()->radius(r); return *this; }
     FluentRef<T>& padding(u32 p) { if (this->is_valid()) this->operator->()->padding(p); return *this; }
     FluentRef<T>& elevation(u32 e) { if (this->is_valid()) this->operator->()->elevation(e); return *this; }
@@ -73,6 +73,7 @@ public:
     using ContainerRef<widgets::Panel>::ContainerRef;
     PanelRef& color(u32 c) { if (this->is_valid()) this->operator->()->set_background_color(c); return *this; }
     PanelRef& glass(bool g) { if (this->is_valid()) this->operator->()->set_glass(g); return *this; }
+    PanelRef& on_click(void (*callback)(void*)) { if (this->is_valid()) this->operator->()->on_click(callback); return *this; }
 };
 
 class IconRef : public FluentRef<widgets::Icon> {
@@ -80,6 +81,12 @@ public:
     using FluentRef<widgets::Icon>::FluentRef;
     IconRef& type([[maybe_unused]] widgets::IconType t) { if (this->is_valid()) this->operator->(); /* type is set in constructor usually */ return *this; }
     IconRef& active(bool a) { if (this->is_valid()) this->operator->()->set_active(a); return *this; }
+    IconRef& size(i32 s) { if (this->is_valid()) this->operator->()->set_size(s); return *this; }
+    IconRef& on_click(void (*callback)(void*)) { if (this->is_valid()) this->operator->()->on_click(callback); return *this; }
+
+    // Explicitly return IconRef to avoid slicing to FluentRef<Icon>
+    IconRef& background(u32 color) { if (this->is_valid()) this->operator->()->set_background_color(color); return *this; }
+    IconRef& radius(u32 r) { if (this->is_valid()) this->operator->()->radius(r); return *this; }
 };
 
 class ProgressBarRef : public FluentRef<widgets::ProgressBar> {

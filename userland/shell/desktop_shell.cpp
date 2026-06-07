@@ -4,10 +4,16 @@
 #include <userland/gui/widgets/fluent.h>
 #include "taskbar.h"
 #include "launcher.h"
+#include <apps/terminal/terminal.h>
+#include <apps/file_manager/file_manager.h>
+#include <apps/settings/settings.h>
 
 namespace acos::shell {
 
+DesktopShell* DesktopShell::s_instance = nullptr;
+
 DesktopShell::DesktopShell() {
+    s_instance = this;
     gui::widgets::init_synthetic_theme();
 }
 
@@ -17,6 +23,7 @@ void DesktopShell::initialize() {
     auto root = Panel()
         .background(0xFF0A0A0B);
     root->set_rect({0, 0, 1024, 768});
+    m_root_panel = root.static_cast_to<gui::Widget>();
 
     // Top Bar
     auto top_bar = Panel()
@@ -25,18 +32,20 @@ void DesktopShell::initialize() {
     top_bar->set_rect({0, 0, 1024, 48});
 
     auto top_content = Row()
-        .spacing(20)
+        .main_axis_alignment(MainAxisAlignment::SpaceBetween)
         .cross_axis_alignment(CrossAxisAlignment::Center);
     top_content->set_rect({20, 0, 984, 48});
 
-    top_content->add_child(Text("ACOS_KERNEL").color(0xFFFFFFFF).font_size(16));
-    top_content->add_child(Text("System").color(widgets::g_current_theme.accent));
-    top_content->add_child(Text("Network").color(0xFF888888));
-    top_content->add_child(Text("Security").color(0xFF888888));
+    auto top_left = Row().spacing(25).cross_axis_alignment(CrossAxisAlignment::Center);
+    top_left->add_child(Text("ACOS_KERNEL").color(0xFFFFFFFF).font_size(16));
+    top_left->add_child(Text("System").color(widgets::g_current_theme.accent));
+    top_left->add_child(Text("Network").color(0xFF888888));
+    top_left->add_child(Text("Security").color(0xFF888888));
+    top_content->add_child(top_left);
 
     // Search Box
     auto search = Panel().radius(20).background(0x22FFFFFF);
-    search->set_rect({0, 0, 200, 28});
+    search->set_rect({0, 0, 240, 28});
     search->add_child(Text("  Search (Ctrl+Space)").color(0xFF888888).font_size(12));
     top_content->add_child(search);
 
@@ -54,25 +63,25 @@ void DesktopShell::initialize() {
     auto sidebar = Column().spacing(30);
     sidebar->set_rect({20, 80, 80, 600});
 
-    auto create_nav_icon = [&](widgets::IconType t, const char* label) {
+    auto create_nav_icon = [&](widgets::IconType t, const char* label, void (*callback)(void*)) {
         auto c = Column().spacing(5).cross_axis_alignment(CrossAxisAlignment::Center);
-        c->add_child(Icon(t).background(0x22FFFFFF).radius(8));
+        c->add_child(Icon(t).background(0x22FFFFFF).radius(8).on_click(callback));
         c->add_child(Text(label).color(0xFF888888).font_size(10));
         return c;
     };
 
-    sidebar->add_child(create_nav_icon(widgets::IconType::Files, "Source_Root"));
-    sidebar->add_child(create_nav_icon(widgets::IconType::Terminal, "Quick_Term"));
-    sidebar->add_child(create_nav_icon(widgets::IconType::Settings, "Core_Config"));
+    sidebar->add_child(create_nav_icon(widgets::IconType::Files, "Source_Root", [](void*){ DesktopShell::get().launch_file_manager(); }));
+    sidebar->add_child(create_nav_icon(widgets::IconType::Terminal, "Quick_Term", [](void*){ DesktopShell::get().launch_terminal(); }));
+    sidebar->add_child(create_nav_icon(widgets::IconType::Settings, "Core_Config", [](void*){ DesktopShell::get().launch_settings(); }));
 
     root->add_child(sidebar);
 
     // Dashboard (Right)
     auto dashboard = Column().spacing(20);
-    dashboard->set_rect({700, 80, 300, 600});
+    dashboard->set_rect({712, 80, 300, 600});
 
     auto create_card = [&](const char* title, i32 h) {
-        auto p = Panel().glass(true).radius(12).padding(15).background(0x11FFFFFF);
+        auto p = Panel().glass(true).radius(12).padding(15).background(0xCC1A1A1B);
         p->set_rect({0, 0, 300, h});
         p->add_child(Text(title).color(0xFFFFFFFF).font_size(14));
         return p;
@@ -121,6 +130,21 @@ void DesktopShell::run() {}
 void DesktopShell::draw(acos::graphics::Renderer* renderer) {
     if (!renderer) return;
     m_ui_context.paint(renderer);
+}
+
+void DesktopShell::launch_terminal() {
+    auto term = m_ui_context.region().alloc<apps::Terminal>();
+    m_root_panel->add_child(term.static_cast_to<gui::Widget>());
+}
+
+void DesktopShell::launch_file_manager() {
+    auto fm = m_ui_context.region().alloc<apps::FileManager>();
+    m_root_panel->add_child(fm.static_cast_to<gui::Widget>());
+}
+
+void DesktopShell::launch_settings() {
+    auto settings = m_ui_context.region().alloc<apps::Settings>();
+    m_root_panel->add_child(settings.static_cast_to<gui::Widget>());
 }
 
 } // namespace acos::shell

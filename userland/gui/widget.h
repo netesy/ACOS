@@ -51,8 +51,8 @@ public:
 
     void set_parent(Ref<Widget> parent) { m_parent = parent; }
     Ref<Widget> parent() const { return m_parent; }
-    void add_child(Ref<Widget> child);
-    void remove_child(Ref<Widget> child);
+    virtual void add_child(Ref<Widget> child);
+    virtual void remove_child(Ref<Widget> child);
     const Vector<Ref<Widget>>& children() const { return m_children; }
 
     Ref<Widget> self();
