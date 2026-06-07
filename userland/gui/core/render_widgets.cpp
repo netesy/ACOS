@@ -41,14 +41,15 @@ RenderText::RenderText() : m_text(nullptr), m_align(TextAlignment::Left) {}
 void RenderText::paint(::acos::graphics::Renderer* renderer) {
     if (!renderer || !m_text) return;
 
-    ::acos::i32 x = m_rect.x;
-    if (m_align == TextAlignment::Center) {
-        // x += (m_rect.w - text_width) / 2; // TODO: implement text_width
-    } else if (m_align == TextAlignment::Right) {
-        // x += m_rect.w - text_width;
-    }
+    ::acos::graphics::Font::Alignment font_align = ::acos::graphics::Font::Alignment::Left;
+    if (m_align == TextAlignment::Center) font_align = ::acos::graphics::Font::Alignment::Center;
+    else if (m_align == TextAlignment::Right) font_align = ::acos::graphics::Font::Alignment::Right;
 
-    renderer->draw_text(m_text, x, m_rect.y, m_style.foreground_color);
+    ::acos::i32 x = m_rect.x;
+    if (m_align == TextAlignment::Center) x += m_rect.w / 2;
+    else if (m_align == TextAlignment::Right) x += m_rect.w;
+
+    renderer->draw_text(m_text, (u32)x, (u32)m_rect.y, m_style.foreground_color, font_align);
 }
 void RenderText::perform_layout(BoxConstraints constraints) {
     Size size = constraints.constrain({m_rect.w, m_rect.h});
@@ -293,7 +294,7 @@ void RenderListView::set_items(const char** items, ::acos::usize count) {
 }
 void RenderListView::set_selected(::acos::i32 index) { m_selected = index; }
 
-RenderTextArea::RenderTextArea() { m_text[0] = '\0'; }
+RenderTextArea::RenderTextArea() : m_cursor_pos(0), m_cursor_visible(false) { m_text[0] = '\0'; }
 void RenderTextArea::paint(::acos::graphics::Renderer* renderer) {
     if (!renderer) return;
     renderer->blend_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.background_color, 120);
@@ -304,8 +305,15 @@ void RenderTextArea::paint(::acos::graphics::Renderer* renderer) {
     char line_buf[128];
     ::acos::usize line_pos = 0;
 
-    for (::acos::usize i = 0; m_text[i]; i++) {
-        if (m_text[i] == '\n' || line_pos >= 127) {
+    ::acos::u32 char_idx = 0;
+    for (::acos::usize i = 0; m_text[i]; i++, char_idx++) {
+        bool is_newline = (m_text[i] == '\n');
+
+        if (m_cursor_visible && char_idx == m_cursor_pos) {
+            renderer->draw_line(cur_x + (i32)line_pos * 8, cur_y, cur_x + (i32)line_pos * 8, cur_y + 16, 0xFFFFFFFF);
+        }
+
+        if (is_newline || line_pos >= 127) {
             line_buf[line_pos] = '\0';
             renderer->draw_text(line_buf, cur_x, cur_y, m_style.foreground_color);
             cur_y += 18;
@@ -319,6 +327,9 @@ void RenderTextArea::paint(::acos::graphics::Renderer* renderer) {
         line_buf[line_pos] = '\0';
         renderer->draw_text(line_buf, cur_x, cur_y, m_style.foreground_color);
     }
+    if (m_cursor_visible && char_idx == m_cursor_pos && cur_y <= m_rect.y + m_rect.h - 18) {
+        renderer->draw_line(cur_x + (i32)line_pos * 8, cur_y, cur_x + (i32)line_pos * 8, cur_y + 16, 0xFFFFFFFF);
+    }
 }
 void RenderTextArea::perform_layout(BoxConstraints constraints) {
     Size size = constraints.constrain({m_rect.w, m_rect.h});
@@ -328,8 +339,12 @@ void RenderTextArea::perform_layout(BoxConstraints constraints) {
 void RenderTextArea::set_text(const char* text) {
     if (!text) { m_text[0] = '\0'; return; }
     ::acos::usize i = 0;
-    while (text[i] && i < 2047) { m_text[i] = text[i]; i++; }
+    while (text[i] && i < 4095) { m_text[i] = text[i]; i++; }
     m_text[i] = '\0';
+}
+void RenderTextArea::set_cursor(::acos::u32 pos, bool visible) {
+    m_cursor_pos = pos;
+    m_cursor_visible = visible;
 }
 
 RenderTextBox::RenderTextBox() : m_text(nullptr), m_placeholder(nullptr), m_cursor(0), m_cursor_visible(false) {}
@@ -367,8 +382,9 @@ void RenderGraph::paint(::acos::graphics::Renderer* renderer) {
     }
 }
 void RenderGraph::perform_layout(BoxConstraints constraints) {
-    m_rect.w = constraints.max_w;
-    m_rect.h = constraints.max_h;
+    Size size = constraints.constrain({m_rect.w, m_rect.h});
+    m_rect.w = size.w;
+    m_rect.h = size.h;
 }
 void RenderGraph::set_data(const float* data, ::acos::u32 count) {
     m_count = count > 64 ? 64 : count;

@@ -15,6 +15,7 @@ Text::~Text() {}
 void Text::set_text(const char* text) {
     if (!text) {
         m_text_buffer[0] = '\0';
+        m_rect.w = 0;
     } else {
         usize i = 0;
         while (text[i] && i < 127) {
@@ -22,8 +23,10 @@ void Text::set_text(const char* text) {
             i++;
         }
         m_text_buffer[i] = '\0';
+        m_rect.w = (i32)i * 8;
     }
     set_paint_dirty();
+    set_layout_dirty();
 }
 
 Ref<RenderObject> Text::create_render_object() {

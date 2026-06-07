@@ -21,6 +21,7 @@ void TextArea::update_render_object(Ref<RenderObject> render_object) {
     auto rt = static_cast<RenderTextArea*>(render_object.operator->());
     if (rt) {
         rt->set_text(m_buffer);
+        rt->set_cursor(m_cursor_pos, m_cursor_visible);
     }
 }
 

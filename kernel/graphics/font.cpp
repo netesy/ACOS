@@ -18,11 +18,6 @@ Framebuffer* active_framebuffer() {
     return display ? display->get_framebuffer() : nullptr;
 }
 
-usize strlen_impl(const char* s) {
-    usize l = 0;
-    while(s && *s++) l++;
-    return l;
-}
 }
 
 Font::Font(acos::Span<const u8> data) : m_data(data) {
@@ -98,30 +93,33 @@ void Font::draw_char(char c, u32 x, u32 y, u32 color, Style style) const {
 
 void Font::draw_string(const char* str, u32 x, u32 y, u32 color, Alignment align, Style style, i32 spacing) const {
     if (!str) return;
-    u32 len = strlen_impl(str);
     u32 char_w = m_valid ? m_width : 8;
     u32 char_h = m_valid ? m_height : 10;
-
-    u32 total_w = len * (char_w + spacing);
-    u32 start_x = x;
-    if (align == Alignment::Center) {
-        start_x = x - total_w / 2;
-    } else if (align == Alignment::Right) {
-        start_x = x - total_w;
-    }
-
-    u32 cur_x = start_x;
     u32 cur_y = y;
 
-    while (*str) {
-        char c = *str++;
-        if (c == '\n') {
-            cur_x = start_x;
-            cur_y += char_h;
-            continue;
+    const char* line_start = str;
+    while (*line_start) {
+        const char* line_end = line_start;
+        u32 line_len = 0;
+        while (*line_end && *line_end != '\n') {
+            line_len++;
+            line_end++;
         }
-        draw_char(c, cur_x, cur_y, color, style);
-        cur_x += char_w + spacing;
+
+        u32 total_w = line_len * (char_w + spacing);
+        u32 start_x = x;
+        if (align == Alignment::Center) {
+            start_x = x - total_w / 2;
+        } else if (align == Alignment::Right) {
+            start_x = x - total_w;
+        }
+
+        for (u32 i = 0; i < line_len; i++) {
+            draw_char(line_start[i], start_x + i * (char_w + spacing), cur_y, color, style);
+        }
+
+        cur_y += char_h;
+        line_start = *line_end == '\n' ? line_end + 1 : line_end;
     }
 }
 
@@ -149,16 +147,27 @@ void Font::draw_char_default(char c, u32 x, u32 y, u32 color, Style style) {
 void Font::draw_string_default(const char* str, u32 x, u32 y, u32 color, Alignment align, Style style, i32 spacing) {
     if (g_default_font) g_default_font->draw_string(str, x, y, color, align, style, spacing);
     else {
-        u32 len = strlen_impl(str);
-        u32 total_w = len * (8 + spacing);
-        u32 start_x = x;
-        if (align == Alignment::Center) start_x = x - total_w / 2;
-        else if (align == Alignment::Right) start_x = x - total_w;
+        u32 cur_y = y;
+        const char* line_start = str;
+        while (line_start && *line_start) {
+            const char* line_end = line_start;
+            u32 line_len = 0;
+            while (*line_end && *line_end != '\n') {
+                line_len++;
+                line_end++;
+            }
 
-        u32 cur_x = start_x;
-        while (str && *str) {
-            draw_char_default(*str++, cur_x, y, color, style);
-            cur_x += 8 + spacing;
+            u32 total_w = line_len * (8 + spacing);
+            u32 start_x = x;
+            if (align == Alignment::Center) start_x = x - total_w / 2;
+            else if (align == Alignment::Right) start_x = x - total_w;
+
+            for (u32 i = 0; i < line_len; i++) {
+                draw_char_default(line_start[i], start_x + i * (8 + spacing), cur_y, color, style);
+            }
+
+            cur_y += 10;
+            line_start = *line_end == '\n' ? line_end + 1 : line_end;
         }
     }
 }

@@ -26,6 +26,12 @@ extern "C" int strcmp(const char* s1, const char* s2) {
     return *(const unsigned char*)s1 - *(const unsigned char*)s2;
 }
 
+extern "C" acos::usize strlen(const char* s) {
+    acos::usize len = 0;
+    while (s[len]) len++;
+    return len;
+}
+
 extern "C" void __cxa_pure_virtual() {
     while (1) {
         __asm__("hlt");

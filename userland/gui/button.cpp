@@ -7,7 +7,13 @@
 namespace acos::gui::widgets {
 
 Button::Button(const char* label) : m_label(label), m_mouse_over(false) {
-    m_rect = {0, 0, 100, 32};
+    i32 w = 100;
+    if (label) {
+        i32 label_w = 0;
+        while (label[label_w]) label_w++;
+        w = label_w * 8 + 20;
+    }
+    m_rect = {0, 0, w, 32};
 }
 
 Button::~Button() {}

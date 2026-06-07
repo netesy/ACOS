@@ -1,6 +1,7 @@
 #pragma once
 #include "render_object.h"
 #include "../icon.h"
+#include "../text.h"
 #include "layout_types.h"
 
 namespace acos::gui::widgets {
@@ -149,8 +150,11 @@ public:
     void paint(::acos::graphics::Renderer* renderer) override;
     void perform_layout(BoxConstraints constraints) override;
     void set_text(const char* text);
+    void set_cursor(::acos::u32 pos, bool visible);
 private:
-    char m_text[2048];
+    char m_text[4096];
+    ::acos::u32 m_cursor_pos;
+    bool m_cursor_visible;
 };
 
 class RenderTextBox : public RenderObject {
