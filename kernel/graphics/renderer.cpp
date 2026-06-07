@@ -95,8 +95,72 @@ void Renderer::fill_rect(u32 x, u32 y, u32 w, u32 h, u32 color) {
     }
 }
 
+void Renderer::draw_char(char c, u32 x, u32 y, u32 color, Font::Style style) {
+    Font* font = Font::get_default();
+
+    auto plot_glyph = [&](u32 ox, u32 oy) {
+        if (!font || !font->is_valid()) {
+            // Minimal fallback: draw a 6x8 block
+            if (static_cast<u8>(c) > 32) {
+                for (int row = 1; row < 7; row++) {
+                    for (int col = 1; col < 6; col++) {
+                        draw_pixel(ox + col, oy + row, color);
+                    }
+                }
+            }
+            return;
+        }
+
+        const u8* glyph = font->get_glyph(c);
+        if (!glyph) return;
+        u32 fw = font->width();
+        u32 fh = font->height();
+        u32 bytes_per_line = (fw + 7) / 8;
+
+        for (u32 row = 0; row < fh; row++) {
+            for (u32 col = 0; col < fw; col++) {
+                u8 byte = glyph[row * bytes_per_line + (col / 8)];
+                if ((byte >> (7 - (col % 8))) & 1) {
+                    i32 shear = 0;
+                    if (style == Font::Style::Italic) shear = (fh - row) / 4;
+                    draw_pixel(ox + col + shear, oy + row, color);
+                }
+            }
+        }
+    };
+
+    plot_glyph(x, y);
+    if (style == Font::Style::Bold) plot_glyph(x + 1, y);
+}
+
 void Renderer::draw_text(const char* text, u32 x, u32 y, u32 color, Font::Alignment align, Font::Style style, i32 spacing) {
-    Font::draw_string_default(text, x, y, color, align, style, spacing);
+    if (!text) return;
+    Font* font = Font::get_default();
+    u32 char_w = (font && font->is_valid()) ? font->width() : 8;
+    u32 char_h = (font && font->is_valid()) ? font->height() : 10;
+    u32 cur_y = y;
+
+    const char* line_start = text;
+    while (*line_start) {
+        const char* line_end = line_start;
+        u32 line_len = 0;
+        while (*line_end && *line_end != '\n') {
+            line_len++;
+            line_end++;
+        }
+
+        u32 total_w = line_len * (char_w + spacing);
+        u32 start_x = x;
+        if (align == Font::Alignment::Center) start_x = x - total_w / 2;
+        else if (align == Font::Alignment::Right) start_x = x - total_w;
+
+        for (u32 i = 0; i < line_len; i++) {
+            draw_char(line_start[i], start_x + i * (char_w + spacing), cur_y, color, style);
+        }
+
+        cur_y += char_h;
+        line_start = *line_end == '\n' ? line_end + 1 : line_end;
+    }
 }
 
 void Renderer::measure_text(const char* text, u32& w, u32& h, i32 spacing) {

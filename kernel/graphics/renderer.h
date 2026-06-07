@@ -16,6 +16,7 @@ public:
     void fill_rect(u32 x, u32 y, u32 w, u32 h, u32 color);
 
     // Text drawing
+    void draw_char(char c, u32 x, u32 y, u32 color, Font::Style style = Font::Style::Regular);
     void draw_text(const char* text, u32 x, u32 y, u32 color,
                    Font::Alignment align = Font::Alignment::Left,
                    Font::Style style = Font::Style::Regular,

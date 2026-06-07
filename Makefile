@@ -113,6 +113,7 @@ KERNEL_SRCS = \
 	$(GRAPHICS_DIR)/renderer.cpp \
 	$(GRAPHICS_DIR)/surface.cpp \
 	$(GRAPHICS_DIR)/font.cpp \
+	$(GRAPHICS_DIR)/font_manager.cpp \
 	$(DISPLAY_DIR)/window.cpp \
 	$(DISPLAY_DIR)/surface_manager.cpp \
 	$(DISPLAY_DIR)/input_router.cpp \
@@ -298,7 +299,12 @@ $(BOOT_DIR)/main.o: $(BOOT_DIR)/main.cpp
 # Run
 # ----------------------------------------------------
 
-run: $(DISK_IMG)
+dist: $(BOOT_EFI) $(KERNEL_ELF)
+	mkdir -p dist/EFI/BOOT
+	cp $(BOOT_EFI) dist/EFI/BOOT/BOOTX64.EFI
+	cp $(KERNEL_ELF) dist/kernel.elf
+
+run: dist
 	@if command -v $(QEMU) >/dev/null 2>&1; then \
 		if [ -n "$(QEMU_FIRMWARE)" ]; then \
 			if [ -d /mnt/wslg ]; then \
@@ -307,7 +313,7 @@ run: $(DISK_IMG)
 				export XDG_RUNTIME_DIR=/mnt/wslg/runtime-dir; \
 				echo "[RUN] WSLg detected: DISPLAY=$$DISPLAY WAYLAND_DISPLAY=$$WAYLAND_DISPLAY"; \
 			fi; \
-			$(QEMU) $(QEMU_FLAGS) -bios "$(QEMU_FIRMWARE)"; \
+			$(QEMU) -m 512M -drive file=fat:rw:dist,format=raw -vga std -display sdl -serial stdio -bios "$(QEMU_FIRMWARE)"; \
 		else \
 			echo "[RUN] Warning: OVMF firmware not found; cannot launch UEFI VM."; \
 			exit 1; \
@@ -326,6 +332,7 @@ run-win: $(DISK_IMG)
 
 clean:
 	rm -f $(BOOT_EFI) $(KERNEL_ELF) $(DISK_IMG)
+	rm -rf dist
 	find . -name "*.o" -type f -delete 2>/dev/null || true
 
 .PHONY: all image run run-win clean

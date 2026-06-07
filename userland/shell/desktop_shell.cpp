@@ -82,7 +82,7 @@ void DesktopShell::initialize() {
     auto tel = create_card("Telemetry", 200);
     auto g = Graph();
     g->set_rect({15, 60, 270, 80});
-    g->add_value(0.3f); g->add_value(0.5f); g->add_value(0.4f); g->add_value(0.7f); g->add_value(0.9f); g->add_value(0.6f);
+    g->add_value(0.3f); g->add_value(0.5f); g->add_value(0.4f); g->add_value(0.7f); g->add_value(0.9f); g->add_value(0.6f); g->add_value(0.8f); g->add_value(0.4f);
     tel->add_child(g);
     dashboard->add_child(tel);
 

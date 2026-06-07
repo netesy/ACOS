@@ -1,4 +1,5 @@
 #include <kernel/graphics/graphics_manager.h>
+#include <kernel/graphics/font_manager.h>
 #include <libs/runtime/include/acos/runtime.h>
 
 namespace acos::graphics {
@@ -92,6 +93,8 @@ void GraphicsManager::init(FramebufferInfo* boot_framebuffer) {
         boot_framebuffer->bpp);
     boot_display()->attach(g_boot_framebuffer);
     register_display(boot_display());
+
+    FontManager::initialize();
 }
 
 } // namespace acos::graphics
