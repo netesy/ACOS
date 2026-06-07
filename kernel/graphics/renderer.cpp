@@ -99,6 +99,10 @@ void Renderer::draw_text(const char* text, u32 x, u32 y, u32 color, Font::Alignm
     Font::draw_string_default(text, x, y, color, align, style, spacing);
 }
 
+void Renderer::measure_text(const char* text, u32& w, u32& h, i32 spacing) {
+    Font::measure_string_default(text, w, h, spacing);
+}
+
 void Renderer::draw_circle(u32 cx, u32 cy, u32 radius, u32 color) {
     i32 r = (i32)radius;
     for (i32 y = -r; y <= r; y++) {

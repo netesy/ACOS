@@ -16,23 +16,19 @@ void Text::set_text(const char* text) {
     if (!text) {
         m_text_buffer[0] = '\0';
         m_rect.w = 0;
+        m_rect.h = 0;
     } else {
         usize i = 0;
-        i32 max_line_w = 0;
-        i32 current_line_w = 0;
         while (text[i] && i < 127) {
             m_text_buffer[i] = text[i];
-            if (text[i] == '\n') {
-                if (current_line_w > max_line_w) max_line_w = current_line_w;
-                current_line_w = 0;
-            } else {
-                current_line_w += 8;
-            }
             i++;
         }
         m_text_buffer[i] = '\0';
-        if (current_line_w > max_line_w) max_line_w = current_line_w;
-        m_rect.w = max_line_w;
+
+        u32 w, h;
+        ::acos::graphics::Font::measure_string_default(m_text_buffer, w, h);
+        m_rect.w = (i32)w;
+        m_rect.h = (i32)h;
     }
     set_paint_dirty();
     set_layout_dirty();

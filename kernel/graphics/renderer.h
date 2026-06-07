@@ -20,6 +20,7 @@ public:
                    Font::Alignment align = Font::Alignment::Left,
                    Font::Style style = Font::Style::Regular,
                    i32 spacing = 0);
+    void measure_text(const char* text, u32& w, u32& h, i32 spacing = 0);
     
     // Advanced drawing
     void draw_circle(u32 cx, u32 cy, u32 radius, u32 color);

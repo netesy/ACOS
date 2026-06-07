@@ -43,11 +43,15 @@ public:
     u32 height() const { return m_height; }
     u32 char_size() const { return m_charsize; }
 
+    void measure_char(char c, u32& w, u32& h) const;
+    void measure_string(const char* str, u32& w, u32& h, i32 spacing = 0) const;
+
     void draw_char(char c, u32 x, u32 y, u32 color, Style style = Style::Regular) const;
     void draw_string(const char* str, u32 x, u32 y, u32 color, Alignment align = Alignment::Left, Style style = Style::Regular, i32 spacing = 0) const;
 
     static void set_default(Font* font);
     static Font* get_default();
+    static void measure_string_default(const char* str, u32& w, u32& h, i32 spacing = 0);
     static void draw_char_default(char c, u32 x, u32 y, u32 color, Style style = Style::Regular);
     static void draw_string_default(const char* str, u32 x, u32 y, u32 color, Alignment align = Alignment::Left, Style style = Style::Regular, i32 spacing = 0);
 

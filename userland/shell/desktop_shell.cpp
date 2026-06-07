@@ -21,7 +21,7 @@ void DesktopShell::initialize() {
     // Top Bar
     auto top_bar = Panel()
         .glass(true)
-        .background(0x44000000);
+        .background(0xCC0A0A0B); // More opaque dark glass
     top_bar->set_rect({0, 0, 1024, 48});
 
     auto top_content = Row()
@@ -79,17 +79,17 @@ void DesktopShell::initialize() {
     };
 
     // Telemetry
-    auto tel = create_card("Telemetry", 180);
+    auto tel = create_card("Telemetry", 200);
     auto g = Graph();
-    g->set_rect({15, 40, 270, 80});
+    g->set_rect({15, 60, 270, 80});
     g->add_value(0.3f); g->add_value(0.5f); g->add_value(0.4f); g->add_value(0.7f); g->add_value(0.9f); g->add_value(0.6f);
     tel->add_child(g);
     dashboard->add_child(tel);
 
     // Storage
-    auto storage = create_card("ACOS_ROOT", 140);
-    auto s_content = Column().spacing(10);
-    s_content->set_rect({15, 40, 270, 80});
+    auto storage = create_card("ACOS_ROOT", 160);
+    auto s_content = Column().spacing(12);
+    s_content->set_rect({15, 60, 270, 80});
     s_content->add_child(Text("SSD MOUNTED  82%").color(0xFF888888).font_size(12));
     s_content->add_child(ProgressBar().value(82));
     s_content->add_child(Text("Encrypted: AES-256").color(0xFF888888).font_size(10));

@@ -49,7 +49,13 @@ void RenderText::paint(::acos::graphics::Renderer* renderer) {
     if (m_align == TextAlignment::Center) x += m_rect.w / 2;
     else if (m_align == TextAlignment::Right) x += m_rect.w;
 
-    renderer->draw_text(m_text, (u32)x, (u32)m_rect.y, m_style.foreground_color, font_align);
+    u32 measured_w, measured_h;
+    renderer->measure_text(m_text, measured_w, measured_h);
+
+    // Vertically center the text within the assigned rect
+    ::acos::i32 y = m_rect.y + (m_rect.h - (i32)measured_h) / 2;
+
+    renderer->draw_text(m_text, (u32)x, (u32)y, m_style.foreground_color, font_align);
 }
 void RenderText::perform_layout(BoxConstraints constraints) {
     Size size = constraints.constrain({m_rect.w, m_rect.h});

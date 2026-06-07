@@ -52,6 +52,42 @@ const u8* Font::get_glyph(char c) const {
     return m_data.data() + m_headersize + (index * m_charsize);
 }
 
+void Font::measure_char([[maybe_unused]] char c, u32& w, u32& h) const {
+    w = m_valid ? m_width : 8;
+    h = m_valid ? m_height : 10;
+}
+
+void Font::measure_string(const char* str, u32& w, u32& h, i32 spacing) const {
+    if (!str) {
+        w = 0; h = 0; return;
+    }
+    u32 char_w = m_valid ? m_width : 8;
+    u32 char_h = m_valid ? m_height : 10;
+
+    u32 max_w = 0;
+    u32 cur_w = 0;
+    u32 total_h = 0;
+    bool has_content = false;
+
+    for (usize i = 0; str[i]; i++) {
+        has_content = true;
+        if (str[i] == '\n') {
+            if (cur_w > max_w) max_w = cur_w;
+            cur_w = 0;
+            total_h += char_h;
+        } else {
+            if (cur_w > 0) cur_w += spacing;
+            cur_w += char_w;
+        }
+    }
+
+    if (cur_w > max_w) max_w = cur_w;
+    if (has_content && cur_w > 0) total_h += char_h;
+
+    w = max_w;
+    h = total_h;
+}
+
 void Font::draw_char(char c, u32 x, u32 y, u32 color, Style style) const {
     Framebuffer* fb = active_framebuffer();
     if (!fb) return;
@@ -125,6 +161,32 @@ void Font::draw_string(const char* str, u32 x, u32 y, u32 color, Alignment align
 
 void Font::set_default(Font* font) { g_default_font = font; }
 Font* Font::get_default() { return g_default_font; }
+
+void Font::measure_string_default(const char* str, u32& w, u32& h, i32 spacing) {
+    if (g_default_font) g_default_font->measure_string(str, w, h, spacing);
+    else {
+        if (!str) { w = 0; h = 0; return; }
+        u32 max_w = 0;
+        u32 cur_w = 0;
+        u32 total_h = 0;
+        bool has_content = false;
+        for (usize i = 0; str[i]; i++) {
+            has_content = true;
+            if (str[i] == '\n') {
+                if (cur_w > max_w) max_w = cur_w;
+                cur_w = 0;
+                total_h += 10;
+            } else {
+                if (cur_w > 0) cur_w += spacing;
+                cur_w += 8;
+            }
+        }
+        if (cur_w > max_w) max_w = cur_w;
+        if (has_content && cur_w > 0) total_h += 10;
+        w = max_w;
+        h = total_h;
+    }
+}
 
 void Font::draw_char_default(char c, u32 x, u32 y, u32 color, Style style) {
     if (g_default_font) g_default_font->draw_char(c, x, y, color, style);
