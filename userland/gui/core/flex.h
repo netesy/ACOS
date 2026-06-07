@@ -31,7 +31,8 @@ public:
     Flex(::acos::gui::Axis axis)
         : m_axis(axis),
           m_main_axis_alignment(::acos::gui::MainAxisAlignment::Start),
-          m_cross_axis_alignment(::acos::gui::CrossAxisAlignment::Start) {}
+          m_cross_axis_alignment(::acos::gui::CrossAxisAlignment::Start),
+          m_spacing(0) {}
 
     Size layout(BoxConstraints constraints) override;
 
@@ -39,11 +40,13 @@ public:
 
     Flex& main_axis_alignment(::acos::gui::MainAxisAlignment alignment) { m_main_axis_alignment = alignment; return *this; }
     Flex& cross_axis_alignment(::acos::gui::CrossAxisAlignment alignment) { m_cross_axis_alignment = alignment; return *this; }
+    Flex& spacing(::acos::i32 s) { m_spacing = s; set_layout_dirty(); return *this; }
 
 protected:
     ::acos::gui::Axis m_axis;
     ::acos::gui::MainAxisAlignment m_main_axis_alignment;
     ::acos::gui::CrossAxisAlignment m_cross_axis_alignment;
+    ::acos::i32 m_spacing;
 };
 
 class Row : public Flex {

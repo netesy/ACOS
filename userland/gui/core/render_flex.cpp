@@ -6,8 +6,8 @@ namespace acos::gui::widgets {
 
 class RenderFlex : public RenderObject {
 public:
-    RenderFlex(::acos::gui::Axis axis, ::acos::gui::MainAxisAlignment main_align, ::acos::gui::CrossAxisAlignment cross_align)
-        : m_axis(axis), m_main_align(main_align), m_cross_align(cross_align) {}
+    RenderFlex(::acos::gui::Axis axis, ::acos::gui::MainAxisAlignment main_align, ::acos::gui::CrossAxisAlignment cross_align, ::acos::i32 spacing)
+        : m_axis(axis), m_main_align(main_align), m_cross_align(cross_align), m_spacing(spacing) {}
 
     void paint(::acos::graphics::Renderer* renderer) override {
         for (auto& child : m_children) {
@@ -18,6 +18,15 @@ public:
     void perform_layout(BoxConstraints constraints) override {
         ::acos::i32 main_total = 0;
         ::acos::i32 cross_max = 0;
+
+        u32 visible_count = 0;
+        for (auto& child : m_children) {
+            if (child) visible_count++;
+        }
+
+        if (visible_count > 0) {
+            main_total += (::acos::i32)(visible_count - 1) * m_spacing;
+        }
 
         for (auto& child : m_children) {
             if (!child) continue;
@@ -67,10 +76,10 @@ public:
 
             if (m_axis == ::acos::gui::Axis::Horizontal) {
                 child->set_rect({m_rect.x + current_main, m_rect.y + cross_offset, child_size.w, child_size.h});
-                current_main += child_size.w;
+                current_main += child_size.w + m_spacing;
             } else {
                 child->set_rect({m_rect.x + cross_offset, m_rect.y + current_main, child_size.w, child_size.h});
-                current_main += child_size.h;
+                current_main += child_size.h + m_spacing;
             }
         }
     }
@@ -79,10 +88,11 @@ private:
     ::acos::gui::Axis m_axis;
     ::acos::gui::MainAxisAlignment m_main_align;
     ::acos::gui::CrossAxisAlignment m_cross_align;
+    ::acos::i32 m_spacing;
 };
 
 Ref<RenderObject> Flex::create_render_object() {
-    return UIContext::get().region().alloc<RenderFlex>(m_axis, m_main_axis_alignment, m_cross_axis_alignment);
+    return UIContext::get().region().alloc<RenderFlex>(m_axis, m_main_axis_alignment, m_cross_axis_alignment, m_spacing);
 }
 
 } // namespace acos::gui::widgets

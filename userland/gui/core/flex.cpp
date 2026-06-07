@@ -8,6 +8,15 @@ Size Flex::layout(BoxConstraints constraints) {
     ::acos::i32 main_total = 0;
     ::acos::i32 cross_max = 0;
 
+    u32 visible_count = 0;
+    for (auto& child : m_children) {
+        if (child && child->is_visible()) visible_count++;
+    }
+
+    if (visible_count > 0) {
+        main_total += (::acos::i32)(visible_count - 1) * m_spacing;
+    }
+
     for (auto& child : m_children) {
         if (!child || !child->is_visible()) continue;
 
@@ -39,10 +48,10 @@ Size Flex::layout(BoxConstraints constraints) {
         Size child_size = {child->rect().w, child->rect().h};
         if (m_axis == Axis::Horizontal) {
             child->set_position(m_rect.x + current_main, m_rect.y);
-            current_main += child_size.w;
+            current_main += child_size.w + m_spacing;
         } else {
             child->set_position(m_rect.x, m_rect.y + current_main);
-            current_main += child_size.h;
+            current_main += child_size.h + m_spacing;
         }
     }
 

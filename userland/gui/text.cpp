@@ -35,6 +35,7 @@ void Text::update_render_object(Ref<RenderObject> render_object) {
     auto rt = static_cast<RenderText*>(render_object.operator->());
     if (rt) {
         rt->set_text(m_text_buffer);
+        rt->set_alignment(m_alignment);
     }
 }
 

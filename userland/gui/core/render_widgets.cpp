@@ -22,7 +22,7 @@ namespace acos::gui::widgets {
 RenderButton::RenderButton() : m_label(nullptr), m_pressed(false), m_hovered(false) {}
 void RenderButton::paint(::acos::graphics::Renderer* renderer) {
     if (!renderer) return;
-    ::acos::u32 bg_color = m_style.background_color;
+    ::acos::u32 bg_color = m_style.background_color == 0 ? g_current_theme.widget_bg : m_style.background_color;
     ::acos::u8 alpha = m_pressed ? 255 : (m_hovered ? 220 : 200);
     renderer->fill_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.border_radius, (bg_color & 0x00FFFFFF) | ((::acos::u32)alpha << 24));
     renderer->draw_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.border_radius, m_style.border_color);
@@ -37,10 +37,18 @@ void RenderButton::set_label(const char* label) { m_label = label; }
 void RenderButton::set_pressed(bool pressed) { m_pressed = pressed; }
 void RenderButton::set_hovered(bool hovered) { m_hovered = hovered; }
 
-RenderText::RenderText() : m_text(nullptr) {}
+RenderText::RenderText() : m_text(nullptr), m_align(TextAlignment::Left) {}
 void RenderText::paint(::acos::graphics::Renderer* renderer) {
     if (!renderer || !m_text) return;
-    renderer->draw_text(m_text, m_rect.x, m_rect.y, m_style.foreground_color);
+
+    ::acos::i32 x = m_rect.x;
+    if (m_align == TextAlignment::Center) {
+        // x += (m_rect.w - text_width) / 2; // TODO: implement text_width
+    } else if (m_align == TextAlignment::Right) {
+        // x += m_rect.w - text_width;
+    }
+
+    renderer->draw_text(m_text, x, m_rect.y, m_style.foreground_color);
 }
 void RenderText::perform_layout(BoxConstraints constraints) {
     Size size = constraints.constrain({m_rect.w, m_rect.h});
@@ -228,9 +236,19 @@ void RenderGrid::perform_layout(BoxConstraints constraints) {
 RenderPanel::RenderPanel() : m_is_glass(false) {}
 void RenderPanel::paint(::acos::graphics::Renderer* renderer) {
     if (!renderer) return;
-    if (m_is_glass) renderer->blend_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.background_color, 150);
-    else renderer->fill_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.border_radius, m_style.background_color);
-    renderer->draw_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.border_radius, m_style.border_color);
+    ::acos::u32 bg = m_style.background_color;
+    if (m_is_glass) {
+        if (bg == 0) bg = g_current_theme.glass_bg;
+        u8 alpha = (u8)((bg >> 24) & 0xFF);
+        renderer->blend_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, bg, alpha);
+    } else {
+        if (bg != 0) renderer->fill_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.border_radius, bg);
+    }
+
+    if (g_current_theme.border_width > 0) {
+        renderer->draw_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.border_radius, m_style.border_color);
+    }
+
     for (auto& child : m_children) if (child) child->paint(renderer);
 }
 void RenderPanel::perform_layout(BoxConstraints constraints) {
@@ -339,14 +357,13 @@ void RenderTextBox::set_cursor(::acos::u32 cursor, bool visible) { m_cursor = cu
 RenderGraph::RenderGraph() : m_count(0) {}
 void RenderGraph::paint(::acos::graphics::Renderer* renderer) {
     if (!renderer || m_count == 0) return;
-    renderer->blend_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, 0x33000000, 100);
+    renderer->blend_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, 0x22000000, 50);
 
-    ::acos::i32 bar_w = m_rect.w / m_count;
+    ::acos::i32 bar_w = m_rect.w / 12; // Always space for 12
     for (::acos::u32 i = 0; i < m_count; i++) {
         ::acos::i32 bar_h = (::acos::i32)(m_rect.h * m_data[i]);
-        ::acos::u32 color = g_current_theme.primary;
-        if (i == m_count - 1) color = g_current_theme.accent;
-        renderer->fill_rect(m_rect.x + (::acos::i32)i * bar_w + 1, m_rect.y + m_rect.h - bar_h, bar_w - 2, bar_h, color);
+        ::acos::u32 color = (i == m_count - 1) ? g_current_theme.accent : 0xFF555555;
+        renderer->fill_rounded_rect(m_rect.x + (::acos::i32)i * bar_w + 2, m_rect.y + m_rect.h - bar_h, bar_w - 4, bar_h, 2, color);
     }
 }
 void RenderGraph::perform_layout(BoxConstraints constraints) {

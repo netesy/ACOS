@@ -1,14 +1,7 @@
 #include "desktop_shell.h"
 #include <userland/gui/theme.h>
 #include <userland/gui/core/context.h>
-#include <userland/gui/panel.h>
-#include <userland/gui/text.h>
-#include <userland/gui/listview.h>
-#include <userland/gui/progressbar.h>
-#include <userland/gui/graph.h>
-#include <userland/gui/badge.h>
-#include <userland/gui/icon.h>
-#include <userland/gui/core/flex.h>
+#include <userland/gui/widgets/fluent.h>
 #include "taskbar.h"
 #include "launcher.h"
 
@@ -19,103 +12,105 @@ DesktopShell::DesktopShell() {
 }
 
 void DesktopShell::initialize() {
-    auto& region = m_ui_context.region();
+    using namespace gui;
 
-    // Main Root Panel
-    auto root = region.alloc<gui::widgets::Panel>();
+    auto root = Panel()
+        .background(0xFF0A0A0B);
     root->set_rect({0, 0, 1024, 768});
-    root->set_background_color(0xFF0A0A0B);
 
     // Top Bar
-    auto top_bar = region.alloc<gui::widgets::Panel>();
-    top_bar->set_rect({0, 0, 1024, 40});
-    top_bar->set_background_color(0x33000000);
+    auto top_bar = Panel()
+        .glass(true)
+        .background(0x44000000);
+    top_bar->set_rect({0, 0, 1024, 48});
 
-    auto top_layout = region.alloc<gui::widgets::Row>();
-    top_layout->set_rect({20, 0, 984, 40});
-    top_layout->cross_axis_alignment(gui::CrossAxisAlignment::Center);
+    auto top_content = Row()
+        .spacing(20)
+        .cross_axis_alignment(CrossAxisAlignment::Center);
+    top_content->set_rect({20, 0, 984, 48});
 
-    top_layout->add_child(region.alloc<gui::widgets::Text>("ACOS_KERNEL").static_cast_to<gui::Widget>());
-    top_layout->add_child(region.alloc<gui::widgets::Text>("System").static_cast_to<gui::Widget>());
-    top_layout->add_child(region.alloc<gui::widgets::Text>("Network").static_cast_to<gui::Widget>());
-    top_layout->add_child(region.alloc<gui::widgets::Text>("Security").static_cast_to<gui::Widget>());
+    top_content->add_child(Text("ACOS_KERNEL").color(0xFFFFFFFF).font_size(16));
+    top_content->add_child(Text("System").color(widgets::g_current_theme.accent));
+    top_content->add_child(Text("Network").color(0xFF888888));
+    top_content->add_child(Text("Security").color(0xFF888888));
 
-    auto spacer = region.alloc<gui::widgets::Panel>(); // Empty spacer
-    top_layout->add_child(spacer.static_cast_to<gui::Widget>());
+    // Search Box
+    auto search = Panel().radius(20).background(0x22FFFFFF);
+    search->set_rect({0, 0, 200, 28});
+    search->add_child(Text("  Search (Ctrl+Space)").color(0xFF888888).font_size(12));
+    top_content->add_child(search);
 
-    top_layout->add_child(region.alloc<gui::widgets::Text>("127.0.0.1").static_cast_to<gui::Widget>());
-    top_layout->add_child(region.alloc<gui::widgets::Text>("OCT 24, 04:20:01").static_cast_to<gui::Widget>());
+    auto top_right = Row().spacing(15).main_axis_alignment(MainAxisAlignment::End);
+    top_right->add_child(Text("127.0.0.1").color(0xFF888888));
+    top_right->add_child(Text("OCT 24, 04:20:01").color(0xFFFFFFFF));
+    top_right->add_child(Icon(widgets::IconType::Settings));
+    top_right->add_child(Icon(widgets::IconType::Battery));
 
-    top_bar->add_child(top_layout.static_cast_to<gui::Widget>());
-    root->add_child(top_bar.static_cast_to<gui::Widget>());
+    top_content->add_child(top_right);
+    top_bar->add_child(top_content);
+    root->add_child(top_bar);
 
-    // Left Column (Icons)
-    auto left_col = region.alloc<gui::widgets::Column>();
-    left_col->set_rect({20, 60, 100, 600});
-    left_col->main_axis_alignment(gui::MainAxisAlignment::Start);
+    // Sidebar
+    auto sidebar = Column().spacing(30);
+    sidebar->set_rect({20, 80, 80, 600});
 
-    left_col->add_child(region.alloc<gui::widgets::Icon>(gui::widgets::IconType::Files).static_cast_to<gui::Widget>());
-    left_col->add_child(region.alloc<gui::widgets::Text>("Source_Root").static_cast_to<gui::Widget>());
+    auto create_nav_icon = [&](widgets::IconType t, const char* label) {
+        auto c = Column().spacing(5).cross_axis_alignment(CrossAxisAlignment::Center);
+        c->add_child(Icon(t).background(0x22FFFFFF).radius(8));
+        c->add_child(Text(label).color(0xFF888888).font_size(10));
+        return c;
+    };
 
-    left_col->add_child(region.alloc<gui::widgets::Icon>(gui::widgets::IconType::Terminal).static_cast_to<gui::Widget>());
-    left_col->add_child(region.alloc<gui::widgets::Text>("Quick_Term").static_cast_to<gui::Widget>());
+    sidebar->add_child(create_nav_icon(widgets::IconType::Files, "Source_Root"));
+    sidebar->add_child(create_nav_icon(widgets::IconType::Terminal, "Quick_Term"));
+    sidebar->add_child(create_nav_icon(widgets::IconType::Settings, "Core_Config"));
 
-    left_col->add_child(region.alloc<gui::widgets::Icon>(gui::widgets::IconType::Settings).static_cast_to<gui::Widget>());
-    left_col->add_child(region.alloc<gui::widgets::Text>("Core_Config").static_cast_to<gui::Widget>());
+    root->add_child(sidebar);
 
-    root->add_child(left_col.static_cast_to<gui::Widget>());
+    // Dashboard (Right)
+    auto dashboard = Column().spacing(20);
+    dashboard->set_rect({700, 80, 300, 600});
 
-    // Right Dashboard
-    auto right_dash = region.alloc<gui::widgets::Column>();
-    right_dash->set_rect({700, 60, 300, 650});
+    auto create_card = [&](const char* title, i32 h) {
+        auto p = Panel().glass(true).radius(12).padding(15).background(0x11FFFFFF);
+        p->set_rect({0, 0, 300, h});
+        p->add_child(Text(title).color(0xFFFFFFFF).font_size(14));
+        return p;
+    };
 
-    // Telemetry Panel
-    auto tel_panel = region.alloc<gui::widgets::Panel>();
-    tel_panel->set_rect({0, 0, 300, 200});
-    tel_panel->set_background_color(0x22FFFFFF);
-    tel_panel->add_child(region.alloc<gui::widgets::Text>("Telemetry").static_cast_to<gui::Widget>());
+    // Telemetry
+    auto tel = create_card("Telemetry", 180);
+    auto g = Graph();
+    g->set_rect({15, 40, 270, 80});
+    g->add_value(0.3f); g->add_value(0.5f); g->add_value(0.4f); g->add_value(0.7f); g->add_value(0.9f); g->add_value(0.6f);
+    tel->add_child(g);
+    dashboard->add_child(tel);
 
-    auto graph = region.alloc<gui::widgets::Graph>();
-    graph->set_rect({10, 40, 280, 100});
-    graph->add_value(0.4f); graph->add_value(0.6f); graph->add_value(0.5f); graph->add_value(0.8f);
-    tel_panel->add_child(graph.static_cast_to<gui::Widget>());
+    // Storage
+    auto storage = create_card("ACOS_ROOT", 140);
+    auto s_content = Column().spacing(10);
+    s_content->set_rect({15, 40, 270, 80});
+    s_content->add_child(Text("SSD MOUNTED  82%").color(0xFF888888).font_size(12));
+    s_content->add_child(ProgressBar().value(82));
+    s_content->add_child(Text("Encrypted: AES-256").color(0xFF888888).font_size(10));
+    storage->add_child(s_content);
+    dashboard->add_child(storage);
 
-    right_dash->add_child(tel_panel.static_cast_to<gui::Widget>());
-
-    // Storage Panel
-    auto storage_panel = region.alloc<gui::widgets::Panel>();
-    storage_panel->set_rect({0, 0, 300, 150});
-    storage_panel->set_background_color(0x22FFFFFF);
-    storage_panel->add_child(region.alloc<gui::widgets::Text>("ACOS_ROOT").static_cast_to<gui::Widget>());
-
-    auto pb = region.alloc<gui::widgets::ProgressBar>();
-    pb->set_rect({10, 60, 280, 10});
-    pb->set_value(82);
-    storage_panel->add_child(pb.static_cast_to<gui::Widget>());
-
-    right_dash->add_child(storage_panel.static_cast_to<gui::Widget>());
-
-    // Logs Panel
-    auto logs_panel = region.alloc<gui::widgets::Panel>();
-    logs_panel->set_rect({0, 0, 300, 250});
-    logs_panel->set_background_color(0x22FFFFFF);
-    logs_panel->add_child(region.alloc<gui::widgets::Text>("RECENT LOGS").static_cast_to<gui::Widget>());
-
-    auto lv = region.alloc<gui::widgets::ListView>();
-    lv->set_rect({10, 40, 280, 200});
+    // Logs
+    auto logs = create_card("RECENT LOGS", 220);
+    auto lv = ListView();
+    lv->set_rect({10, 40, 280, 160});
     lv->add_item("process_exec(0.01)");
     lv->add_item("network_stack_init");
     lv->add_item("unauthorized_access_trap");
-    logs_panel->add_child(lv.static_cast_to<gui::Widget>());
+    logs->add_child(lv);
+    dashboard->add_child(logs);
 
-    right_dash->add_child(logs_panel.static_cast_to<gui::Widget>());
-    root->add_child(right_dash.static_cast_to<gui::Widget>());
+    root->add_child(dashboard);
 
-    // Taskbar (Bottom centered dock)
-    auto taskbar = region.alloc<Taskbar>();
-    // Taskbar will self-center in DesktopShell::draw or via layout?
-    // Row can center it if root is a Column. Let's just set rect for now.
-    taskbar->set_rect({312, 700, 400, 50});
+    // Taskbar (Bottom Dock)
+    auto taskbar = UIContext::get().region().alloc<Taskbar>();
+    taskbar->set_rect({312, 700, 400, 52});
     root->add_child(taskbar.static_cast_to<gui::Widget>());
 
     m_ui_context.set_root(root.static_cast_to<gui::Widget>());
@@ -125,13 +120,6 @@ void DesktopShell::run() {}
 
 void DesktopShell::draw(acos::graphics::Renderer* renderer) {
     if (!renderer) return;
-
-    acos::graphics::Gradient bg_grad;
-    bg_grad.start = acos::graphics::Color(10, 10, 11);
-    bg_grad.end = acos::graphics::Color(26, 18, 38);
-    bg_grad.horizontal = false;
-    renderer->draw_gradient_rect(0, 0, renderer->width(), renderer->height(), bg_grad);
-
     m_ui_context.paint(renderer);
 }
 

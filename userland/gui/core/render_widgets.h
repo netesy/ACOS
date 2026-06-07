@@ -25,8 +25,10 @@ public:
     void paint(::acos::graphics::Renderer* renderer) override;
     void perform_layout(BoxConstraints constraints) override;
     void set_text(const char* text);
+    void set_alignment(::acos::gui::widgets::TextAlignment align) { m_align = align; }
 private:
     const char* m_text;
+    ::acos::gui::widgets::TextAlignment m_align;
 };
 
 class RenderIcon : public RenderObject {
