@@ -26,7 +26,11 @@ void RenderButton::paint(::acos::graphics::Renderer* renderer) {
     ::acos::u8 alpha = m_pressed ? 255 : (m_hovered ? 220 : 200);
     renderer->fill_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.border_radius, (bg_color & 0x00FFFFFF) | ((::acos::u32)alpha << 24));
     renderer->draw_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.border_radius, m_style.border_color);
-    if (m_label) renderer->draw_text(m_label, m_rect.x + 10, m_rect.y + 8, m_style.foreground_color);
+    if (m_label) {
+        ::acos::u32 lw, lh;
+        renderer->measure_text(m_label, lw, lh);
+        renderer->draw_text(m_label, m_rect.x + (m_rect.w - lw) / 2, m_rect.y + (m_rect.h - lh) / 2, m_style.foreground_color);
+    }
 }
 void RenderButton::perform_layout(BoxConstraints constraints) {
     u32 mw = 80, mh = 32;
@@ -62,7 +66,8 @@ void RenderText::paint(::acos::graphics::Renderer* renderer) {
     // Vertically center the text within the assigned rect
     ::acos::i32 y = m_rect.y + (m_rect.h - (i32)measured_h) / 2;
 
-    renderer->draw_text(m_text, (u32)x, (u32)y, m_style.foreground_color, font_align);
+    ::acos::u32 color = m_style.foreground_color == 0 ? g_current_theme.text : m_style.foreground_color;
+    renderer->draw_text(m_text, (u32)x, (u32)y, color, font_align);
 }
 void RenderText::perform_layout(BoxConstraints constraints) {
     u32 mw = 0, mh = 0;
@@ -136,7 +141,11 @@ void RenderCheckBox::paint(::acos::graphics::Renderer* renderer) {
         renderer->draw_line(bx + 4, by + 4, bx + box_size - 4, by + box_size - 4, m_style.foreground_color);
         renderer->draw_line(bx + 4, by + box_size - 4, bx + box_size - 4, by + 4, m_style.foreground_color);
     }
-    if (m_label) renderer->draw_text(m_label, bx + box_size + 8, m_rect.y + (m_rect.h / 2) - 8, m_style.foreground_color);
+    if (m_label) {
+        ::acos::u32 lw, lh;
+        renderer->measure_text(m_label, lw, lh);
+        renderer->draw_text(m_label, bx + box_size + 8, m_rect.y + (m_rect.h - lh) / 2, m_style.foreground_color);
+    }
 }
 void RenderCheckBox::perform_layout(BoxConstraints constraints) {
     Size size = constraints.constrain({m_rect.w, m_rect.h});
@@ -177,7 +186,11 @@ void RenderSwitch::paint(::acos::graphics::Renderer* renderer) {
     ::acos::u32 knob_color = 0xFFFFFFFF;
     ::acos::i32 knob_x = m_on ? sx + (::acos::i32)sw_w - (::acos::i32)sw_h + 2 : sx + 2;
     renderer->fill_circle(knob_x + (::acos::i32)(sw_h - 4) / 2, sy + (::acos::i32)sw_h / 2, (sw_h - 4) / 2, knob_color);
-    if (m_label) renderer->draw_text(m_label, sx + (::acos::i32)sw_w + 8, m_rect.y + (m_rect.h / 2) - 8, m_style.foreground_color);
+    if (m_label) {
+        ::acos::u32 lw, lh;
+        renderer->measure_text(m_label, lw, lh);
+        renderer->draw_text(m_label, sx + (::acos::i32)sw_w + 8, m_rect.y + (m_rect.h - lh) / 2, m_style.foreground_color);
+    }
 }
 void RenderSwitch::perform_layout(BoxConstraints constraints) {
     Size size = constraints.constrain({m_rect.w, m_rect.h});
@@ -195,7 +208,11 @@ void RenderRadioButton::paint(::acos::graphics::Renderer* renderer) {
     renderer->blend_rect(m_rect.x, m_rect.y, radius*2, radius*2, m_style.background_color, 150);
     renderer->draw_circle(cx, cy, radius, m_style.border_color);
     if (m_selected) renderer->fill_circle(cx, cy, 4, m_style.foreground_color);
-    if (m_label) renderer->draw_text(m_label, m_rect.x + (::acos::i32)radius*2 + 8, m_rect.y + (m_rect.h / 2) - 8, m_style.foreground_color);
+    if (m_label) {
+        ::acos::u32 lw, lh;
+        renderer->measure_text(m_label, lw, lh);
+        renderer->draw_text(m_label, m_rect.x + (::acos::i32)radius*2 + 8, m_rect.y + (m_rect.h - lh) / 2, m_style.foreground_color);
+    }
 }
 void RenderRadioButton::perform_layout(BoxConstraints constraints) {
     Size size = constraints.constrain({m_rect.w, m_rect.h});
@@ -208,16 +225,17 @@ void RenderRadioButton::set_selected(bool selected) { m_selected = selected; }
 RenderProgressBar::RenderProgressBar() : m_value(0.0f), m_min(0.0f), m_max(100.0f) {}
 void RenderProgressBar::paint(::acos::graphics::Renderer* renderer) {
     if (!renderer) return;
-    renderer->blend_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.background_color, 100);
-    renderer->draw_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_rect.h / 2, m_style.border_color);
+    ::acos::u32 bg = m_style.background_color == 0 ? 0x44FFFFFF : m_style.background_color;
+    renderer->fill_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_rect.h / 2, bg);
+
     float ratio = (m_value - m_min) / (m_max - m_min);
+    if (ratio > 1.0f) ratio = 1.0f;
+    if (ratio < 0.0f) ratio = 0.0f;
+
     ::acos::u32 fill_w = static_cast<::acos::u32>(m_rect.w * ratio);
     if (fill_w > 0) {
-        ::acos::graphics::Gradient grad;
-        grad.start = ::acos::graphics::Color::from_argb(m_style.foreground_color);
-        grad.end = ::acos::graphics::Color::from_argb(m_style.foreground_color);
-        grad.horizontal = true;
-        renderer->draw_gradient_rect(m_rect.x, m_rect.y, fill_w, m_rect.h, grad);
+        ::acos::u32 fg = m_style.foreground_color == 0 ? g_current_theme.accent : m_style.foreground_color;
+        renderer->fill_rounded_rect(m_rect.x, m_rect.y, fill_w, m_rect.h, m_rect.h / 2, fg);
     }
 }
 void RenderProgressBar::perform_layout(BoxConstraints constraints) {
@@ -276,13 +294,18 @@ void RenderPanel::paint(::acos::graphics::Renderer* renderer) {
     if (m_is_glass) {
         if (bg == 0) bg = g_current_theme.glass_bg;
         u8 alpha = (u8)((bg >> 24) & 0xFF);
-        renderer->blend_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, bg, alpha);
+        if (m_style.border_radius > 0) {
+            renderer->fill_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.border_radius, bg);
+        } else {
+            renderer->blend_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, bg, alpha);
+        }
     } else {
         if (bg != 0) renderer->fill_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.border_radius, bg);
     }
 
-    if (g_current_theme.border_width > 0) {
-        renderer->draw_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.border_radius, m_style.border_color);
+    if (g_current_theme.border_width > 0 || m_style.border_color != 0) {
+        ::acos::u32 bc = m_style.border_color == 0 ? g_current_theme.border : m_style.border_color;
+        renderer->draw_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.border_radius, bc);
     }
 
     for (auto& child : m_children) if (child) child->paint(renderer);
@@ -315,7 +338,9 @@ void RenderListView::paint(::acos::graphics::Renderer* renderer) {
         if (i == (::acos::usize)m_selected) {
             renderer->fill_rect(m_rect.x + 2, m_rect.y + 2 + (::acos::i32)i * item_h, m_rect.w - 4, item_h, ::acos::gui::widgets::g_current_theme.primary);
         }
-        renderer->draw_text(m_items[i], m_rect.x + 8, m_rect.y + 4 + (::acos::i32)i * item_h, m_style.foreground_color);
+        ::acos::u32 lw, lh;
+        renderer->measure_text(m_items[i], lw, lh);
+        renderer->draw_text(m_items[i], m_rect.x + 8, m_rect.y + (::acos::i32)i * item_h + (item_h - (i32)lh) / 2, m_style.foreground_color);
     }
 }
 void RenderListView::perform_layout(BoxConstraints constraints) {
@@ -400,8 +425,14 @@ void RenderTextBox::paint(::acos::graphics::Renderer* renderer) {
     if (!renderer) return;
     renderer->blend_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.background_color, 180);
     renderer->draw_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.border_radius, m_style.border_color);
-    if (m_text && m_text[0] != '\0') renderer->draw_text(m_text, m_rect.x + 8, m_rect.y + 8, m_style.foreground_color);
-    else if (m_placeholder) renderer->draw_text(m_placeholder, m_rect.x + 8, m_rect.y + 8, 0x88888888);
+    ::acos::u32 lw, lh;
+    if (m_text && m_text[0] != '\0') {
+        renderer->measure_text(m_text, lw, lh);
+        renderer->draw_text(m_text, m_rect.x + 8, m_rect.y + (m_rect.h - (i32)lh) / 2, m_style.foreground_color);
+    } else if (m_placeholder) {
+        renderer->measure_text(m_placeholder, lw, lh);
+        renderer->draw_text(m_placeholder, m_rect.x + 8, m_rect.y + (m_rect.h - (i32)lh) / 2, 0x88888888);
+    }
     if (m_cursor_visible) {
         ::acos::u32 char_w = 8;
         ::acos::u32 cursor_x = (::acos::u32)m_rect.x + 8 + (m_cursor * char_w);
@@ -420,13 +451,13 @@ void RenderTextBox::set_cursor(::acos::u32 cursor, bool visible) { m_cursor = cu
 RenderGraph::RenderGraph() : m_count(0) {}
 void RenderGraph::paint(::acos::graphics::Renderer* renderer) {
     if (!renderer || m_count == 0) return;
-    renderer->blend_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, 0x22000000, 50);
 
-    ::acos::i32 bar_w = m_rect.w / 12; // Always space for 12
+    ::acos::i32 bar_w = m_rect.w / 12;
     for (::acos::u32 i = 0; i < m_count; i++) {
         ::acos::i32 bar_h = (::acos::i32)(m_rect.h * m_data[i]);
-        ::acos::u32 color = (i == m_count - 1) ? g_current_theme.accent : 0xFF555555;
-        renderer->fill_rounded_rect(m_rect.x + (::acos::i32)i * bar_w + 2, m_rect.y + m_rect.h - bar_h, bar_w - 4, bar_h, 2, color);
+        if (bar_h < 4) bar_h = 4;
+        ::acos::u32 color = (i == m_count - 1) ? g_current_theme.accent : 0xFF444444;
+        renderer->fill_rect(m_rect.x + (::acos::i32)i * bar_w + 4, m_rect.y + m_rect.h - bar_h, bar_w - 8, bar_h, color);
     }
 }
 void RenderGraph::perform_layout(BoxConstraints constraints) {
@@ -444,7 +475,11 @@ void RenderBadge::paint(::acos::graphics::Renderer* renderer) {
     if (!renderer) return;
     renderer->fill_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_rect.h/2, 0x44FFFFFF);
     renderer->draw_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_rect.h/2, 0x88FFFFFF);
-    if (m_text) renderer->draw_text(m_text, m_rect.x + 8, m_rect.y + 4, 0xFFFFFFFF);
+    if (m_text) {
+        ::acos::u32 lw, lh;
+        renderer->measure_text(m_text, lw, lh);
+        renderer->draw_text(m_text, m_rect.x + (m_rect.w - lw) / 2, m_rect.y + (m_rect.h - lh) / 2, 0xFFFFFFFF);
+    }
 }
 void RenderBadge::perform_layout(BoxConstraints constraints) {
     m_rect.w = constraints.constrain({80, 20}).w;

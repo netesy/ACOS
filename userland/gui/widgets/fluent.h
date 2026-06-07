@@ -24,6 +24,7 @@ public:
 
     FluentRef<T>& background(u32 color) { if (this->is_valid()) this->operator->()->set_background_color(color); return *this; }
     FluentRef<T>& radius(u32 r) { if (this->is_valid()) this->operator->()->radius(r); return *this; }
+    FluentRef<T>& border(u32 color, u32 width) { if (this->is_valid()) { this->operator->()->set_border_color(color); this->operator->()->set_border_width(width); } return *this; }
     FluentRef<T>& padding(u32 p) { if (this->is_valid()) this->operator->()->padding(p); return *this; }
     FluentRef<T>& elevation(u32 e) { if (this->is_valid()) this->operator->()->elevation(e); return *this; }
     FluentRef<T>& opacity(float o) { if (this->is_valid()) this->operator->()->opacity(o); return *this; }
@@ -34,6 +35,7 @@ public:
     using FluentRef<widgets::Text>::FluentRef; TextRef(const Ref<widgets::Text>& other) : FluentRef<widgets::Text>(other) {}
     TextRef& text(const char* t) { if (this->is_valid()) this->operator->()->set_text(t); return *this; }
     TextRef& color(u32 c) { if (this->is_valid()) this->operator->()->set_text_color(c); return *this; }
+    TextRef& border(u32 color, u32 width) { if (this->is_valid()) { this->operator->()->set_border_color(color); this->operator->()->set_border_width(width); } return *this; }
     TextRef& font_size(u32 s) { if (this->is_valid()) this->operator->()->set_font_size(s); return *this; }
     TextRef& alignment(widgets::TextAlignment a) { if (this->is_valid()) this->operator->()->set_alignment(a); return *this; }
 };
@@ -56,6 +58,7 @@ class ColumnRef : public ContainerRef<widgets::Column> {
 public:
     using ContainerRef<widgets::Column>::ContainerRef;
     ColumnRef& spacing(i32 s) { if (this->is_valid()) this->operator->()->spacing(s); return *this; }
+    ColumnRef& add_child(Ref<Widget> c) { if (this->is_valid()) this->operator->()->add_child(c); return *this; }
     ColumnRef& main_axis_alignment(MainAxisAlignment a) { if (this->is_valid()) this->operator->()->main_axis_alignment(a); return *this; }
     ColumnRef& cross_axis_alignment(CrossAxisAlignment a) { if (this->is_valid()) this->operator->()->cross_axis_alignment(a); return *this; }
 };
@@ -64,6 +67,7 @@ class RowRef : public ContainerRef<widgets::Row> {
 public:
     using ContainerRef<widgets::Row>::ContainerRef;
     RowRef& spacing(i32 s) { if (this->is_valid()) this->operator->()->spacing(s); return *this; }
+    RowRef& add_child(Ref<Widget> c) { if (this->is_valid()) this->operator->()->add_child(c); return *this; }
     RowRef& main_axis_alignment(MainAxisAlignment a) { if (this->is_valid()) this->operator->()->main_axis_alignment(a); return *this; }
     RowRef& cross_axis_alignment(CrossAxisAlignment a) { if (this->is_valid()) this->operator->()->cross_axis_alignment(a); return *this; }
 };
@@ -81,6 +85,7 @@ public:
     using FluentRef<widgets::Icon>::FluentRef;
     IconRef& type([[maybe_unused]] widgets::IconType t) { if (this->is_valid()) this->operator->(); /* type is set in constructor usually */ return *this; }
     IconRef& active(bool a) { if (this->is_valid()) this->operator->()->set_active(a); return *this; }
+    IconRef& foreground(u32 color) { if (this->is_valid()) this->operator->()->set_foreground_color(color); return *this; }
     IconRef& size(i32 s) { if (this->is_valid()) this->operator->()->set_size(s); return *this; }
     IconRef& on_click(void (*callback)(void*)) { if (this->is_valid()) this->operator->()->on_click(callback); return *this; }
 
@@ -93,6 +98,7 @@ class ProgressBarRef : public FluentRef<widgets::ProgressBar> {
 public:
     using FluentRef<widgets::ProgressBar>::FluentRef;
     ProgressBarRef& value(float v) { if (this->is_valid()) this->operator->()->set_value(v); return *this; }
+    ProgressBarRef& foreground(u32 color) { if (this->is_valid()) this->operator->()->set_foreground_color(color); return *this; }
 };
 
 class GraphRef : public FluentRef<widgets::Graph> {

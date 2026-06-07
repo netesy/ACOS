@@ -88,6 +88,11 @@ public:
     void set_elevation(::acos::u32 elevation) { m_style.elevation = elevation; }
     ::acos::u32 elevation() const { return m_style.elevation; }
 
+    void set_background_color(::acos::u32 color) { m_style.background_color = color; set_paint_dirty(); }
+    void set_border_color(::acos::u32 color) { m_style.border_color = color; set_paint_dirty(); }
+    void set_border_width(::acos::u32 width) { m_style.border_width = width; set_layout_dirty(); }
+    void set_foreground_color(::acos::u32 color) { m_style.foreground_color = color; set_paint_dirty(); }
+
     virtual bool hit_test(::acos::i32 x, ::acos::i32 y) const { return m_rect.contains(x, y); }
 
 protected:

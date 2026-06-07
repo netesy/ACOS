@@ -18,6 +18,26 @@ extern "C" void* memset(void* s, int c, acos::usize n) {
     return s;
 }
 
+extern "C" void* memmove(void* dest, const void* src, acos::usize n) {
+    acos::u8* d = reinterpret_cast<acos::u8*>(dest);
+    const acos::u8* s = reinterpret_cast<const acos::u8*>(src);
+    if (d < s) {
+        for (acos::usize i = 0; i < n; i++) d[i] = s[i];
+    } else if (d > s) {
+        for (acos::usize i = n; i > 0; i--) d[i - 1] = s[i - 1];
+    }
+    return dest;
+}
+
+extern "C" int memcmp(const void* s1, const void* s2, acos::usize n) {
+    const acos::u8* p1 = reinterpret_cast<const acos::u8*>(s1);
+    const acos::u8* p2 = reinterpret_cast<const acos::u8*>(s2);
+    for (acos::usize i = 0; i < n; i++) {
+        if (p1[i] != p2[i]) return p1[i] - p2[i];
+    }
+    return 0;
+}
+
 extern "C" int strcmp(const char* s1, const char* s2) {
     while (*s1 && (*s1 == *s2)) {
         s1++;

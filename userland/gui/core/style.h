@@ -7,6 +7,7 @@ struct Style {
     ::acos::u32 background_color;
     ::acos::u32 foreground_color;
     ::acos::u32 border_color;
+    ::acos::u32 border_width;
     ::acos::u32 border_radius;
 
     ::acos::u32 padding_left;

@@ -19,6 +19,7 @@ Taskbar::Taskbar() {
     auto root_layout = region.alloc<gui::widgets::Row>();
     root_layout->main_axis_alignment(gui::MainAxisAlignment::Center);
     root_layout->cross_axis_alignment(gui::CrossAxisAlignment::Center);
+    root_layout->spacing(20);
 
     auto term_icon = region.alloc<gui::widgets::Icon>(gui::widgets::IconType::Terminal);
     term_icon->on_click([](void*){ DesktopShell::get().launch_terminal(); });
