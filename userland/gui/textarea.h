@@ -7,6 +7,7 @@ class TextArea : public Widget {
 public:
     Ref<RenderObject> create_render_object() override;
     void update_render_object(Ref<RenderObject> render_object) override;
+    void on_event(Event& event) override;
 
     TextArea();
     virtual ~TextArea();

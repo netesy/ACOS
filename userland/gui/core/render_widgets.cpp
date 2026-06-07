@@ -300,35 +300,48 @@ void RenderTextArea::paint(::acos::graphics::Renderer* renderer) {
     renderer->blend_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.background_color, 120);
     renderer->draw_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.border_radius, m_style.border_color);
 
-    ::acos::i32 cur_x = m_rect.x + 8;
-    ::acos::i32 cur_y = m_rect.y + 8;
-    char line_buf[128];
+    const ::acos::i32 padding = 8;
+    ::acos::i32 cur_x = m_rect.x + padding;
+    ::acos::i32 cur_y = m_rect.y + padding;
+    ::acos::i32 line_height = 18;
+    ::acos::i32 char_width = 8;
+    ::acos::i32 max_chars_per_line = (m_rect.w - padding * 2) / char_width;
+
+    char line_buf[256];
     ::acos::usize line_pos = 0;
-
     ::acos::u32 char_idx = 0;
-    for (::acos::usize i = 0; m_text[i]; i++, char_idx++) {
-        bool is_newline = (m_text[i] == '\n');
 
+    auto flush_line = [&]() {
+        line_buf[line_pos] = '\0';
+        renderer->draw_text(line_buf, cur_x, cur_y, m_style.foreground_color);
+        cur_y += line_height;
+        line_pos = 0;
+    };
+
+    for (::acos::usize i = 0; m_text[i]; i++, char_idx++) {
         if (m_cursor_visible && char_idx == m_cursor_pos) {
-            renderer->draw_line(cur_x + (i32)line_pos * 8, cur_y, cur_x + (i32)line_pos * 8, cur_y + 16, 0xFFFFFFFF);
+            renderer->draw_line(cur_x + (i32)line_pos * char_width, cur_y, cur_x + (i32)line_pos * char_width, cur_y + 16, 0xFFFFFFFF);
         }
 
-        if (is_newline || line_pos >= 127) {
-            line_buf[line_pos] = '\0';
-            renderer->draw_text(line_buf, cur_x, cur_y, m_style.foreground_color);
-            cur_y += 18;
-            line_pos = 0;
-            if (cur_y > m_rect.y + m_rect.h - 18) break;
+        if (m_text[i] == '\n') {
+            flush_line();
         } else {
             line_buf[line_pos++] = m_text[i];
+            if ((i32)line_pos >= max_chars_per_line || line_pos >= 255) {
+                flush_line();
+            }
         }
+
+        if (cur_y > m_rect.y + m_rect.h - line_height) break;
     }
-    if (line_pos > 0 && cur_y <= m_rect.y + m_rect.h - 18) {
+
+    if (line_pos > 0 && cur_y <= m_rect.y + m_rect.h - line_height) {
         line_buf[line_pos] = '\0';
         renderer->draw_text(line_buf, cur_x, cur_y, m_style.foreground_color);
     }
-    if (m_cursor_visible && char_idx == m_cursor_pos && cur_y <= m_rect.y + m_rect.h - 18) {
-        renderer->draw_line(cur_x + (i32)line_pos * 8, cur_y, cur_x + (i32)line_pos * 8, cur_y + 16, 0xFFFFFFFF);
+
+    if (m_cursor_visible && char_idx == m_cursor_pos && cur_y <= m_rect.y + m_rect.h - line_height) {
+        renderer->draw_line(cur_x + (i32)line_pos * char_width, cur_y, cur_x + (i32)line_pos * char_width, cur_y + 16, 0xFFFFFFFF);
     }
 }
 void RenderTextArea::perform_layout(BoxConstraints constraints) {

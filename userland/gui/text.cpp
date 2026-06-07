@@ -18,12 +18,21 @@ void Text::set_text(const char* text) {
         m_rect.w = 0;
     } else {
         usize i = 0;
+        i32 max_line_w = 0;
+        i32 current_line_w = 0;
         while (text[i] && i < 127) {
             m_text_buffer[i] = text[i];
+            if (text[i] == '\n') {
+                if (current_line_w > max_line_w) max_line_w = current_line_w;
+                current_line_w = 0;
+            } else {
+                current_line_w += 8;
+            }
             i++;
         }
         m_text_buffer[i] = '\0';
-        m_rect.w = (i32)i * 8;
+        if (current_line_w > max_line_w) max_line_w = current_line_w;
+        m_rect.w = max_line_w;
     }
     set_paint_dirty();
     set_layout_dirty();
