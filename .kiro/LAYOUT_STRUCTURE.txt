@@ -1,0 +1,236 @@
+================================================================================
+                        ACOS DESKTOP LAYOUT STRUCTURE
+================================================================================
+
+CURRENT BROKEN STATE (mixing absolute + relative positioning):
+─────────────────────────────────────────────────────────────
+
+      Panel(0,0,1024,768) - set_rect() override
+      │
+      ├─ Panel(0,0,1024,42) - top bar manual position
+      │
+      ├─ Column - sidebar manual position (20,80,80,600)
+      │
+      ├─ Grid - desktop grid manual position (120,80,570,600)
+      │
+      ├─ Column - dashboard manual position (712,80,300,600)
+      │
+      └─ Panel - dock manual position (280,710,464,48)
+
+PROBLEM: All manual positioning breaks constraint calculations
+         Layout pass runs AFTER manual positioning
+         Children don't respect parent bounds
+
+
+================================================================================
+
+TARGET STATE (pure constraint-based layout):
+──────────────────────────────────────────
+
+      Column (root) [width: 1280, height: 800]
+      │ spacing: 0
+      │ MainAxisAlignment: Start (top-to-bottom)
+      │ CrossAxisAlignment: Stretch (full width)
+      │
+      ├─→ TopMenuBar (Panel)
+      │   │ height: FIXED 48px (tight constraint)
+      │   │ width: STRETCH to parent
+      │   │
+      │   └─ Row [MainAxisAlignment: SpaceBetween]
+      │       ├─ Text("ACOS_KERNEL"), Text("System"), etc.
+      │       ├─ SearchBox (Panel + Text)
+      │       └─ Text(IP), Text(Clock), Icon(Settings), Icon(Battery)
+      │
+      ├─→ MainRow (Row) [MainAxisAlignment: Start, CrossAxisAlignment: Stretch]
+      │   │ height: FLEXIBLE (expand to fill)
+      │   │ spacing: 0
+      │   │
+      │   ├─ Sidebar (Column)
+      │   │  │ width: FIXED 80px
+      │   │  │ height: STRETCH to parent
+      │   │  │ spacing: 20
+      │   │  │ CrossAxisAlignment: Center
+      │   │  │
+      │   │  ├─ ShortcutWidget(Terminal)
+      │   │  ├─ ShortcutWidget(Files)
+      │   │  └─ ShortcutWidget(Settings)
+      │   │
+      │   ├─ CenterContainer (Column) [main content area]
+      │   │  │ width: FLEXIBLE (expand to fill)
+      │   │  │ height: STRETCH to parent
+      │   │  │ MainAxisAlignment: Center
+      │   │  │ CrossAxisAlignment: Center
+      │   │  │
+      │   │  └─ Grid (6 columns, 20px spacing)
+      │   │     │ width: FIXED to calculated grid size
+      │   │     │ height: FLEXIBLE
+      │   │     │
+      │   │     ├─ ShortcutWidget
+      │   │     ├─ ShortcutWidget
+      │   │     ├─ ShortcutWidget
+      │   │     ├─ ShortcutWidget
+      │   │     ├─ ShortcutWidget
+      │   │     ├─ ShortcutWidget
+      │   │     ├─ ShortcutWidget
+      │   │     └─ ... (more shortcuts)
+      │   │
+      │   └─ Dashboard (Column)
+      │      │ width: FIXED 300px
+      │      │ height: STRETCH to parent
+      │      │ spacing: 10
+      │      │ padding: 15
+      │      │
+      │      ├─ CPULoadWidget
+      │      │  └─ RenderGraph (custom paint)
+      │      │
+      │      ├─ StorageCardWidget
+      │      │  └─ RenderStorageCard (custom paint)
+      │      │
+      │      └─ RecentLogsWidget
+      │         └─ RenderRecentLogs (custom paint)
+      │
+      └─→ BottomDock (Row)
+          │ height: FIXED 56px (tight constraint)
+          │ width: STRETCH to parent
+          │ MainAxisAlignment: Center
+          │ padding: 12
+          │
+          └─ DockPanel (Panel) [glass effect]
+             └─ TaskBar
+
+================================================================================
+
+CONSTRAINT FLOW (how sizing works):
+─────────────────────────────────
+
+Root receives: BoxConstraints(min_w=0, max_w=1280, min_h=0, max_h=800)
+  │
+  ├─ TopMenuBar receives: BoxConstraints(max_w=1280, max_h=752)
+  │  └─ Returns: Size(1280, 48) ← fixed height
+  │
+  ├─ MainRow receives: BoxConstraints(max_w=1280, max_h=704)
+  │  ├─ Sidebar receives: BoxConstraints(max_w=80, max_h=704)
+  │  │  └─ Returns: Size(80, 704)
+  │  │
+  │  ├─ CenterContainer receives: BoxConstraints(max_w=1120, max_h=704)
+  │  │  └─ Grid receives: BoxConstraints(max_w=1120, max_h=704)
+  │  │     └─ Returns: Size(calculated, 704)
+  │  │
+  │  └─ Dashboard receives: BoxConstraints(max_w=300, max_h=704)
+  │     └─ Returns: Size(300, 704)
+  │
+  └─ BottomDock receives: BoxConstraints(max_w=1280, max_h=44)
+     └─ Returns: Size(1280, 44)
+
+
+================================================================================
+
+KEY LAYOUT PROPERTIES:
+──────────────────────
+
+TopMenuBar:
+  • height: 48px (FIXED via tight constraint)
+  • width: 1280px (STRETCH to parent)
+  • content: centered horizontally with SpaceBetween
+  • alignment: Start (top)
+
+Sidebar:
+  • width: 80px (FIXED)
+  • height: 704px (STRETCH to parent in row)
+  • content: vertically stacked, centered
+  • alignment: Column with CrossAxisAlignment::Center
+
+Desktop Grid Area:
+  • width: ~900px (FLEXIBLE, calculated from remaining space)
+  • height: 704px (STRETCH to parent)
+  • content: 6x grid, centered within area
+  • alignment: CenterContainer centers it
+
+Dashboard:
+  • width: 300px (FIXED)
+  • height: 704px (STRETCH to parent in row)
+  • content: vertically stacked cards
+  • alignment: Column with spacing
+
+BottomDock:
+  • height: 56px (FIXED via tight constraint)
+  • width: 1280px (STRETCH to parent)
+  • content: centered horizontally
+  • alignment: Row with MainAxisAlignment::Center
+
+
+================================================================================
+
+FIXED vs FLEXIBLE SIZING GUIDE:
+───────────────────────────────
+
+FIXED SIZING (use tight constraints):
+  ✓ Top menu bar (always 48px)
+  ✓ Bottom dock (always 56px)
+  ✓ Sidebar width (always 80px)
+  ✓ Dashboard width (always 300px)
+
+FLEXIBLE SIZING (use loose constraints):
+  ✓ Main row height (expand to fill)
+  ✓ Desktop grid area (fill remaining width)
+  ✓ All vertical spacing in columns
+  ✓ Top menu content (expand horizontally)
+
+
+================================================================================
+
+IMPLEMENTATION CHECKLIST:
+─────────────────────────
+
+Root Construction:
+  [ ] Create Column as root
+  [ ] Set spacing(0)
+  [ ] Add TopMenuBar
+  [ ] Add MainRow
+  [ ] Add BottomDock
+  [ ] Set UIContext root
+
+TopMenuBar Construction:
+  [ ] Create Panel with glass effect
+  [ ] Create Row inside with SpaceBetween
+  [ ] Add left items (ACOS_KERNEL, System, Network, Security)
+  [ ] Add search box
+  [ ] Add right items (IP, Clock, Settings, Battery)
+
+MainRow Construction:
+  [ ] Create Row
+  [ ] Add Sidebar (Column, 80px width)
+  [ ] Add CenterContainer (Grid wrapper)
+  [ ] Add Dashboard (Column, 300px width)
+
+Sidebar Construction:
+  [ ] Create Column with CrossAxisAlignment::Center
+  [ ] Add ShortcutWidget items
+  [ ] Set spacing(20)
+
+Desktop Grid Construction:
+  [ ] Create CenterContainer
+  [ ] Create Grid(6 columns, 20px spacing) inside
+  [ ] Populate with ShortcutWidgets
+  [ ] Grid will auto-wrap and center
+
+Dashboard Construction:
+  [ ] Create Column with spacing(10), padding(15)
+  [ ] Add CPULoadWidget
+  [ ] Add StorageCardWidget
+  [ ] Add RecentLogsWidget
+
+BottomDock Construction:
+  [ ] Create Row with MainAxisAlignment::Center
+  [ ] Create Panel with glass effect
+  [ ] Add TaskBar inside
+  [ ] Set height constraint
+
+Cleanup:
+  [ ] Remove ALL set_rect() calls
+  [ ] Remove ALL set_position() calls (except for overlays)
+  [ ] Remove manual constraint assignments
+  [ ] Test layout resizing
+
+
+================================================================================

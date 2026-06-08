@@ -7,7 +7,6 @@
 #include "core/layout_types.h"
 #include "core/style.h"
 #include "core/render_object.h"
-
 namespace acos::gui {
 
 using ::acos::Vector;
@@ -61,8 +60,23 @@ public:
     Widget& background(::acos::u32 color);
     Widget& radius(::acos::u32 r);
     Widget& padding(::acos::u32 p);
+    Widget& padding(::acos::u32 top, ::acos::u32 right, ::acos::u32 bottom, ::acos::u32 left);
+    Widget& margin(::acos::u32 m);
+    Widget& margin(::acos::u32 top, ::acos::u32 right, ::acos::u32 bottom, ::acos::u32 left);
+    Widget& preferred_size(::acos::i32 w, ::acos::i32 h);
+    Widget& preferred_width(::acos::i32 w);
+    Widget& preferred_height(::acos::i32 h);
+    Widget& flex_grow(::acos::u32 factor);
     Widget& elevation(::acos::u32 e);
     Widget& opacity(float o);
+    // Positioning
+    Widget& position(Position pos);
+    Widget& anchor_top(::acos::i32 v);
+    Widget& anchor_right(::acos::i32 v);
+    Widget& anchor_bottom(::acos::i32 v);
+    Widget& anchor_left(::acos::i32 v);
+    // Shorthand: fixed position pinned to screen edges
+    Widget& fixed(::acos::i32 top = -1, ::acos::i32 right = -1, ::acos::i32 bottom = -1, ::acos::i32 left = -1);
 
     bool is_visible() const { return m_flags & (::acos::u32)WidgetFlags::Visible; }
     void set_visible(bool v);
@@ -93,7 +107,11 @@ public:
     void set_border_width(::acos::u32 width) { m_style.border_width = width; set_layout_dirty(); }
     void set_foreground_color(::acos::u32 color) { m_style.foreground_color = color; set_paint_dirty(); }
 
-    virtual bool hit_test(::acos::i32 x, ::acos::i32 y) const { return m_rect.contains(x, y); }
+    bool hit_test(::acos::i32 x, ::acos::i32 y) const { return m_rect.contains(x, y); }
+
+    // Style read access
+    const Style& style() const { return m_style; }
+    Style& style() { return m_style; }
 
 protected:
     Rect m_rect;

@@ -46,6 +46,15 @@ extern "C" int strcmp(const char* s1, const char* s2) {
     return *(const unsigned char*)s1 - *(const unsigned char*)s2;
 }
 
+extern "C" int strncmp(const char* s1, const char* s2, acos::usize n) {
+    for (acos::usize i = 0; i < n; i++) {
+        if (!s1[i] || s1[i] != s2[i]) {
+            return *(const unsigned char*)(s1 + i) - *(const unsigned char*)(s2 + i);
+        }
+    }
+    return 0;
+}
+
 extern "C" acos::usize strlen(const char* s) {
     acos::usize len = 0;
     while (s[len]) len++;

@@ -1,5 +1,6 @@
 #pragma once
 #include "../core/ref.h"
+#include "../core/style.h"
 #include "../text.h"
 #include "../button.h"
 #include "../core/flex.h"
@@ -26,8 +27,21 @@ public:
     FluentRef<T>& radius(u32 r) { if (this->is_valid()) this->operator->()->radius(r); return *this; }
     FluentRef<T>& border(u32 color, u32 width) { if (this->is_valid()) { this->operator->()->set_border_color(color); this->operator->()->set_border_width(width); } return *this; }
     FluentRef<T>& padding(u32 p) { if (this->is_valid()) this->operator->()->padding(p); return *this; }
+    FluentRef<T>& padding(u32 top, u32 right, u32 bottom, u32 left) { if (this->is_valid()) this->operator->()->padding(top, right, bottom, left); return *this; }
+    FluentRef<T>& margin(u32 m) { if (this->is_valid()) this->operator->()->margin(m); return *this; }
+    FluentRef<T>& margin(u32 top, u32 right, u32 bottom, u32 left) { if (this->is_valid()) this->operator->()->margin(top, right, bottom, left); return *this; }
+    FluentRef<T>& preferred_size(i32 w, i32 h) { if (this->is_valid()) this->operator->()->preferred_size(w, h); return *this; }
+    FluentRef<T>& preferred_width(i32 w) { if (this->is_valid()) this->operator->()->preferred_width(w); return *this; }
+    FluentRef<T>& preferred_height(i32 h) { if (this->is_valid()) this->operator->()->preferred_height(h); return *this; }
+    FluentRef<T>& flex_grow(u32 factor) { if (this->is_valid()) this->operator->()->flex_grow(factor); return *this; }
     FluentRef<T>& elevation(u32 e) { if (this->is_valid()) this->operator->()->elevation(e); return *this; }
     FluentRef<T>& opacity(float o) { if (this->is_valid()) this->operator->()->opacity(o); return *this; }
+    FluentRef<T>& position(Position pos) { if (this->is_valid()) this->operator->()->position(pos); return *this; }
+    FluentRef<T>& anchor_top(i32 v) { if (this->is_valid()) this->operator->()->anchor_top(v); return *this; }
+    FluentRef<T>& anchor_right(i32 v) { if (this->is_valid()) this->operator->()->anchor_right(v); return *this; }
+    FluentRef<T>& anchor_bottom(i32 v) { if (this->is_valid()) this->operator->()->anchor_bottom(v); return *this; }
+    FluentRef<T>& anchor_left(i32 v) { if (this->is_valid()) this->operator->()->anchor_left(v); return *this; }
+    FluentRef<T>& fixed(i32 top = -1, i32 right = -1, i32 bottom = -1, i32 left = -1) { if (this->is_valid()) this->operator->()->fixed(top, right, bottom, left); return *this; }
 };
 
 class TextRef : public FluentRef<widgets::Text> {
@@ -61,6 +75,8 @@ public:
     ColumnRef& add_child(Ref<Widget> c) { if (this->is_valid()) this->operator->()->add_child(c); return *this; }
     ColumnRef& main_axis_alignment(MainAxisAlignment a) { if (this->is_valid()) this->operator->()->main_axis_alignment(a); return *this; }
     ColumnRef& cross_axis_alignment(CrossAxisAlignment a) { if (this->is_valid()) this->operator->()->cross_axis_alignment(a); return *this; }
+    ColumnRef& preferred_height(i32 h) { if (this->is_valid()) this->operator->()->preferred_height(h); return *this; }
+    ColumnRef& flex_grow(u32 f) { if (this->is_valid()) this->operator->()->flex_grow(f); return *this; }
 };
 
 class RowRef : public ContainerRef<widgets::Row> {
@@ -70,6 +86,9 @@ public:
     RowRef& add_child(Ref<Widget> c) { if (this->is_valid()) this->operator->()->add_child(c); return *this; }
     RowRef& main_axis_alignment(MainAxisAlignment a) { if (this->is_valid()) this->operator->()->main_axis_alignment(a); return *this; }
     RowRef& cross_axis_alignment(CrossAxisAlignment a) { if (this->is_valid()) this->operator->()->cross_axis_alignment(a); return *this; }
+    RowRef& preferred_height(i32 h) { if (this->is_valid()) this->operator->()->preferred_height(h); return *this; }
+    RowRef& preferred_width(i32 w) { if (this->is_valid()) this->operator->()->preferred_width(w); return *this; }
+    RowRef& flex_grow(u32 f) { if (this->is_valid()) this->operator->()->flex_grow(f); return *this; }
 };
 
 class PanelRef : public ContainerRef<widgets::Panel> {

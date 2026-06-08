@@ -311,14 +311,42 @@ void RenderPanel::paint(::acos::graphics::Renderer* renderer) {
     for (auto& child : m_children) if (child) child->paint(renderer);
 }
 void RenderPanel::perform_layout(BoxConstraints constraints) {
-    Size size = constraints.constrain({m_rect.w, m_rect.h});
+    // Determine size: preferred_w/h override, 0 means fill available
+    ::acos::i32 pw = m_style.preferred_w;
+    ::acos::i32 ph = m_style.preferred_h;
+
+    // Apply margins to reduce available space
+    ::acos::i32 mh = (::acos::i32)(m_style.margin_top + m_style.margin_bottom);
+    ::acos::i32 mw = (::acos::i32)(m_style.margin_left + m_style.margin_right);
+
+    ::acos::i32 avail_w = (constraints.max_w >= mw) ? constraints.max_w - mw : constraints.max_w;
+    ::acos::i32 avail_h = (constraints.max_h >= mh) ? constraints.max_h - mh : constraints.max_h;
+
+    // Fill by default; preferred_h clips if set
+    ::acos::i32 target_w = (pw > 0) ? pw : avail_w;
+    ::acos::i32 target_h = (ph > 0) ? ph : avail_h;
+
+    Size size = constraints.constrain({target_w, target_h});
     m_rect.w = size.w;
     m_rect.h = size.h;
+
+    // Inner content area (inset by padding)
+    ::acos::i32 pl = (::acos::i32)m_style.padding_left;
+    ::acos::i32 pr = (::acos::i32)m_style.padding_right;
+    ::acos::i32 pt = (::acos::i32)m_style.padding_top;
+    ::acos::i32 pb = (::acos::i32)m_style.padding_bottom;
+
+    ::acos::i32 inner_w = m_rect.w - pl - pr;
+    ::acos::i32 inner_h = m_rect.h - pt - pb;
+    if (inner_w < 0) inner_w = 0;
+    if (inner_h < 0) inner_h = 0;
+
+    BoxConstraints inner = BoxConstraints::loose(inner_w, inner_h);
+
     for (auto& child : m_children) {
         if (child) {
-            Rect r = child->rect();
-            child->set_rect({m_rect.x + r.x, m_rect.y + r.y, r.w, r.h});
-            child->perform_layout(BoxConstraints::loose(m_rect.w, m_rect.h));
+            child->set_rect({m_rect.x + pl, m_rect.y + pt, 0, 0});
+            child->perform_layout(inner);
         }
     }
 }

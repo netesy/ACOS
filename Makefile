@@ -181,6 +181,9 @@ KERNEL_SRCS = \
 	$(SHELL_DIR)/desktop_shell.cpp \
 	$(SHELL_DIR)/session_manager.cpp \
 	$(SHELL_DIR)/volume_indicator.cpp \
+	$(SHELL_DIR)/shortcut_manager.cpp \
+	$(SHELL_DIR)/shortcut_widget.cpp \
+	$(SHELL_DIR)/telemetry_widgets.cpp \
 	$(KERNEL_DIR)/input/input_manager.cpp \
 	$(APPS_DIR)/terminal/terminal.cpp \
 	$(APPS_DIR)/file_manager/file_manager.cpp \

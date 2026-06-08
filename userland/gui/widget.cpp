@@ -113,6 +113,95 @@ Widget& Widget::padding(u32 p) {
     return *this;
 }
 
+Widget& Widget::padding(u32 top, u32 right, u32 bottom, u32 left) {
+    m_style.padding_top = top;
+    m_style.padding_right = right;
+    m_style.padding_bottom = bottom;
+    m_style.padding_left = left;
+    set_layout_dirty();
+    return *this;
+}
+
+Widget& Widget::margin(u32 m) {
+    m_style.margin_left = m_style.margin_right = m_style.margin_top = m_style.margin_bottom = m;
+    set_layout_dirty();
+    return *this;
+}
+
+Widget& Widget::margin(u32 top, u32 right, u32 bottom, u32 left) {
+    m_style.margin_top = top;
+    m_style.margin_right = right;
+    m_style.margin_bottom = bottom;
+    m_style.margin_left = left;
+    set_layout_dirty();
+    return *this;
+}
+
+Widget& Widget::preferred_size(i32 w, i32 h) {
+    m_style.preferred_w = w;
+    m_style.preferred_h = h;
+    set_layout_dirty();
+    return *this;
+}
+
+Widget& Widget::preferred_width(i32 w) {
+    m_style.preferred_w = w;
+    set_layout_dirty();
+    return *this;
+}
+
+Widget& Widget::preferred_height(i32 h) {
+    m_style.preferred_h = h;
+    set_layout_dirty();
+    return *this;
+}
+
+Widget& Widget::flex_grow(u32 factor) {
+    m_style.flex_grow = factor;
+    set_layout_dirty();
+    return *this;
+}
+
+Widget& Widget::position(Position pos) {
+    m_style.position = pos;
+    set_layout_dirty();
+    return *this;
+}
+
+Widget& Widget::anchor_top(i32 v) {
+    m_style.anchor_top = v;
+    set_layout_dirty();
+    return *this;
+}
+
+Widget& Widget::anchor_right(i32 v) {
+    m_style.anchor_right = v;
+    set_layout_dirty();
+    return *this;
+}
+
+Widget& Widget::anchor_bottom(i32 v) {
+    m_style.anchor_bottom = v;
+    set_layout_dirty();
+    return *this;
+}
+
+Widget& Widget::anchor_left(i32 v) {
+    m_style.anchor_left = v;
+    set_layout_dirty();
+    return *this;
+}
+
+Widget& Widget::fixed(i32 top, i32 right, i32 bottom, i32 left) {
+    m_style.position   = Position::Fixed;
+    m_style.anchor_top    = top;
+    m_style.anchor_right  = right;
+    m_style.anchor_bottom = bottom;
+    m_style.anchor_left   = left;
+    set_layout_dirty();
+    return *this;
+}
+
 Widget& Widget::elevation(u32 e) {
     m_style.elevation = e;
     set_paint_dirty();

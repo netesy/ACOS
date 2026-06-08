@@ -21,20 +21,31 @@ Taskbar::Taskbar() {
     root_layout->cross_axis_alignment(gui::CrossAxisAlignment::Center);
     root_layout->spacing(20);
 
-    auto term_icon = region.alloc<gui::widgets::Icon>(gui::widgets::IconType::Terminal);
-    term_icon->on_click([](void*){ DesktopShell::get().launch_terminal(); });
-    root_layout->add_child(term_icon.static_cast_to<gui::Widget>());
+    auto create_dock_item = [&](gui::widgets::IconType type, void (*callback)(void*)) {
+        auto container = region.alloc<gui::widgets::Panel>();
+        container->set_rect({0, 0, 48, 48});
+        container->set_background_color(0);
 
-    auto file_icon = region.alloc<gui::widgets::Icon>(gui::widgets::IconType::Files);
-    file_icon->on_click([](void*){ DesktopShell::get().launch_file_manager(); });
-    root_layout->add_child(file_icon.static_cast_to<gui::Widget>());
+        auto icon = region.alloc<gui::widgets::Icon>(type);
+        icon->set_rect({4, 4, 40, 40});
+        icon->on_click(callback);
+        container->add_child(icon.static_cast_to<gui::Widget>());
 
-    auto code_icon = region.alloc<gui::widgets::Icon>(gui::widgets::IconType::Code);
-    root_layout->add_child(code_icon.static_cast_to<gui::Widget>());
+        // Visual indicator (dot) for running app
+        auto indicator = region.alloc<gui::widgets::Panel>();
+        indicator->set_rect({22, 42, 4, 4});
+        indicator->radius(2);
+        indicator->set_background_color(0xFFFFFFFF);
+        indicator->set_visible(true); // Should be dynamic based on process state
+        container->add_child(indicator.static_cast_to<gui::Widget>());
 
-    auto settings_icon = region.alloc<gui::widgets::Icon>(gui::widgets::IconType::Settings);
-    settings_icon->on_click([](void*){ DesktopShell::get().launch_settings(); });
-    root_layout->add_child(settings_icon.static_cast_to<gui::Widget>());
+        return container.static_cast_to<gui::Widget>();
+    };
+
+    root_layout->add_child(create_dock_item(gui::widgets::IconType::Terminal, [](void*){ DesktopShell::get().launch_terminal(); }));
+    root_layout->add_child(create_dock_item(gui::widgets::IconType::Files, [](void*){ DesktopShell::get().launch_file_manager(); }));
+    root_layout->add_child(create_dock_item(gui::widgets::IconType::Code, [](void*){}));
+    root_layout->add_child(create_dock_item(gui::widgets::IconType::Settings, [](void*){ DesktopShell::get().launch_settings(); }));
 
     add_child(root_layout.static_cast_to<gui::Widget>());
 }

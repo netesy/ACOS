@@ -4,6 +4,7 @@
 extern "C" void* memcpy(void* dest, const void* src, acos::usize n);
 extern "C" void* memset(void* s, int c, acos::usize n);
 extern "C" int strcmp(const char* s1, const char* s2);
+extern "C" int strncmp(const char* s1, const char* s2, acos::usize n);
 extern "C" acos::usize strlen(const char* s);
 extern "C" void __cxa_pure_virtual();
 

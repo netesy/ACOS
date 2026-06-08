@@ -132,7 +132,8 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
         if (g_display_server) {
             g_display_server->run_tick();
         }
-        __asm__("hlt");
+        // Yield briefly without blocking - pause instruction reduces power while spinning
+        __asm__("pause");
     }
 }
 
