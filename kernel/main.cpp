@@ -22,6 +22,8 @@
 #include <kernel/hal/console.h>
 #include <kernel/vfs/vfs.h>
 #include <kernel/vfs/dev_fs.h>
+#include <kernel/smp/smp.h>
+#include <kernel/smp/cpu.h>
 
 namespace acos::hal {
     void gdt_init();
@@ -56,7 +58,16 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     }
 
     acos::hal::gdt_init();
+    acos::smp::SmpManager::init();
     acos::hal::idt_init();
+
+    // Register the current boot thread as the initial thread for CPU 0
+    static acos::scheduler::Thread boot_thread;
+    boot_thread.id = 0;
+    boot_thread.state = acos::scheduler::ThreadState::Running;
+    boot_thread.is_user = false;
+    acos::smp::Cpu::current()->current_thread = &boot_thread;
+
     acos::memory::pmm_init(bootInfo);
 
     // Initialize DevFS and mount /dev/console
@@ -141,6 +152,9 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
         if (g_display_server) {
             g_display_server->run_tick();
         }
+        // Drive scheduler
+        acos::scheduler::schedule();
+
         // Yield briefly without blocking - pause instruction reduces power while spinning
         __asm__("pause");
     }

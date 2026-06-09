@@ -29,9 +29,10 @@ void Cpu::init_ap(u32 apic_id) {
 }
 
 CpuData* Cpu::current() {
-    u64 ptr;
+    u32 low, high;
     // Read GS base
-    __asm__ volatile("rdmsr" : "=a"(*(u32*)&ptr), "=d"(*(((u32*)&ptr)+1)) : "c"(0xC0000101));
+    __asm__ volatile("rdmsr" : "=a"(low), "=d"(high) : "c"(0xC0000101));
+    u64 ptr = ((u64)high << 32) | low;
     return reinterpret_cast<CpuData*>(ptr);
 }
 

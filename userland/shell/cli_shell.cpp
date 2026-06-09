@@ -119,7 +119,12 @@ void CLIShell::cmd_ls(int argc, char** argv) {
     const char* path = (argc > 1) ? argv[1] : m_cwd;
 
     acos::vfs::DirectoryEntry entries[32];
-    i32 count = acos::vfs::VFS::read_dir(path, entries, 32);
+    i32 count = static_cast<i32>(acos::syscall::syscall_dispatch(
+        static_cast<u64>(acos::syscall::SyscallNum::FileReadDir),
+        reinterpret_cast<u64>(path),
+        reinterpret_cast<u64>(entries),
+        32, 0, 0
+    ));
 
     if (count < 0) {
         const char* err = "ls: cannot access directory\n";

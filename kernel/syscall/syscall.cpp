@@ -259,6 +259,14 @@ extern "C" u64 syscall_dispatch(u64 num, u64 arg1, u64 arg2, u64 arg3, u64 arg4,
             return static_cast<u64>(vfs::VFS::write(fd, data, size));
         }
 
+        case SyscallNum::FileReadDir: {
+            const char* path = reinterpret_cast<const char*>(arg1);
+            vfs::DirectoryEntry* entries = reinterpret_cast<vfs::DirectoryEntry*>(arg2);
+            usize max_entries = arg3;
+            if (!current) return static_cast<u64>(-1);
+            return static_cast<u64>(vfs::VFS::read_dir(path, entries, max_entries));
+        }
+
         default:
             return static_cast<u64>(-1);
     }

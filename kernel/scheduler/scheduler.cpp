@@ -122,8 +122,8 @@ Thread* create_thread(ThreadEntry entry, void* arg) {
     thread->return_value = nullptr;
     thread->next = nullptr;
     
-    // Allocate stack (8KB)
-    const usize STACK_SIZE = 8192;
+    // Allocate stack (16KB)
+    const usize STACK_SIZE = 16384;
     u64* stack = (u64*)acos::memory::kmalloc(STACK_SIZE);
     if (!stack) {
         acos::memory::kfree(thread);
