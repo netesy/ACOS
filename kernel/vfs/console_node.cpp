@@ -1,6 +1,7 @@
 #include <kernel/vfs/console_node.h>
 #include <kernel/hal/console.h>
 #include <kernel/hal/serial.h>
+#include <kernel/scheduler/scheduler.h>
 
 namespace acos::vfs {
 
@@ -14,12 +15,11 @@ i32 ConsoleNode::read(u64 offset [[maybe_unused]], usize size, void* buffer) {
         if (hal::serial_received()) {
             buf[read_bytes++] = hal::serial_read();
         } else {
-            // In a real OS we would block the thread here.
-            // For now, if we have read at least one byte, we return.
+            // If we have read at least one byte, we return.
             if (read_bytes > 0) break;
 
-            // Busy wait for at least one byte
-            __asm__("pause");
+            // Yield to other threads while waiting for input
+            scheduler::schedule();
         }
     }
 

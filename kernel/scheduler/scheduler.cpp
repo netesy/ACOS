@@ -134,13 +134,24 @@ Thread* create_thread(ThreadEntry entry, void* arg) {
     thread->stack_pointer = thread->stack_top;
     
     // Setup initial stack frame for thread entry
-    // Push return address (entry point)
+    // The stack must be compatible with context_switch in switch.S
+    // context_switch pops: rbp, rbx, r12, r13, r14, r15, then ret
+
+    // 1. Entry point (popped by ret)
     thread->stack_pointer -= sizeof(u64);
     *(u64*)thread->stack_pointer = (u64)entry;
     
-    // Push argument
-    thread->stack_pointer -= sizeof(u64);
-    *(u64*)thread->stack_pointer = (u64)arg;
+    // 2. Callee-saved registers (rbp, rbx, r12, r13, r14, r15)
+    for (int i = 0; i < 6; i++) {
+        thread->stack_pointer -= sizeof(u64);
+        *(u64*)thread->stack_pointer = 0;
+    }
+
+    // Note: We are currently ignoring the 'arg' in the generic create_thread
+    // because x86_64 ABI passes first arg in RDI.
+    // To support arg, we would need to initialize RDI on the stack and
+    // have context_switch or a wrapper restore it.
+    (void)arg;
     
     return thread;
 }

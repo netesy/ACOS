@@ -128,6 +128,9 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
         cli_thread->is_user = true; // Mark as user thread for syscall context
         cli_process->primary_thread = cli_thread;
         acos::scheduler::wake_thread(cli_thread);
+
+        // Switch to the shell thread
+        acos::scheduler::schedule();
     }
 
     acos::hal::console_print("Core System Initialization: PASS\n");
