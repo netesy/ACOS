@@ -4,6 +4,7 @@
 #include <userland/gui/widgets/fluent.h>
 #include "taskbar.h"
 #include "launcher.h"
+#include "telemetry_widgets.h"
 #include <apps/terminal/terminal.h>
 #include <apps/file_manager/file_manager.h>
 #include <apps/settings/settings.h>
@@ -50,14 +51,23 @@ void DesktopShell::initialize() {
     top_content->add_child(search);
 
     auto top_right = Row().spacing(15).main_axis_alignment(MainAxisAlignment::End);
-    top_right->add_child(Text("127.0.0.1").color(0xFF888888));
-    top_right->add_child(Text("OCT 24, 04:20:01").color(0xFFFFFFFF));
+    m_ip_text = Text("127.0.0.1").color(0xFF888888);
+    m_clock_text = Text("OCT 24, 04:20:01").color(0xFFFFFFFF);
+    top_right->add_child(m_ip_text.static_cast_to<gui::Widget>());
+    top_right->add_child(m_clock_text.static_cast_to<gui::Widget>());
     top_right->add_child(Icon(widgets::IconType::Settings));
     top_right->add_child(Icon(widgets::IconType::Battery));
 
     top_content->add_child(top_right);
     top_bar->add_child(top_content);
     root->add_child(top_bar);
+
+    // Desktop Grid for Shortcuts
+    auto desktop_grid = m_ui_context.region().alloc<gui::widgets::Grid>(6, 20);
+    desktop_grid->set_rect({120, 80, 570, 600});
+    root->add_child(desktop_grid.static_cast_to<gui::Widget>());
+    m_shortcut_manager.set_grid(desktop_grid);
+    m_shortcut_manager.sync();
 
     // Sidebar
     auto sidebar = Column().spacing(30);
@@ -80,79 +90,31 @@ void DesktopShell::initialize() {
     auto dashboard = Column().spacing(20);
     dashboard->set_rect({712, 80, 300, 600});
 
-    auto create_card = [&](const char* title, i32 h) {
-        auto p = Panel().glass(true).radius(12).padding(15).background(0xCC1A1A1B);
-        p->set_rect({0, 0, 300, h});
-        p->add_child(Text(title).color(0xFFFFFFFF).font_size(14));
-        return p;
-    };
-
     // Telemetry
-    auto tel = create_card("Telemetry", 210);
-    tel->add_child(Badge("v1.0 STABLE").static_cast_to<gui::Widget>()); // Positioning might need manual layout or Stack
-    auto cpu_row = Row().main_axis_alignment(MainAxisAlignment::SpaceBetween);
-    cpu_row->set_rect({15, 45, 270, 20});
-    cpu_row->add_child(Text("CPU CORE LOAD").color(0xFFFFFFFF).font_size(12));
-    cpu_row->add_child(Text("42%").color(0xFFFFFFFF).font_size(12));
-    tel->add_child(cpu_row);
-
-    auto g = Graph();
-    g->set_rect({15, 80, 270, 60});
-    g->add_value(0.3f); g->add_value(0.5f); g->add_value(0.4f); g->add_value(0.7f); g->add_value(0.9f); g->add_value(0.6f); g->add_value(0.8f); g->add_value(1.0f);
-    tel->add_child(g);
-
-    auto tel_footer = Row().spacing(20);
-    tel_footer->set_rect({15, 150, 270, 45});
-    auto mem_box = Panel().radius(8).background(0x11FFFFFF).padding(10);
-    mem_box->add_child(Column().spacing(2)
-        .add_child(Text("MEMORY").color(0xFF888888).font_size(8))
-        .add_child(Text("6.4 GB").color(0xFFFFFFFF).font_size(12)));
-    tel_footer->add_child(mem_box);
-    auto up_box = Panel().radius(8).background(0x11FFFFFF).padding(10);
-    up_box->add_child(Column().spacing(2)
-        .add_child(Text("UPTIME").color(0xFF888888).font_size(8))
-        .add_child(Text("124h").color(0xFFFFFFFF).font_size(12)));
-    tel_footer->add_child(up_box);
-    tel->add_child(tel_footer);
-
-    dashboard->add_child(tel);
+    auto cpu_widget = m_ui_context.region().alloc<CPULoadWidget>();
+    cpu_widget->set_rect({0, 0, 300, 210});
+    cpu_widget->set_background_color(0xCC1A1A1B);
+    cpu_widget->radius(12);
+    cpu_widget->set_glass(true);
+    dashboard->add_child(cpu_widget.static_cast_to<gui::Widget>());
 
     // Storage
-    auto storage = create_card("ACOS_ROOT", 160);
-    storage.border(0xFFBF00FF, 2); // Neon purple border
-    auto s_content = Column().spacing(12);
-    s_content->set_rect({15, 60, 270, 80});
-    auto s_header = Row().main_axis_alignment(MainAxisAlignment::SpaceBetween);
-    s_header->add_child(Text("SSD MOUNTED").color(0xFFFFFFFF).font_size(12));
-    s_header->add_child(Text("82%").color(0xFFFFFFFF).font_size(12));
-    s_content->add_child(s_header);
-    s_content->add_child(ProgressBar().value(82).foreground(0xFFBF00FF));
-    s_content->add_child(Row().main_axis_alignment(MainAxisAlignment::SpaceBetween)
-        .add_child(Text("Encrypted: AES-256").color(0xFF888888).font_size(10))
-        .add_child(Icon(widgets::IconType::Settings))); // Using Settings as a lock icon fallback
-    storage->add_child(s_content);
-    dashboard->add_child(storage);
+    auto storage_widget = m_ui_context.region().alloc<StorageCardWidget>();
+    storage_widget->set_rect({0, 0, 300, 160});
+    storage_widget->set_background_color(0xCC1A1A1B);
+    storage_widget->radius(12);
+    storage_widget->set_glass(true);
+    storage_widget->set_border_color(0xFFBF00FF);
+    storage_widget->set_border_width(2);
+    dashboard->add_child(storage_widget.static_cast_to<gui::Widget>());
 
     // Logs
-    auto logs = create_card("RECENT LOGS", 240);
-    auto log_list = Column().spacing(15);
-    log_list->set_rect({15, 50, 270, 180});
-
-    auto create_log_entry = [&](widgets::IconType t, const char* title, const char* sub, u32 icon_color) {
-        auto r = Row().spacing(10);
-        r->add_child(Icon(t).background(0).foreground(icon_color));
-        r->add_child(Column().spacing(2)
-            .add_child(Text(title).color(0xFFFFFFFF).font_size(12))
-            .add_child(Text(sub).color(0xFF888888).font_size(8)));
-        return r;
-    };
-
-    log_list->add_child(create_log_entry(widgets::IconType::Terminal, "process_exec(0.01)", "PID: 4122 | State: SLEEPING", 0xFF00E5FF));
-    log_list->add_child(create_log_entry(widgets::IconType::Network, "network_stack_init", "Packet drop: 0% | Latency: 2ms", 0xFFBF00FF));
-    log_list->add_child(create_log_entry(widgets::IconType::Settings, "unauthorized_access_trap", "Blocked IP: 192.168.1.104", 0xFFFF1744));
-
-    logs->add_child(log_list);
-    dashboard->add_child(logs);
+    auto logs_widget = m_ui_context.region().alloc<RecentLogsWidget>();
+    logs_widget->set_rect({0, 0, 300, 240});
+    logs_widget->set_background_color(0xCC1A1A1B);
+    logs_widget->radius(12);
+    logs_widget->set_glass(true);
+    dashboard->add_child(logs_widget.static_cast_to<gui::Widget>());
 
     root->add_child(dashboard);
 
@@ -168,7 +130,14 @@ void DesktopShell::initialize() {
     m_ui_context.set_root(root.static_cast_to<gui::Widget>());
 }
 
-void DesktopShell::run() {}
+void DesktopShell::run() {
+    // Start status bar update cycle if needed or handle async tasks
+}
+
+void DesktopShell::update(u64 delta_ms) {
+    m_ui_context.update(delta_ms);
+    update_status_bar();
+}
 
 void DesktopShell::draw(acos::graphics::Renderer* renderer) {
     if (!renderer) return;
@@ -188,6 +157,41 @@ void DesktopShell::launch_file_manager() {
 void DesktopShell::launch_settings() {
     auto settings = m_ui_context.region().alloc<apps::Settings>();
     m_root_panel->add_child(settings.static_cast_to<gui::Widget>());
+}
+
+void DesktopShell::update_status_bar() {
+    // Dynamic IP (Simulated/Placeholder)
+    if (m_ip_text) m_ip_text->set_text("192.168.1.105");
+
+    // Dynamic Clock (Simulated/Placeholder)
+    if (m_clock_text) m_clock_text->set_text("OCT 24, 04:20:42");
+}
+
+void DesktopShell::toggle_search() {
+    if (m_search_modal && m_search_modal->is_visible()) {
+        m_search_modal->set_visible(false);
+        return;
+    }
+
+    if (!m_search_modal) {
+        using namespace gui;
+        auto modal = Panel()
+            .background(0xDD0A0A0B)
+            .radius(16)
+            .border(0xFF4A4A4B, 1);
+        modal->set_rect({262, 100, 500, 60});
+
+        auto input = m_ui_context.region().alloc<widgets::TextBox>();
+        input->set_rect({10, 10, 480, 40});
+        input->set_placeholder("Search applications, files, and commands...");
+        modal->add_child(input.static_cast_to<Widget>());
+
+        m_search_modal = modal.static_cast_to<Widget>();
+        m_root_panel->add_child(m_search_modal);
+    }
+
+    m_search_modal->set_visible(true);
+    gui::UIContext::get().focus_manager().set_focus(m_search_modal);
 }
 
 } // namespace acos::shell

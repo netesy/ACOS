@@ -53,6 +53,7 @@ public:
     Ref<Widget> parent() const { return m_parent; }
     virtual void add_child(Ref<Widget> child);
     virtual void remove_child(Ref<Widget> child);
+	void clear_children() { m_children.clear(); set_layout_dirty(); }
     const Vector<Ref<Widget>>& children() const { return m_children; }
 
     Ref<Widget> self();

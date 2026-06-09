@@ -127,8 +127,11 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     acos::hal::console_print("Core System Initialization: PASS\n");
     acos::hal::serial_print("ACOS Kernel Boot Success. Entering Idle Loop.\n");
 
-    // Kernel idle loop: drive display compositing each tick
+    // Kernel idle loop: drive display compositing and shell updates each tick
     while (true) {
+        if (g_desktop_shell) {
+            g_desktop_shell->update(16); // Assuming ~60fps tick
+        }
         if (g_display_server) {
             g_display_server->run_tick();
         }
