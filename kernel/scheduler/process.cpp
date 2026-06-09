@@ -17,6 +17,7 @@ Process* Process::create() {
     p->id = g_next_process_id++;
     p->address_space = reinterpret_cast<memory::AddressSpace*>(acos::memory::kmalloc(sizeof(memory::AddressSpace)));
     new (p->address_space) memory::AddressSpace();
+    p->primary_thread = nullptr;
 
     for (usize i = 0; i < MAX_HANDLES; i++) {
         p->channels[i] = nullptr;

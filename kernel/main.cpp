@@ -13,12 +13,15 @@
 #include <services/audio/audio_server.h>
 #include <userland/shell/session_manager.h>
 #include <userland/shell/desktop_shell.h>
+#include <userland/shell/cli_shell.h>
 #include <libs/runtime/include/acos/runtime.h>
 #include <drivers/audio/virtio_sound/virtio_sound.h>
 #include <drivers/audio/hda/hda.h>
 
 #include <kernel/hal/serial.h>
 #include <kernel/hal/console.h>
+#include <kernel/vfs/vfs.h>
+#include <kernel/vfs/dev_fs.h>
 
 namespace acos::hal {
     void gdt_init();
@@ -35,7 +38,7 @@ acos::audio::AudioServer* g_audio_server = nullptr;
 acos::shell::SessionManager* g_session_manager = nullptr;
 acos::shell::DesktopShell* g_desktop_shell = nullptr;
 
-static void desktop_draw_callback(acos::graphics::Renderer* renderer) {
+[[maybe_unused]] static void desktop_draw_callback(acos::graphics::Renderer* renderer) {
     if (g_desktop_shell) {
         g_desktop_shell->draw(renderer);
     }
@@ -55,6 +58,10 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     acos::hal::gdt_init();
     acos::hal::idt_init();
     acos::memory::pmm_init(bootInfo);
+
+    // Initialize DevFS and mount /dev/console
+    static acos::vfs::DevFileSystem s_dev_fs;
+    acos::vfs::VFS::mount("/dev", &s_dev_fs);
     acos::memory::vmm_init(bootInfo);
     acos::scheduler::scheduler_init();
 
@@ -68,7 +75,7 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     acos::services::ServiceManager::register_service(acos::services::ServiceId::Audio, 3);
 
     // Initialize Display Server
-    bool display_ready = false;
+    [[maybe_unused]] bool display_ready = false;
     void* ds_mem = acos::memory::kmalloc(sizeof(acos::display::DisplayServer));
     if (ds_mem) {
         g_display_server = new (ds_mem) acos::display::DisplayServer();
@@ -102,26 +109,25 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
         }
     }
 
-    // Initialize Desktop Shell
-    void* shell_mem = acos::memory::kmalloc(sizeof(acos::shell::DesktopShell));
-    if (shell_mem && display_ready) {
-        g_desktop_shell = new (shell_mem) acos::shell::DesktopShell();
-        g_desktop_shell->initialize();
-        g_display_server->set_desktop_draw(desktop_draw_callback);
-        acos::hal::serial_print("Desktop Shell: Initialized and wired to compositor\n");
-    }
-
-    // Start Session
-    void* sm_mem = acos::memory::kmalloc(sizeof(acos::shell::SessionManager));
-    if (sm_mem) {
-        g_session_manager = new (sm_mem) acos::shell::SessionManager();
-        acos::hal::console_print("Starting Multimedia User Session...\n");
-        if (display_ready) {
-            acos::hal::serial_print("Session Manager: Starting GUI Session for User 0\n");
-            g_session_manager->start_session(0);
-        } else {
-            acos::hal::serial_print("Session Manager: No display available; GUI session not started\n");
+    // CLI Shell Initialization - Start as a separate thread to avoid blocking kernelMain
+    auto cli_entry = [](void*) -> void* {
+        void* cli_mem = acos::memory::kmalloc(sizeof(acos::shell::CLIShell));
+        if (cli_mem) {
+            acos::shell::CLIShell* cli_shell = new (cli_mem) acos::shell::CLIShell();
+            acos::hal::console_print("Starting ACOS CLI Shell...\n");
+            cli_shell->run();
         }
+        return nullptr;
+    };
+
+    acos::scheduler::Thread* cli_thread = acos::scheduler::create_thread(cli_entry, nullptr);
+    if (cli_thread) {
+        // Create a dummy user process for the shell to live in
+        acos::scheduler::Process* cli_process = acos::scheduler::Process::create();
+        cli_thread->parent = cli_process;
+        cli_thread->is_user = true; // Mark as user thread for syscall context
+        cli_process->primary_thread = cli_thread;
+        acos::scheduler::wake_thread(cli_thread);
     }
 
     acos::hal::console_print("Core System Initialization: PASS\n");

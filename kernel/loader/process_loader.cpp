@@ -51,7 +51,7 @@ scheduler::Process* create_process_from_elf(const char* name, const void* elf_da
     
     t->stack_pointer = stack_virt - 8;
 
-    scheduler::wake_thread(t);
+    p->primary_thread = t;
 
     return p;
 }

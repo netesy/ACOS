@@ -23,4 +23,8 @@ u64 File::seek(u64 offset) {
     return m_offset;
 }
 
+u64 File::size() const {
+    return m_node ? m_node->size() : 0;
+}
+
 } // namespace acos::vfs

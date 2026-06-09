@@ -6,6 +6,7 @@
 #include <kernel/vfs/file.h>
 #include <kernel/vfs/vfs.h>
 #include <kernel/memory/heap.h>
+#include <kernel/loader/process_loader.h>
 #include <libs/runtime/include/acos/runtime.h>
 
 namespace acos::syscall {
@@ -52,9 +53,51 @@ extern "C" u64 syscall_dispatch(u64 num, u64 arg1, u64 arg2, u64 arg3, u64 arg4,
 
         case SyscallNum::ProcessCreate: {
             if (!current) return kErrInvalid;
-            scheduler::Process* child = scheduler::Process::create();
+            const char* path = reinterpret_cast<const char*>(arg1);
+            if (!path) return kErrInvalid;
+
+            // Load ELF from VFS
+            i32 fd = vfs::VFS::open(path, 0);
+            if (fd < 0) return kErrInvalid;
+
+            vfs::File* file = current->get_file(fd);
+            if (!file) {
+                vfs::VFS::close(fd);
+                return kErrInvalid;
+            }
+
+            usize size = file->size();
+            void* elf_data = memory::kmalloc(size);
+            if (!elf_data) {
+                vfs::VFS::close(fd);
+                return kErrNoMemory;
+            }
+
+            file->read(elf_data, size);
+            vfs::VFS::close(fd);
+
+            scheduler::Process* child = loader::create_process_from_elf(path, elf_data, size);
+            memory::kfree(elf_data);
+
             if (!child) return kErrNoMemory;
+
+            // Handle Inheritance (FD 0, 1, 2)
+            for (int i = 0; i < 3; i++) {
+                if (current->files[i]) {
+                    child->files[i] = current->files[i];
+                }
+            }
+
             return current->register_process(child, scheduler::ResourceRights::Administer | scheduler::ResourceRights::Transfer | scheduler::ResourceRights::Delegate);
+        }
+
+        case SyscallNum::ProcessStart: {
+            if (!current) return kErrInvalid;
+            scheduler::Process* target = current->get_process(arg1);
+            if (!target || !target->primary_thread) return kErrInvalid;
+
+            scheduler::wake_thread(target->primary_thread);
+            return 0;
         }
 
         case SyscallNum::ProcessTerminate: {

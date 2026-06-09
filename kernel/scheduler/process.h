@@ -55,6 +55,8 @@ struct Process {
     acos::vfs::File* files[MAX_FILES];
     acos::net::Socket* sockets[MAX_SOCKETS];
 
+    Thread* primary_thread;
+
     static Process* create();
 
     u64 register_resource(ResourceKind kind, void* object, u64 rights);
