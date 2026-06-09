@@ -36,7 +36,7 @@ void enqueue_thread(u32 cpu_id, Thread* thread) {
 
 void schedule() {
     u32 cpu_id = smp::Cpu::id();
-    hal::ScopedLock lock(g_queue_locks[cpu_id]);
+    g_queue_locks[cpu_id].lock();
     
     smp::CpuData* cpu = smp::Cpu::current();
     if (!cpu) return;
@@ -69,6 +69,9 @@ void schedule() {
         next->state = ThreadState::Running;
         cpu->current_thread = next;
         
+        // Release lock before context switch to avoid deadlock
+        g_queue_locks[cpu_id].unlock();
+
         // Perform context switch
         if (current) {
             context_switch(&current->stack_pointer, next->stack_pointer);
@@ -76,6 +79,8 @@ void schedule() {
             // First thread on this CPU
             __asm__ volatile("mov %0, %%rsp" : : "r"(next->stack_pointer));
         }
+    } else {
+        g_queue_locks[cpu_id].unlock();
     }
 }
 
@@ -118,7 +123,7 @@ Thread* create_thread(ThreadEntry entry, void* arg) {
     thread->id = next_thread_id++;
     thread->state = ThreadState::Created;
     thread->parent = nullptr;
-    thread->is_user = true;
+    thread->is_user = false;
     thread->return_value = nullptr;
     thread->next = nullptr;
     

@@ -36,6 +36,16 @@ namespace acos::memory {
 
 // Global instances
 acos::display::DisplayServer* g_display_server = nullptr;
+
+static void* cli_thread_entry(void*) {
+    void* cli_mem = acos::memory::kmalloc(sizeof(acos::shell::CLIShell));
+    if (cli_mem) {
+        acos::shell::CLIShell* cli_shell = new (cli_mem) acos::shell::CLIShell();
+        acos::hal::console_print("Starting ACOS CLI Shell...\n");
+        cli_shell->run();
+    }
+    return nullptr;
+}
 acos::audio::AudioServer* g_audio_server = nullptr;
 acos::shell::SessionManager* g_session_manager = nullptr;
 acos::shell::DesktopShell* g_desktop_shell = nullptr;
@@ -121,22 +131,12 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     }
 
     // CLI Shell Initialization - Start as a separate thread to avoid blocking kernelMain
-    auto cli_entry = [](void*) -> void* {
-        void* cli_mem = acos::memory::kmalloc(sizeof(acos::shell::CLIShell));
-        if (cli_mem) {
-            acos::shell::CLIShell* cli_shell = new (cli_mem) acos::shell::CLIShell();
-            acos::hal::console_print("Starting ACOS CLI Shell...\n");
-            cli_shell->run();
-        }
-        return nullptr;
-    };
-
-    acos::scheduler::Thread* cli_thread = acos::scheduler::create_thread(cli_entry, nullptr);
+    acos::scheduler::Thread* cli_thread = acos::scheduler::create_thread(cli_thread_entry, nullptr);
     if (cli_thread) {
-        // Create a dummy user process for the shell to live in
+        // Create a dummy process for the shell
         acos::scheduler::Process* cli_process = acos::scheduler::Process::create();
         cli_thread->parent = cli_process;
-        cli_thread->is_user = true; // Mark as user thread for syscall context
+        cli_thread->is_user = false; // Run in kernel mode for now since it's linked in
         cli_process->primary_thread = cli_thread;
         acos::scheduler::wake_thread(cli_thread);
 
