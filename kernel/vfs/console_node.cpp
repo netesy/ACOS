@@ -18,7 +18,8 @@ i32 ConsoleNode::read(u64 offset [[maybe_unused]], usize size, void* buffer) {
             // If we have read at least one byte, we return.
             if (read_bytes > 0) break;
 
-            // Yield to other threads while waiting for input
+            // Hint for the processor and yield to other threads
+            __asm__("pause");
             scheduler::schedule();
         }
     }

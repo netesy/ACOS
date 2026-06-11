@@ -89,6 +89,15 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     // Initialize DevFS and mount /dev/console
     static acos::vfs::DevFileSystem s_dev_fs;
     acos::vfs::VFS::mount("/dev", &s_dev_fs);
+
+    // Explicit debug to confirm /dev/console is resolvable
+    acos::i32 test_fd = acos::vfs::VFS::open("/dev/console", 0);
+    if (test_fd >= 0) {
+        acos::hal::serial_print("VFS: /dev/console mounted and verified\n");
+        acos::vfs::VFS::close(test_fd);
+    } else {
+        acos::hal::serial_print("VFS: ERROR failed to mount /dev/console\n");
+    }
     acos::memory::vmm_init(bootInfo);
     acos::scheduler::scheduler_init();
 
