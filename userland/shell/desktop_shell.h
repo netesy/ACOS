@@ -4,13 +4,22 @@
 #include <userland/gui/text.h>
 #include "shortcut_manager.h"
 
+namespace acos::display { class DisplayServer; }
+
 namespace acos::shell {
 
 class DesktopShell {
 public:
     DesktopShell();
     void initialize();
+
+    /// Legacy run (empty). Kept for compat.
     void run();
+
+    /// Threaded event loop: process input, update widgets.
+    /// Runs forever on the desktop shell thread.
+    void run_loop();
+
     void draw(acos::graphics::Renderer* renderer);
 
     static DesktopShell& get() { return *s_instance; }
@@ -23,6 +32,9 @@ public:
 
     DesktopShortcutManager& shortcut_manager() { return m_shortcut_manager; }
 
+    /// Set the display server reference for IPC communication.
+    void set_display_server(acos::display::DisplayServer* ds) { m_ds = ds; }
+
 private:
     static DesktopShell* s_instance;
     gui::UIContext m_ui_context;
@@ -31,6 +43,9 @@ private:
     gui::Ref<gui::widgets::Text> m_clock_text;
     gui::Ref<gui::Widget> m_search_modal;
     DesktopShortcutManager m_shortcut_manager;
+
+    // Display server reference for IPC
+    acos::display::DisplayServer* m_ds;
 };
 
 } // namespace acos::shell

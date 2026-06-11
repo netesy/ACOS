@@ -2,6 +2,9 @@
 #include <userland/gui/theme.h>
 #include <userland/gui/core/context.h>
 #include <userland/gui/widgets/fluent.h>
+#include <services/display/display_server.h>
+#include <services/display/display_protocol.h>
+#include <kernel/hal/serial.h>
 #include "taskbar.h"
 #include "launcher.h"
 #include "telemetry_widgets.h"
@@ -13,7 +16,7 @@ namespace acos::shell {
 
 DesktopShell* DesktopShell::s_instance = nullptr;
 
-DesktopShell::DesktopShell() {
+DesktopShell::DesktopShell() : m_ds(nullptr) {
     s_instance = this;
     gui::widgets::init_synthetic_theme();
 }
@@ -97,6 +100,29 @@ void DesktopShell::initialize() {
 }
 
 void DesktopShell::run() {}
+
+// Threaded event loop: runs on the desktop shell thread.
+// Currently minimal — future work:
+//   - Process mouse/keyboard input events
+//   - Update clock/status bar periodically
+//   - Handle application launch requests
+void DesktopShell::run_loop() {
+    acos::hal::serial_print("Desktop Shell: run_loop started on shell thread\n");
+
+    while (true) {
+        // Send damage notification to keep compositor active
+        // (the desktop background is always-dirty for now)
+        if (m_ds) {
+            acos::display::DisplayMsg cmd{};
+            cmd.type = acos::display::DisplayMsgType::DamageNotify;
+            m_ds->send_command(cmd);
+        }
+
+        // Yield CPU — will be replaced by event-driven blocking
+        // when input routing is implemented
+        __asm__ volatile("hlt");
+    }
+}
 
 void DesktopShell::draw(acos::graphics::Renderer* renderer) {
     if (!renderer) return;

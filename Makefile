@@ -122,6 +122,7 @@ KERNEL_SRCS = \
 	$(DISPLAY_DIR)/input_router.cpp \
 	$(DISPLAY_DIR)/compositor.cpp \
 	$(DISPLAY_DIR)/display_server.cpp \
+	$(DISPLAY_DIR)/terminal_window.cpp \
 	$(GUI_DIR)/widget.cpp \
 	$(GUI_DIR)/theme.cpp \
 	$(GUI_DIR)/layout.cpp \
@@ -315,6 +316,9 @@ dist: $(BOOT_EFI) $(KERNEL_ELF)
 	cp $(BOOT_EFI) $(DIST_DIR)/EFI/BOOT/BOOTX64.EFI
 	cp $(KERNEL_ELF) $(DIST_DIR)/kernel.elf
 
+# Desktop mode (GUI): SDL display with terminal window visible.
+# Keyboard input goes to the SDL window's emulated devices.
+# Serial output is mirrored to the terminal for debugging.
 run: dist
 	@if command -v $(QEMU) >/dev/null 2>&1; then \
 		if [ -n "$(QEMU_FIRMWARE)" ]; then \
@@ -322,18 +326,35 @@ run: dist
 				export DISPLAY=:0; \
 				export WAYLAND_DISPLAY=wayland-0; \
 				export XDG_RUNTIME_DIR=/mnt/wslg/runtime-dir; \
-				echo "[RUN] WSLg detected: DISPLAY=$$DISPLAY WAYLAND_DISPLAY=$$WAYLAND_DISPLAY"; \
+				echo "[DESKTOP] WSLg detected: DISPLAY=$$DISPLAY WAYLAND_DISPLAY=$$WAYLAND_DISPLAY"; \
 			fi; \
+			echo "[DESKTOP] Launching ACOS in GUI mode..."; \
 			$(QEMU) -m 512M -drive file=fat:rw:$(DIST_DIR),format=raw -vga std -display sdl -serial stdio -bios "$(QEMU_FIRMWARE)"; \
 		else \
-			echo "[RUN] Warning: OVMF firmware not found; cannot launch UEFI VM."; \
+			echo "[DESKTOP] Warning: OVMF firmware not found; cannot launch UEFI VM."; \
 			exit 1; \
 		fi; \
 	else \
-		echo "[RUN] Warning: $(QEMU) not found; skipping VM launch."; \
+		echo "[DESKTOP] Warning: $(QEMU) not found; skipping VM launch."; \
 		exit 1; \
 	fi
 
+# Server mode (CLI): no SDL window, all I/O through terminal.
+# Keyboard input goes directly to serial → shell.
+# Use this for CLI-only interaction or when SDL steals focus.
+run-s: dist
+	@if command -v $(QEMU) >/dev/null 2>&1; then \
+		if [ -n "$(QEMU_FIRMWARE)" ]; then \
+			echo "[SERVER] Launching ACOS in CLI mode (no GUI)..."; \
+			$(QEMU) -m 512M -drive file=fat:rw:$(DIST_DIR),format=raw -nographic -bios "$(QEMU_FIRMWARE)"; \
+		else \
+			echo "[SERVER] Warning: OVMF firmware not found."; \
+			exit 1; \
+		fi; \
+	else \
+		echo "[SERVER] Warning: $(QEMU) not found."; \
+		exit 1; \
+	fi
 
 run-win: $(DISK_IMG)
 	qemu-system-x86_64.exe \
@@ -345,4 +366,4 @@ clean:
 	rm -f $(BOOT_EFI) $(KERNEL_ELF) $(DISK_IMG)
 	rm -rf $(BUILD_DIR) $(DIST_DIR)
 
-.PHONY: all image run run-win clean
+.PHONY: all image run run-s run-win clean

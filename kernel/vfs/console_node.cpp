@@ -1,7 +1,23 @@
 #include <kernel/vfs/console_node.h>
 #include <kernel/hal/console.h>
 #include <kernel/hal/serial.h>
-#include <kernel/scheduler/scheduler.h>
+#include <services/display/terminal_window.h>
+#include <services/display/display_server.h>
+
+// The shell thread is the only thread that runs. The boot thread's
+// idle loop never executes because context switching back from the
+// shell thread doesn't work yet (no timer interrupt). So the shell
+// thread itself drives the display compositor after each hlt and
+// after each write.
+static void flush_display() {
+    if (acos::display::g_terminal_window) {
+        acos::display::g_terminal_window->redraw();
+    }
+    extern acos::display::DisplayServer* g_display_server;
+    if (g_display_server) {
+        g_display_server->run_tick();
+    }
+}
 
 namespace acos::vfs {
 
@@ -15,23 +31,15 @@ i32 ConsoleNode::read(u64 offset [[maybe_unused]], usize size, void* buffer) {
         if (hal::serial_received()) {
             buf[read_bytes++] = hal::serial_read();
         } else {
-            // If we have read at least one byte, return what we have.
+            // If we already have data, return it now.
             if (read_bytes > 0) break;
 
-            // Block this thread on console I/O. The idle loop polls
-            // serial_received() and calls wake_thread() when data
-            // arrives, which re-enqueues us and triggers a context
-            // switch back here.
-            scheduler::Thread* self = scheduler::current_thread();
-            if (self) {
-                scheduler::set_console_blocked(self);
-                scheduler::block_thread(self);
-                scheduler::clear_console_blocked(self);
-            }
-            // Fallback: halt CPU until next hardware event in case
-            // the idle loop hasn't polled yet or we're on the boot
-            // thread with no scheduler context.
+            // Halt CPU until next hardware event.
             __asm__ volatile("hlt");
+
+            // Drive the display compositor from the shell thread
+            // since the boot thread's idle loop isn't running.
+            flush_display();
         }
     }
 
@@ -63,6 +71,11 @@ i32 ConsoleNode::write(u64 offset [[maybe_unused]], usize size, const void* buff
     // Also mirror to serial for debugging
     for (usize i = 0; i < size; i++) {
         hal::serial_write(buf[i]);
+    }
+
+    // Forward to terminal window for display in QEMU graphical output
+    if (acos::display::g_terminal_window) {
+        acos::display::g_terminal_window->put_string(buf, size);
     }
 
     return static_cast<i32>(size);
