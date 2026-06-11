@@ -1,6 +1,7 @@
 #include <kernel/scheduler/scheduler.h>
 #include <kernel/smp/cpu.h>
 #include <kernel/hal/spinlock.h>
+#include <kernel/hal/serial.h>
 #include <kernel/memory/heap.h>
 #include <acos/types.h>
 
@@ -22,8 +23,7 @@ void scheduler_init() {
     }
 }
 
-void enqueue_thread(u32 cpu_id, Thread* thread) {
-    hal::ScopedLock lock(g_queue_locks[cpu_id]);
+static void enqueue_thread_internal(u32 cpu_id, Thread* thread) {
     if (!g_run_queues[cpu_id].head) {
         g_run_queues[cpu_id].head = thread;
     } else {
@@ -34,8 +34,18 @@ void enqueue_thread(u32 cpu_id, Thread* thread) {
     g_run_queues[cpu_id].count++;
 }
 
+void enqueue_thread(u32 cpu_id, Thread* thread) {
+    hal::ScopedLock lock(g_queue_locks[cpu_id]);
+    enqueue_thread_internal(cpu_id, thread);
+}
+
 void schedule() {
     u32 cpu_id = smp::Cpu::id();
+    acos::hal::serial_print("[SCHED] schedule() on CPU ");
+    char id_str[2] = {(char)('0' + cpu_id), 0};
+    acos::hal::serial_print(id_str);
+    acos::hal::serial_print("\n");
+
     g_queue_locks[cpu_id].lock();
     
     smp::CpuData* cpu = smp::Cpu::current();
@@ -61,11 +71,12 @@ void schedule() {
     // If current thread is still runnable, re-enqueue it
     if (current && current->state == ThreadState::Running) {
         current->state = ThreadState::Ready;
-        enqueue_thread(cpu_id, current);
+        enqueue_thread_internal(cpu_id, current);
     }
     
     // Switch to next thread
     if (next != current) {
+        acos::hal::serial_print("[SCHED] Switching threads...\n");
         next->state = ThreadState::Running;
         cpu->current_thread = next;
         
@@ -114,6 +125,7 @@ usize get_running_thread_count() {
 
 // Thread creation - allocate and initialize a new thread
 Thread* create_thread(ThreadEntry entry, void* arg) {
+    // acos::hal::serial_print("[SCHED] Creating thread...\n");
     // Allocate thread structure
     Thread* thread = (Thread*)acos::memory::kmalloc(sizeof(Thread));
     if (!thread) return nullptr;

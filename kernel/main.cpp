@@ -73,9 +73,15 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
 
     // Register the current boot thread as the initial thread for CPU 0
     static acos::scheduler::Thread boot_thread;
+    static acos::scheduler::Process kernel_process;
+
     boot_thread.id = 0;
     boot_thread.state = acos::scheduler::ThreadState::Running;
     boot_thread.is_user = false;
+    boot_thread.parent = &kernel_process;
+
+    kernel_process.id = 0;
+
     acos::smp::Cpu::current()->current_thread = &boot_thread;
 
     acos::memory::pmm_init(bootInfo);
@@ -131,6 +137,7 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     }
 
     // CLI Shell Initialization - Start as a separate thread to avoid blocking kernelMain
+    acos::hal::serial_print("Main: Creating shell thread...\n");
     acos::scheduler::Thread* cli_thread = acos::scheduler::create_thread(cli_thread_entry, nullptr);
     if (cli_thread) {
         // Create a dummy process for the shell
@@ -140,8 +147,11 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
         cli_process->primary_thread = cli_thread;
         acos::scheduler::wake_thread(cli_thread);
 
+        acos::hal::serial_print("Main: Handing over to scheduler...\n");
         // Switch to the shell thread
         acos::scheduler::schedule();
+    } else {
+        acos::hal::serial_print("Main: ERROR failed to create shell thread\n");
     }
 
     acos::hal::console_print("Core System Initialization: PASS\n");
