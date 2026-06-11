@@ -154,11 +154,30 @@ Thread* create_thread(ThreadEntry entry, void* arg) {
     // The stack must be compatible with context_switch in switch.S
     // context_switch pops: rbp, rbx, r12, r13, r14, r15, then ret
 
-    // 1. Entry point (popped by ret)
+    // Setup initial stack frame for thread entry
+    // The stack must be compatible with context_switch in switch.S
+    // context_switch pops: rbp, rbx, r12, r13, r14, r15, then ret
+
+    // According to x86_64 SysV ABI, the stack must be 16-byte aligned
+    // at the moment 'call' is executed. This means after 'ret' pops
+    // the entry point, rsp must be 16-byte aligned.
+
+    // Initial STACK_TOP is 16-byte aligned by kmalloc usually,
+    // but let's be explicit.
+    thread->stack_pointer &= ~0xFULL;
+
+    // 1. ABI Alignment Padding (8 bytes)
+    // Pushing entry (8) + 6 regs (48) = 56 bytes.
+    // 56 % 16 = 8. So we need 8 bytes padding to make total 64 (divisible by 16).
+    thread->stack_pointer -= sizeof(u64);
+    *(u64*)thread->stack_pointer = 0;
+
+    // 2. Entry point (popped by ret)
     thread->stack_pointer -= sizeof(u64);
     *(u64*)thread->stack_pointer = (u64)entry;
     
-    // 2. Callee-saved registers (rbp, rbx, r12, r13, r14, r15)
+    // 3. Callee-saved registers (rbp, rbx, r12, r13, r14, r15)
+    // These 6 registers are popped by context_switch
     for (int i = 0; i < 6; i++) {
         thread->stack_pointer -= sizeof(u64);
         *(u64*)thread->stack_pointer = 0;

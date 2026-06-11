@@ -38,11 +38,14 @@ namespace acos::memory {
 acos::display::DisplayServer* g_display_server = nullptr;
 
 static void* cli_thread_entry(void*) {
+    acos::hal::serial_print("CLI_THREAD: Starting thread entry point...\n");
     void* cli_mem = acos::memory::kmalloc(sizeof(acos::shell::CLIShell));
     if (cli_mem) {
         acos::shell::CLIShell* cli_shell = new (cli_mem) acos::shell::CLIShell();
         acos::hal::console_print("Starting ACOS CLI Shell...\n");
         cli_shell->run();
+    } else {
+        acos::hal::serial_print("CLI_THREAD: ERROR failed to allocate memory for shell\n");
     }
     return nullptr;
 }

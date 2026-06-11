@@ -25,6 +25,8 @@ SHARED_LDFLAGS = -shared -nostdlib
 BOOT_EFI   = acos_boot.efi
 KERNEL_ELF = kernel.elf
 DISK_IMG   = acos.img
+BUILD_DIR  = build
+DIST_DIR   = dist
 QEMU       ?= qemu-system-x86_64
 QEMU_FLAGS ?= -m 512M -drive format=raw,file=$(DISK_IMG) -vga std -display sdl -serial stdio
 QEMU_FIRMWARE ?= $(firstword $(wildcard OVMF.fd /usr/share/ovmf/OVMF.fd /usr/share/qemu/OVMF.fd /usr/share/OVMF/OVMF_CODE.fd /usr/share/OVMF/OVMF_CODE_4M.fd))
@@ -246,8 +248,9 @@ KERNEL_ASM_SRCS = \
 	$(ARCH_DIR)/syscall.S \
 	$(ARCH_DIR)/boot.S
 
-BOOT_OBJS   = $(BOOT_SRCS:.cpp=.o)
-KERNEL_OBJS = $(KERNEL_SRCS:.cpp=.o) $(KERNEL_ASM_SRCS:.S=.o)
+BOOT_OBJS   = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(BOOT_SRCS))
+KERNEL_OBJS = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(KERNEL_SRCS)) \
+              $(patsubst %.S, $(BUILD_DIR)/%.o, $(KERNEL_ASM_SRCS))
 
 # ----------------------------------------------------
 # Build Targets
@@ -258,16 +261,16 @@ all: image
 image: $(DISK_IMG)
 
 $(BOOT_EFI): $(BOOT_OBJS)
+	@mkdir -p $(@D)
 	$(LD) $(UEFI_LDFLAGS) -o $@ $^
 
 $(KERNEL_ELF): $(KERNEL_OBJS)
+	@mkdir -p $(@D)
 	ld -T linker.ld -o $@ $^
 
 # ----------------------------------------------------
 # Disk Image Creation
 # ----------------------------------------------------
-
-OBJS = $(BOOT_OBJS) $(KERNEL_OBJS)
 
 $(DISK_IMG): $(BOOT_EFI) $(KERNEL_ELF)
 	@echo "[IMG] Creating FAT32 disk image..."
@@ -291,13 +294,16 @@ $(DISK_IMG): $(BOOT_EFI) $(KERNEL_ELF)
 # Compilation Rules
 # ----------------------------------------------------
 
-%.o: %.cpp
+$(BUILD_DIR)/%.o: %.cpp
+	@mkdir -p $(@D)
 	$(CXX) $(KERNEL_CFLAGS) -c $< -o $@
 
-%.o: %.S
+$(BUILD_DIR)/%.o: %.S
+	@mkdir -p $(@D)
 	$(AS) $(KERNEL_ASFLAGS) -c $< -o $@
 
-$(BOOT_DIR)/main.o: $(BOOT_DIR)/main.cpp
+$(BUILD_DIR)/$(BOOT_DIR)/main.o: $(BOOT_DIR)/main.cpp
+	@mkdir -p $(@D)
 	$(UEFI_CXX) $(UEFI_CFLAGS) -c $< -o $@
 
 # ----------------------------------------------------
@@ -305,9 +311,9 @@ $(BOOT_DIR)/main.o: $(BOOT_DIR)/main.cpp
 # ----------------------------------------------------
 
 dist: $(BOOT_EFI) $(KERNEL_ELF)
-	mkdir -p dist/EFI/BOOT
-	cp $(BOOT_EFI) dist/EFI/BOOT/BOOTX64.EFI
-	cp $(KERNEL_ELF) dist/kernel.elf
+	mkdir -p $(DIST_DIR)/EFI/BOOT
+	cp $(BOOT_EFI) $(DIST_DIR)/EFI/BOOT/BOOTX64.EFI
+	cp $(KERNEL_ELF) $(DIST_DIR)/kernel.elf
 
 run: dist
 	@if command -v $(QEMU) >/dev/null 2>&1; then \
@@ -318,7 +324,7 @@ run: dist
 				export XDG_RUNTIME_DIR=/mnt/wslg/runtime-dir; \
 				echo "[RUN] WSLg detected: DISPLAY=$$DISPLAY WAYLAND_DISPLAY=$$WAYLAND_DISPLAY"; \
 			fi; \
-			$(QEMU) -m 512M -drive file=fat:rw:dist,format=raw -vga std -display sdl -serial stdio -bios "$(QEMU_FIRMWARE)"; \
+			$(QEMU) -m 512M -drive file=fat:rw:$(DIST_DIR),format=raw -vga std -display sdl -serial stdio -bios "$(QEMU_FIRMWARE)"; \
 		else \
 			echo "[RUN] Warning: OVMF firmware not found; cannot launch UEFI VM."; \
 			exit 1; \
@@ -337,7 +343,6 @@ run-win: $(DISK_IMG)
 
 clean:
 	rm -f $(BOOT_EFI) $(KERNEL_ELF) $(DISK_IMG)
-	rm -rf dist
-	find . -name "*.o" -type f -delete 2>/dev/null || true
+	rm -rf $(BUILD_DIR) $(DIST_DIR)
 
 .PHONY: all image run run-win clean
