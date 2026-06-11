@@ -15,12 +15,23 @@ i32 ConsoleNode::read(u64 offset [[maybe_unused]], usize size, void* buffer) {
         if (hal::serial_received()) {
             buf[read_bytes++] = hal::serial_read();
         } else {
-            // If we have read at least one byte, we return.
+            // If we have read at least one byte, return what we have.
             if (read_bytes > 0) break;
 
-            // Hint for the processor and yield to other threads
-            __asm__("pause");
-            scheduler::schedule();
+            // Block this thread on console I/O. The idle loop polls
+            // serial_received() and calls wake_thread() when data
+            // arrives, which re-enqueues us and triggers a context
+            // switch back here.
+            scheduler::Thread* self = scheduler::current_thread();
+            if (self) {
+                scheduler::set_console_blocked(self);
+                scheduler::block_thread(self);
+                scheduler::clear_console_blocked(self);
+            }
+            // Fallback: halt CPU until next hardware event in case
+            // the idle loop hasn't polled yet or we're on the boot
+            // thread with no scheduler context.
+            __asm__ volatile("hlt");
         }
     }
 

@@ -20,6 +20,12 @@ void wake_thread(Thread* thread);
 void block_thread(Thread* thread);
 Thread* current_thread();
 
+// I/O blocking: track threads waiting on device I/O.
+// The idle loop polls these and wakes threads when data arrives.
+void set_console_blocked(Thread* thread);
+void clear_console_blocked(Thread* thread);
+Thread* get_console_blocked();
+
 // Thread creation and lookup
 typedef void* (*ThreadEntry)(void*);
 Thread* create_thread(ThreadEntry entry, void* arg);

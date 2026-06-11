@@ -26,7 +26,12 @@ void CLIShell::run() {
         char c;
         while (bytes_read < 1023) {
             i32 n = static_cast<i32>(acos::syscall::syscall_dispatch(static_cast<u64>(acos::syscall::SyscallNum::FileRead), m_console_fd, reinterpret_cast<u64>(&c), 1, 0, 0));
-            if (n <= 0) continue;
+            if (n <= 0) {
+                // Yield to scheduler so other threads can run and
+                // the idle loop can hlt (preventing host CPU livelock).
+                acos::syscall::syscall_dispatch(static_cast<u64>(acos::syscall::SyscallNum::Yield), 0, 0, 0, 0, 0);
+                continue;
+            }
 
             if (c == '\r' || c == '\n') {
                 acos::syscall::syscall_dispatch(static_cast<u64>(acos::syscall::SyscallNum::FileWrite), m_console_fd, reinterpret_cast<u64>("\n"), 1, 0, 0);

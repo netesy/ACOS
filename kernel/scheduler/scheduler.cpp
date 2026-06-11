@@ -10,6 +10,23 @@ namespace acos::scheduler {
 static RunQueue g_run_queues[64];
 static hal::SpinLock g_queue_locks[64];
 
+// Thread blocked on console I/O (polled from idle loop)
+static Thread* g_console_blocked_thread = nullptr;
+
+void set_console_blocked(Thread* thread) {
+    g_console_blocked_thread = thread;
+}
+
+void clear_console_blocked(Thread* thread) {
+    if (g_console_blocked_thread == thread) {
+        g_console_blocked_thread = nullptr;
+    }
+}
+
+Thread* get_console_blocked() {
+    return g_console_blocked_thread;
+}
+
 // Make g_run_queues accessible for global functions
 RunQueue* get_run_queues() {
     return g_run_queues;
@@ -41,20 +58,21 @@ void enqueue_thread(u32 cpu_id, Thread* thread) {
 
 void schedule() {
     u32 cpu_id = smp::Cpu::id();
-    acos::hal::serial_print("[SCHED] schedule() on CPU ");
-    char id_str[2] = {(char)('0' + cpu_id), 0};
-    acos::hal::serial_print(id_str);
-    acos::hal::serial_print("\n");
 
     g_queue_locks[cpu_id].lock();
     
     smp::CpuData* cpu = smp::Cpu::current();
-    if (!cpu) return;
+    if (!cpu) {
+        g_queue_locks[cpu_id].unlock();
+        return;
+    }
     
     // Get next thread from run queue
     Thread* next = g_run_queues[cpu_id].head;
     if (!next) {
-        // No threads to run, idle
+        // No runnable threads — release lock and return.
+        // Caller (idle loop) should hlt to avoid spinning.
+        g_queue_locks[cpu_id].unlock();
         return;
     }
     
@@ -73,10 +91,11 @@ void schedule() {
         current->state = ThreadState::Ready;
         enqueue_thread_internal(cpu_id, current);
     }
+    // Blocked/Terminated threads are NOT re-enqueued — that's the
+    // whole point of proper blocking.
     
     // Switch to next thread
     if (next != current) {
-        acos::hal::serial_print("[SCHED] Switching threads...\n");
         next->state = ThreadState::Running;
         cpu->current_thread = next;
         
@@ -100,13 +119,19 @@ Thread* current_thread() {
 }
 
 void wake_thread(Thread* thread) {
-    // Determine target CPU based on affinity or load
+    if (!thread) return;
+    // Mark thread as ready to run before enqueueing
+    thread->state = ThreadState::Ready;
     enqueue_thread(0, thread);
 }
 
 void block_thread(Thread* thread) {
-    (void)thread;
+    if (!thread) return;
+    // Mark thread as blocked — schedule() will NOT re-enqueue it.
+    // The thread stays off the run queue until wake_thread() is called.
+    thread->state = ThreadState::Blocked;
     schedule();
+    // Execution resumes here after wake_thread() + context switch back.
 }
 
 usize get_thread_count() {

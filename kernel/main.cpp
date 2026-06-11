@@ -38,15 +38,16 @@ namespace acos::memory {
 acos::display::DisplayServer* g_display_server = nullptr;
 
 static void* cli_thread_entry(void*) {
-    acos::hal::serial_print("CLI_THREAD: Starting thread entry point...\n");
     void* cli_mem = acos::memory::kmalloc(sizeof(acos::shell::CLIShell));
     if (cli_mem) {
         acos::shell::CLIShell* cli_shell = new (cli_mem) acos::shell::CLIShell();
-        acos::hal::console_print("Starting ACOS CLI Shell...\n");
         cli_shell->run();
     } else {
         acos::hal::serial_print("CLI_THREAD: ERROR failed to allocate memory for shell\n");
     }
+
+    // Safety: never return to a garbage address. Block forever.
+    for (;;) { __asm__ volatile("hlt"); }
     return nullptr;
 }
 acos::audio::AudioServer* g_audio_server = nullptr;
@@ -56,6 +57,16 @@ acos::shell::DesktopShell* g_desktop_shell = nullptr;
 [[maybe_unused]] static void desktop_draw_callback(acos::graphics::Renderer* renderer) {
     if (g_desktop_shell) {
         g_desktop_shell->draw(renderer);
+    }
+}
+
+// I/O polling: check for serial input and wake any thread
+// blocked on console reads. Called from the idle loop since
+// we don't yet have interrupt-driven serial.
+static void poll_io() {
+    acos::scheduler::Thread* blocked = acos::scheduler::get_console_blocked();
+    if (blocked && acos::hal::serial_received()) {
+        acos::scheduler::wake_thread(blocked);
     }
 }
 
@@ -152,16 +163,18 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     acos::hal::serial_print("Main: Creating shell thread...\n");
     acos::scheduler::Thread* cli_thread = acos::scheduler::create_thread(cli_thread_entry, nullptr);
     if (cli_thread) {
-        // Create a dummy process for the shell
+        // Create a process for the shell
         acos::scheduler::Process* cli_process = acos::scheduler::Process::create();
-        cli_thread->parent = cli_process;
-        cli_thread->is_user = false; // Run in kernel mode for now since it's linked in
-        cli_process->primary_thread = cli_thread;
-        acos::scheduler::wake_thread(cli_thread);
-
-        acos::hal::serial_print("Main: Handing over to scheduler...\n");
-        // Switch to the shell thread
-        acos::scheduler::schedule();
+        if (!cli_process) {
+            acos::hal::serial_print("Main: ERROR Process::create() returned null\n");
+        } else {
+            cli_thread->parent = cli_process;
+            cli_thread->is_user = false; // Run in kernel mode for now since it's linked in
+            cli_process->primary_thread = cli_thread;
+            acos::scheduler::wake_thread(cli_thread);
+            // Switch to the shell thread
+            acos::scheduler::schedule();
+        }
     } else {
         acos::hal::serial_print("Main: ERROR failed to create shell thread\n");
     }
@@ -169,16 +182,25 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     acos::hal::console_print("Core System Initialization: PASS\n");
     acos::hal::serial_print("ACOS Kernel Boot Success. Entering Idle Loop.\n");
 
-    // Kernel idle loop: drive display compositing each tick
+    // Kernel idle loop: drive display compositing, I/O polling,
+    // and the scheduler each tick.
     while (true) {
         if (g_display_server) {
             g_display_server->run_tick();
         }
+
+        // Poll for I/O and wake blocked threads BEFORE scheduling,
+        // so newly-woken threads are visible to the scheduler.
+        poll_io();
+
         // Drive scheduler
         acos::scheduler::schedule();
 
-        // Yield briefly without blocking - pause instruction reduces power while spinning
-        __asm__("pause");
+        // Halt CPU until next hardware event. This yields the host
+        // CPU in QEMU/TCG, preventing a 100% spin that starves the
+        // main loop of cycles needed to deliver serial/keyboard I/O.
+        // On real hardware, PIT IRQ0 wakes us periodically.
+        __asm__ volatile("hlt");
     }
 }
 

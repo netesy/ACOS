@@ -101,6 +101,17 @@ void pmm_init(BootInfo* bootInfo) {
 
     // Mark page 0 as used (null page guard)
     bitmap_set(0);
+
+    // Mark kernel image pages as used.
+    // Without this, pmm_alloc can return pages overlapping the running
+    // kernel. Writing to those pages (e.g., thread stack frames) silently
+    // corrupts kernel code/data, causing triple faults and reboots.
+    u64 kernel_start = 0x100000; // linker.ld loads kernel at 1 MB
+    for (u64 addr = kernel_start; addr < kernel_end_addr; addr += PAGE_SIZE) {
+        bitmap_set(addr / PAGE_SIZE);
+    }
+
+    acos::hal::serial_print("[PMM] Initialized. Kernel image protected.\n");
 }
 
 u64 pmm_alloc() {
