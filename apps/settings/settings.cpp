@@ -1,3 +1,5 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include "settings.h"
 #include <userland/gui/text.h>
 #include <userland/gui/button.h>

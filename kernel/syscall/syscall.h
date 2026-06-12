@@ -49,7 +49,17 @@ enum class SyscallNum : u64 {
     SocketBind = 401,
     SocketConnect = 402,
     SocketSend = 403,
-    SocketReceive = 404
+    SocketReceive = 404,
+
+    // Graphics (600-699)
+    GraphicsSurfaceCreate = 600,
+    GraphicsWindowCreate = 601,
+    GraphicsPresent = 602,
+    GraphicsGetFramebuffer = 603,
+
+    // Service Discovery (500-599)
+    ResourceLocate = 500,
+    ResourceRegister = 501
 };
 
 struct ResourceInfo {

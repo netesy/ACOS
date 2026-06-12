@@ -1,3 +1,5 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include "pkg.h"
 #include <libs/runtime/include/acos/runtime.h>
 #include <userland/posix/include/unistd.h>

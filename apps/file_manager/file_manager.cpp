@@ -1,3 +1,5 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include "file_manager.h"
 #include <userland/gui/core/context.h>
 #include <userland/gui/button.h>

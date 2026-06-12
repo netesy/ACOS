@@ -1,3 +1,5 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include "widgets/fluent.h"
 
 namespace acos::gui {

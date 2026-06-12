@@ -1,3 +1,5 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include "terminal.h"
 #include <userland/gui/core/context.h>
 #include <userland/gui/textarea.h>

@@ -1,8 +1,10 @@
-#include "display_server.h"
+#include <acos/process.h>
+#include <acos/runtime.h>
+#include <services/display/display_server.h>
 #include <kernel/graphics/graphics_manager.h>
-#include <kernel/memory/heap.h>
-#include <kernel/hal/serial.h>
-#include <kernel/hal/console.h>
+#include <acos/process.h>
+#include <acos/process.h>
+#include <acos/process.h>
 #include <libs/runtime/include/acos/runtime.h>
 
 namespace acos::display {
@@ -31,7 +33,7 @@ bool DisplayServer::initialize() {
 
 void DisplayServer::run() {
     m_running = true;
-    acos::hal::console_print("Display Server: Initialized and running\n");
+    acos::process::log("Display Server: Initialized and running\n");
 
     while (m_running) {
         run_tick();
@@ -52,7 +54,7 @@ void DisplayServer::run_tick() {
 // Halts when idle to avoid burning CPU in QEMU/TCG.
 void DisplayServer::run_loop() {
     m_running = true;
-    acos::hal::serial_print("Display Server: run_loop started on DS thread\n");
+    acos::process::log("Display Server: run_loop started on DS thread\n");
 
     while (m_running) {
         // Drain all pending commands (non-blocking)
@@ -67,7 +69,7 @@ void DisplayServer::run_loop() {
         }
 
         // Yield CPU until next event (IPC send wakes us via scheduler)
-        __asm__ volatile("hlt");
+        
     }
 }
 

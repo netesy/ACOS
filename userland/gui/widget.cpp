@@ -1,3 +1,5 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include "widget.h"
 #include "theme.h"
 #include "core/context.h"

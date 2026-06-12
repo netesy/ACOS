@@ -1,3 +1,5 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include "shortcut_manager.h"
 #include <kernel/vfs/vfs.h>
 #include <userland/gui/core/context.h>

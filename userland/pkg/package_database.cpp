@@ -1,3 +1,5 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include "package_database.h"
 
 namespace acos::pkg {

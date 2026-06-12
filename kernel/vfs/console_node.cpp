@@ -1,23 +1,9 @@
 #include <kernel/vfs/console_node.h>
 #include <kernel/hal/console.h>
 #include <kernel/hal/serial.h>
-#include <services/display/terminal_window.h>
-#include <services/display/display_server.h>
 
-// The shell thread is the only thread that runs. The boot thread's
-// idle loop never executes because context switching back from the
-// shell thread doesn't work yet (no timer interrupt). So the shell
-// thread itself drives the display compositor after each hlt and
-// after each write.
-static void flush_display() {
-    if (acos::display::g_terminal_window) {
-        acos::display::g_terminal_window->redraw();
-    }
-    extern acos::display::DisplayServer* g_display_server;
-    if (g_display_server) {
-        g_display_server->run_tick();
-    }
-}
+// Microkernel: the console node only writes to the HAL console and serial.
+// Graphics-based terminal is now a user-space service.
 
 namespace acos::vfs {
 
@@ -37,9 +23,6 @@ i32 ConsoleNode::read(u64 offset [[maybe_unused]], usize size, void* buffer) {
             // Halt CPU until next hardware event.
             __asm__ volatile("hlt");
 
-            // Drive the display compositor from the shell thread
-            // since the boot thread's idle loop isn't running.
-            flush_display();
         }
     }
 
@@ -71,11 +54,6 @@ i32 ConsoleNode::write(u64 offset [[maybe_unused]], usize size, const void* buff
     // Also mirror to serial for debugging
     for (usize i = 0; i < size; i++) {
         hal::serial_write(buf[i]);
-    }
-
-    // Forward to terminal window for display in QEMU graphical output
-    if (acos::display::g_terminal_window) {
-        acos::display::g_terminal_window->put_string(buf, size);
     }
 
     return static_cast<i32>(size);

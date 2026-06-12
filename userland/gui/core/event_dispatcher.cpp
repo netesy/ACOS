@@ -1,3 +1,5 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include "event_dispatcher.h"
 #include "context.h"
 #include "../widget.h"

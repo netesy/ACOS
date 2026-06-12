@@ -1,3 +1,5 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include "session_manager.h"
 #include "desktop_shell.h"
 #include <kernel/memory/heap.h>

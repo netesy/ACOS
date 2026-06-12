@@ -1,4 +1,6 @@
-#include "window.h"
+#include <acos/process.h>
+#include <acos/runtime.h>
+#include <services/display/window.h>
 
 namespace acos::display {
 

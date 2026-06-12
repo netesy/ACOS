@@ -1,3 +1,5 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include "notification_center.h"
 #include <userland/gui/theme.h>
 #include <userland/gui/text.h>

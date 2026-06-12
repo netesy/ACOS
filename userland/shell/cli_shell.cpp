@@ -1,3 +1,5 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include "cli_shell.h"
 #include <kernel/syscall/syscall.h>
 #include <kernel/vfs/vfs.h>
@@ -15,7 +17,7 @@ CLIShell::CLIShell() : m_running(true) {
 void CLIShell::run() {
     char input_buffer[1024];
 
-    acos::hal::serial_print("CLIShell: REPL loop starting...\n");
+    acos::process::log("CLIShell: REPL loop starting...\n");
     acos::syscall::syscall_dispatch(static_cast<u64>(acos::syscall::SyscallNum::FileWrite), m_console_fd, reinterpret_cast<u64>("ACOS CLI Shell v1.0\n"), 20, 0, 0);
 
     while (m_running) {

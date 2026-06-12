@@ -1,12 +1,14 @@
-#include "terminal_window.h"
-#include "display_server.h"
-#include "display_protocol.h"
-#include "window.h"
-#include "surface_manager.h"
-#include <kernel/graphics/font_manager.h>
-#include <kernel/graphics/font.h>
-#include <kernel/memory/heap.h>
-#include <kernel/hal/serial.h>
+#include <acos/process.h>
+#include <acos/runtime.h>
+#include <services/display/terminal_window.h>
+#include <services/display/display_server.h>
+#include <services/display/display_protocol.h>
+#include <services/display/window.h>
+#include <services/display/surface_manager.h>
+#include <acos/graphics.h>
+#include <acos/graphics.h>
+#include <acos/process.h>
+#include <acos/process.h>
 #include <libs/runtime/include/acos/runtime.h>
 
 namespace acos::display {

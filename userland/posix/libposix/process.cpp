@@ -1,8 +1,10 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include <unistd.h>
 #include <sys/wait.h>
 #include <errno.h>
-#include <kernel/scheduler/scheduler.h>
-#include <kernel/scheduler/process.h>
+#include <acos/process.h>
+#include <acos/process.h>
 
 extern "C" {
 

@@ -1,3 +1,5 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include "shortcut_widget.h"
 #include <userland/gui/core/render_widgets.h>
 #include <userland/gui/core/context.h>

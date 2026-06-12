@@ -1,3 +1,5 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include "relocation.h"
 #include "elf_dynamic.h"
 

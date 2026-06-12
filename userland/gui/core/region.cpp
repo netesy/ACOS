@@ -1,3 +1,5 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include "region.h"
 #include <kernel/memory/heap.h>
 

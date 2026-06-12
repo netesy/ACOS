@@ -1,3 +1,5 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include <errno.h>
 #include <acos/types.h>
 

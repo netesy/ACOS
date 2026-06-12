@@ -1,4 +1,6 @@
-#include "audio_mixer.h"
+#include <acos/process.h>
+#include <acos/runtime.h>
+#include <services/audio/audio_mixer.h>
 
 namespace acos::audio {
 

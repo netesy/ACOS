@@ -1,3 +1,5 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include "link.h"
 #include "core/render_object.h"
 #include "core/context.h"

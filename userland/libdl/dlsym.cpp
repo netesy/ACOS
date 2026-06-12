@@ -1,3 +1,5 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include "include/dlfcn.h"
 #include <userland/loader/symbol_resolver.h>
 

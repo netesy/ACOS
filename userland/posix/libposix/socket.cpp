@@ -1,7 +1,9 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include <sys/socket.h>
 #include <errno.h>
 #include <kernel/net/socket.h>
-#include <kernel/scheduler/scheduler.h>
+#include <acos/process.h>
 
 extern "C" {
 

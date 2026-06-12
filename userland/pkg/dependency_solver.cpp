@@ -1,3 +1,5 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include "dependency_solver.h"
 #include <libs/runtime/include/acos/runtime.h>
 

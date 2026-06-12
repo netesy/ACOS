@@ -13,13 +13,9 @@ KERNEL_CFLAGS = -target x86_64-unknown-elf -nostdinc++ -fno-pic -ffreestanding -
 KERNEL_ASFLAGS = -target x86_64-unknown-elf
 KERNEL_LDFLAGS = -target x86_64-unknown-elf -fuse-ld=lld -nostdlib -Wl,-T,linker.ld -Wl,--no-undefined
 
-# Userland PIE Build Flags
-USER_CFLAGS = $(KERNEL_CFLAGS) -fPIE
-USER_LDFLAGS = -pie -nostdlib
-
-# Shared Library Build Flags
-SHARED_CFLAGS = $(KERNEL_CFLAGS) -fPIC
-SHARED_LDFLAGS = -shared -nostdlib
+# Userland Build Flags
+USER_CFLAGS = -target x86_64-unknown-elf -nostdinc++ -ffreestanding -fno-stack-protector -fno-exceptions -fno-rtti -mno-red-zone -I. -Ilibs/runtime/include -Iuserland/libacos/include -std=c++20 -Wall -Wextra -Werror
+USER_LDFLAGS = -target x86_64-unknown-elf -fuse-ld=lld -nostdlib -Wl,-static
 
 # Files
 BOOT_EFI   = acos_boot.efi
@@ -28,7 +24,6 @@ DISK_IMG   = acos.img
 BUILD_DIR  = build
 DIST_DIR   = dist
 QEMU       ?= qemu-system-x86_64
-QEMU_FLAGS ?= -m 512M -drive format=raw,file=$(DISK_IMG) -vga std -display sdl -serial stdio
 QEMU_FIRMWARE ?= $(firstword $(wildcard OVMF.fd /usr/share/ovmf/OVMF.fd /usr/share/qemu/OVMF.fd /usr/share/OVMF/OVMF_CODE.fd /usr/share/OVMF/OVMF_CODE_4M.fd))
 MKFS_VFAT  ?= $(firstword $(shell command -v mkfs.vfat 2>/dev/null) $(wildcard /usr/sbin/mkfs.vfat /sbin/mkfs.vfat))
 MMD        ?= $(shell command -v mmd 2>/dev/null)
@@ -53,30 +48,10 @@ D_AUDIO_DIR = drivers/audio
 SMP_DIR     = $(KERNEL_DIR)/smp
 ACPI_DIR    = $(ARCH_DIR)/acpi
 ARCH_SMP_DIR = $(ARCH_DIR)/smp
-GUI_DIR     = userland/gui
-SHELL_DIR   = userland/shell
-POSIX_DIR   = userland/posix/libposix
-PKG_DIR     = userland/pkg
-RTLD_DIR    = userland/loader
-LIBDL_DIR   = userland/libdl
-COMPAT_LINUX_DIR = compat/linux
-LIBC_DIR    = libc
-APPS_DIR    = apps
 
-# Sources
-BOOT_SRCS = $(BOOT_DIR)/main.cpp
-
+# Kernel Sources
 KERNEL_SRCS = \
 	libs/runtime/string.cpp \
-	$(NET_DIR)/net_device.cpp \
-	$(NET_DIR)/ethernet.cpp \
-	$(NET_DIR)/arp.cpp \
-	$(NET_DIR)/ipv4.cpp \
-	$(NET_DIR)/icmp.cpp \
-	$(NET_DIR)/udp.cpp \
-	$(NET_DIR)/tcp.cpp \
-	$(NET_DIR)/socket.cpp \
-	$(DRIVERS_DIR)/net/virtio_net.cpp \
 	$(STORAGE_DIR)/ahci.cpp \
 	$(STORAGE_DIR)/partition.cpp \
 	$(STORAGE_DIR)/filesystem_manager.cpp \
@@ -87,6 +62,7 @@ KERNEL_SRCS = \
 	$(LOADER_DIR)/elf_loader.cpp \
 	$(LOADER_DIR)/elf.cpp \
 	$(SERVICE_DIR)/service_manager.cpp \
+	$(SERVICE_DIR)/service_registry.cpp \
 	$(KERNEL_DIR)/device/driver_manager.cpp \
 	$(SYSCALL_DIR)/syscall.cpp \
 	$(KERNEL_DIR)/capabilities/capability.cpp \
@@ -117,125 +93,11 @@ KERNEL_SRCS = \
 	$(GRAPHICS_DIR)/surface.cpp \
 	$(GRAPHICS_DIR)/font.cpp \
 	$(GRAPHICS_DIR)/font_manager.cpp \
-	$(DISPLAY_DIR)/window.cpp \
-	$(DISPLAY_DIR)/surface_manager.cpp \
-	$(DISPLAY_DIR)/input_router.cpp \
-	$(DISPLAY_DIR)/compositor.cpp \
-	$(DISPLAY_DIR)/display_server.cpp \
-	$(DISPLAY_DIR)/terminal_window.cpp \
-	$(GUI_DIR)/widget.cpp \
-	$(GUI_DIR)/theme.cpp \
-	$(GUI_DIR)/layout.cpp \
-	$(GUI_DIR)/button.cpp \
-	$(GUI_DIR)/text.cpp \
-	$(GUI_DIR)/window_widget.cpp \
-	$(GUI_DIR)/textbox.cpp \
-	$(GUI_DIR)/listview.cpp \
-	$(GUI_DIR)/progressbar.cpp \
-	$(GUI_DIR)/checkbox.cpp \
-	$(GUI_DIR)/slider.cpp \
-	$(GUI_DIR)/panel.cpp \
-	$(GUI_DIR)/core/render_widgets.cpp \
-	$(GUI_DIR)/core/render_flex.cpp \
-	$(GUI_DIR)/core/flex.cpp \
-	$(GUI_DIR)/core/context.cpp \
-	$(GUI_DIR)/core/event_dispatcher.cpp \
-	$(GUI_DIR)/core/focus_manager.cpp \
-	$(GUI_DIR)/core/animation.cpp \
-	$(GUI_DIR)/core/ref.cpp \
-	$(GUI_DIR)/core/region.cpp \
-	$(GUI_DIR)/core/style.cpp \
-	$(GUI_DIR)/core/render_object.cpp \
-	$(GUI_DIR)/icon.cpp \
-	$(GUI_DIR)/radiobutton.cpp \
-	$(GUI_DIR)/switch.cpp \
-	$(GUI_DIR)/textarea.cpp \
-	$(GUI_DIR)/scrollbar.cpp \
-	$(GUI_DIR)/scrollview.cpp \
-	$(GUI_DIR)/tabwidget.cpp \
-	$(GUI_DIR)/combobox.cpp \
-	$(GUI_DIR)/messagebox.cpp \
-	$(GUI_DIR)/menu.cpp \
-	$(GUI_DIR)/spinbox.cpp \
-	$(GUI_DIR)/separator.cpp \
-	$(GUI_DIR)/statusbar.cpp \
-	$(GUI_DIR)/menubar.cpp \
-	$(GUI_DIR)/tooltip.cpp \
-	$(GUI_DIR)/imagewidget.cpp \
-	$(GUI_DIR)/treeview.cpp \
-	$(GUI_DIR)/gridview.cpp \
-	$(GUI_DIR)/stackwidget.cpp \
-	$(GUI_DIR)/splitter.cpp \
-	$(GUI_DIR)/canvas.cpp \
-	$(GUI_DIR)/contextmenu.cpp \
-	$(GUI_DIR)/toolbar.cpp \
-	$(GUI_DIR)/groupbox.cpp \
-	$(GUI_DIR)/dialog.cpp \
-	$(GUI_DIR)/link.cpp \
-	$(GUI_DIR)/toast.cpp \
-	$(GUI_DIR)/colorpicker.cpp \
-	$(GUI_DIR)/calendar.cpp \
-	$(GUI_DIR)/graph.cpp \
-	$(GUI_DIR)/badge.cpp \
-	$(GUI_DIR)/menuitem.cpp \
-	$(GUI_DIR)/toolbutton.cpp \
-	$(SHELL_DIR)/taskbar.cpp \
-	$(SHELL_DIR)/launcher.cpp \
-	$(SHELL_DIR)/notification_center.cpp \
-	$(SHELL_DIR)/desktop_shell.cpp \
-	$(SHELL_DIR)/session_manager.cpp \
-	$(SHELL_DIR)/cli_shell.cpp \
-	$(SHELL_DIR)/volume_indicator.cpp \
-	$(SHELL_DIR)/shortcut_manager.cpp \
-	$(SHELL_DIR)/shortcut_widget.cpp \
-	$(SHELL_DIR)/telemetry_widgets.cpp \
 	$(KERNEL_DIR)/input/input_manager.cpp \
-	$(APPS_DIR)/terminal/terminal.cpp \
-	$(APPS_DIR)/file_manager/file_manager.cpp \
-	$(APPS_DIR)/settings/settings.cpp \
-	$(APPS_DIR)/settings/audio_settings.cpp \
-	$(APPS_DIR)/system_monitor/system_monitor.cpp \
 	$(K_AUDIO_DIR)/audio_manager.cpp \
 	$(K_AUDIO_DIR)/audio_device.cpp \
 	$(D_AUDIO_DIR)/virtio_sound/virtio_sound.cpp \
 	$(D_AUDIO_DIR)/hda/hda.cpp \
-	$(AUDIO_DIR)/audio_server.cpp \
-	$(AUDIO_DIR)/audio_stream.cpp \
-	$(AUDIO_DIR)/audio_mixer.cpp \
-	$(AUDIO_DIR)/audio_session.cpp \
-	$(POSIX_DIR)/posix.cpp \
-	$(POSIX_DIR)/file.cpp \
-	$(POSIX_DIR)/process.cpp \
-	$(POSIX_DIR)/socket.cpp \
-	$(POSIX_DIR)/thread.cpp \
-	$(POSIX_DIR)/signal.cpp \
-	$(POSIX_DIR)/time.cpp \
-	$(LIBC_DIR)/stdio/stdio.cpp \
-	$(LIBC_DIR)/stdlib/stdlib.cpp \
-	$(PKG_DIR)/pkg.cpp \
-	$(PKG_DIR)/package_database.cpp \
-	$(PKG_DIR)/repository.cpp \
-	$(PKG_DIR)/dependency_solver.cpp \
-	$(PKG_DIR)/package_manager.cpp \
-	$(PKG_DIR)/signature.cpp \
-	$(RTLD_DIR)/rtld.cpp \
-	$(RTLD_DIR)/library_manager.cpp \
-	$(RTLD_DIR)/symbol_resolver.cpp \
-	$(RTLD_DIR)/relocation.cpp \
-	$(RTLD_DIR)/loader_cache.cpp \
-	$(LIBDL_DIR)/dlopen.cpp \
-	$(LIBDL_DIR)/dlsym.cpp \
-	$(LIBDL_DIR)/dlclose.cpp \
-	$(LIBDL_DIR)/dlerror.cpp \
-	$(COMPAT_LINUX_DIR)/linux_loader.cpp \
-	$(COMPAT_LINUX_DIR)/linux_process.cpp \
-	$(COMPAT_LINUX_DIR)/linux_syscalls.cpp \
-	$(COMPAT_LINUX_DIR)/linux_signal.cpp \
-	$(COMPAT_LINUX_DIR)/linux_thread.cpp \
-	$(COMPAT_LINUX_DIR)/linux_fs.cpp \
-	$(COMPAT_LINUX_DIR)/linux_socket.cpp \
-	$(COMPAT_LINUX_DIR)/linux_errno.cpp \
-	$(COMPAT_LINUX_DIR)/abi_translation.cpp \
 	$(SMP_DIR)/smp.cpp \
 	$(SMP_DIR)/cpu.cpp \
 	$(SMP_DIR)/ipi.cpp \
@@ -249,9 +111,64 @@ KERNEL_ASM_SRCS = \
 	$(ARCH_DIR)/syscall.S \
 	$(ARCH_DIR)/boot.S
 
-BOOT_OBJS   = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(BOOT_SRCS))
+# Userland Library (libacos)
+LIBACOS_SRCS = \
+	userland/libacos/syscall.cpp \
+	userland/libacos/process.cpp \
+	userland/libacos/memory.cpp \
+	userland/libacos/ipc.cpp \
+	libs/runtime/string.cpp
+
+LIBACOS_OBJS = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(LIBACOS_SRCS))
+
+# Services
+DISPLAY_SERVER_SRCS = \
+	services/display/main.cpp \
+	services/display/display_server.cpp \
+	services/display/compositor.cpp \
+	services/display/surface_manager.cpp \
+	services/display/input_router.cpp \
+	services/display/window.cpp \
+	services/display/terminal_window.cpp
+
+AUDIO_SERVER_SRCS = \
+	services/audio/main.cpp \
+	services/audio/audio_server.cpp \
+	services/audio/audio_stream.cpp \
+	services/audio/audio_mixer.cpp \
+	services/audio/audio_session.cpp
+
+DESKTOP_SHELL_SRCS = \
+	userland/shell/desktop_shell.cpp \
+	userland/shell/taskbar.cpp \
+	userland/shell/launcher.cpp \
+	userland/shell/notification_center.cpp \
+	userland/shell/session_manager.cpp \
+	userland/shell/volume_indicator.cpp \
+	userland/shell/shortcut_manager.cpp \
+	userland/shell/shortcut_widget.cpp \
+	userland/shell/telemetry_widgets.cpp \
+	userland/shell/desktop_main.cpp
+
+CLI_SHELL_SRCS = userland/shell/cli_shell.cpp userland/shell/cli_main.cpp
+
+# Objects
+BOOT_OBJS   = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(BOOT_DIR)/main.cpp)
 KERNEL_OBJS = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(KERNEL_SRCS)) \
               $(patsubst %.S, $(BUILD_DIR)/%.o, $(KERNEL_ASM_SRCS))
+
+# Binaries
+DISPLAY_SERVER_BIN = $(DIST_DIR)/bin/display_server.elf
+AUDIO_SERVER_BIN   = $(DIST_DIR)/bin/audio_server.elf
+DESKTOP_SHELL_BIN  = $(DIST_DIR)/bin/desktop_shell.elf
+CLI_SHELL_BIN      = $(DIST_DIR)/bin/cli_shell.elf
+
+DISPLAY_SERVER_OBJS = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(DISPLAY_SERVER_SRCS))
+AUDIO_SERVER_OBJS   = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(AUDIO_SERVER_SRCS))
+DESKTOP_SHELL_OBJS  = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(DESKTOP_SHELL_SRCS))
+CLI_SHELL_OBJS      = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(CLI_SHELL_SRCS))
+
+SERVICES_BINS = $(DISPLAY_SERVER_BIN) $(AUDIO_SERVER_BIN) $(DESKTOP_SHELL_BIN) $(CLI_SHELL_BIN)
 
 # ----------------------------------------------------
 # Build Targets
@@ -269,11 +186,28 @@ $(KERNEL_ELF): $(KERNEL_OBJS)
 	@mkdir -p $(@D)
 	ld -T linker.ld -o $@ $^
 
+# Userland linking rules
+$(DISPLAY_SERVER_BIN): $(BUILD_DIR)/userland/libacos/crt0.o $(DISPLAY_SERVER_OBJS) $(LIBACOS_OBJS)
+	@mkdir -p $(@D)
+	$(LD) -o $@ $^
+
+$(AUDIO_SERVER_BIN): $(BUILD_DIR)/userland/libacos/crt0.o $(AUDIO_SERVER_OBJS) $(LIBACOS_OBJS)
+	@mkdir -p $(@D)
+	$(LD) -o $@ $^
+
+$(DESKTOP_SHELL_BIN): $(BUILD_DIR)/userland/libacos/crt0.o $(DESKTOP_SHELL_OBJS) $(LIBACOS_OBJS)
+	@mkdir -p $(@D)
+	$(LD) -o $@ $^
+
+$(CLI_SHELL_BIN): $(BUILD_DIR)/userland/libacos/crt0.o $(CLI_SHELL_OBJS) $(LIBACOS_OBJS)
+	@mkdir -p $(@D)
+	$(LD) -o $@ $^
+
 # ----------------------------------------------------
 # Disk Image Creation
 # ----------------------------------------------------
 
-$(DISK_IMG): $(BOOT_EFI) $(KERNEL_ELF)
+$(DISK_IMG): $(BOOT_EFI) $(KERNEL_ELF) $(SERVICES_BINS)
 	@echo "[IMG] Creating FAT32 disk image..."
 	dd if=/dev/zero of=$(DISK_IMG) bs=1M count=64
 	@if [ -n "$(MKFS_VFAT)" ]; then \
@@ -286,6 +220,10 @@ $(DISK_IMG): $(BOOT_EFI) $(KERNEL_ELF)
 		$(MMD) -i $(DISK_IMG) ::/EFI/BOOT; \
 		$(MCOPY) -i $(DISK_IMG) $(BOOT_EFI) ::/EFI/BOOT/BOOTX64.EFI; \
 		$(MCOPY) -i $(DISK_IMG) $(KERNEL_ELF) ::/kernel.elf; \
+		$(MMD) -i $(DISK_IMG) ::/bin; \
+		for bin in $(SERVICES_BINS); do \
+			$(MCOPY) -i $(DISK_IMG) $$bin ::/bin/$$(basename $$bin); \
+		done \
 	else \
 		echo "[IMG] Warning: mtools and mkfs.vfat are required to populate the FAT32 image."; \
 	fi
@@ -295,9 +233,33 @@ $(DISK_IMG): $(BOOT_EFI) $(KERNEL_ELF)
 # Compilation Rules
 # ----------------------------------------------------
 
-$(BUILD_DIR)/%.o: %.cpp
+$(BUILD_DIR)/kernel/%.o: kernel/%.cpp
 	@mkdir -p $(@D)
 	$(CXX) $(KERNEL_CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/drivers/%.o: drivers/%.cpp
+	@mkdir -p $(@D)
+	$(CXX) $(KERNEL_CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/libs/%.o: libs/%.cpp
+	@mkdir -p $(@D)
+	$(CXX) $(KERNEL_CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/userland/libacos/%.o: userland/libacos/%.cpp
+	@mkdir -p $(@D)
+	$(CXX) $(USER_CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/userland/libacos/%.o: userland/libacos/%.S
+	@mkdir -p $(@D)
+	$(AS) $(KERNEL_ASFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/services/%.o: services/%.cpp
+	@mkdir -p $(@D)
+	$(CXX) $(USER_CFLAGS) -Iservices/display/include -Iservices/audio/include -c $< -o $@
+
+$(BUILD_DIR)/userland/shell/%.o: userland/shell/%.cpp
+	@mkdir -p $(@D)
+	$(CXX) $(USER_CFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/%.o: %.S
 	@mkdir -p $(@D)
@@ -311,24 +273,19 @@ $(BUILD_DIR)/$(BOOT_DIR)/main.o: $(BOOT_DIR)/main.cpp
 # Run
 # ----------------------------------------------------
 
-dist: $(BOOT_EFI) $(KERNEL_ELF)
+dist: $(BOOT_EFI) $(KERNEL_ELF) $(SERVICES_BINS)
 	mkdir -p $(DIST_DIR)/EFI/BOOT
 	cp $(BOOT_EFI) $(DIST_DIR)/EFI/BOOT/BOOTX64.EFI
 	cp $(KERNEL_ELF) $(DIST_DIR)/kernel.elf
+	mkdir -p $(DIST_DIR)/bin
+	for bin in $(SERVICES_BINS); do \
+		cp $$bin $(DIST_DIR)/bin/; \
+	done
 
-# Desktop mode (GUI): SDL display with terminal window visible.
-# Keyboard input goes to the SDL window's emulated devices.
-# Serial output is mirrored to the terminal for debugging.
 run: dist
 	@if command -v $(QEMU) >/dev/null 2>&1; then \
 		if [ -n "$(QEMU_FIRMWARE)" ]; then \
-			if [ -d /mnt/wslg ]; then \
-				export DISPLAY=:0; \
-				export WAYLAND_DISPLAY=wayland-0; \
-				export XDG_RUNTIME_DIR=/mnt/wslg/runtime-dir; \
-				echo "[DESKTOP] WSLg detected: DISPLAY=$$DISPLAY WAYLAND_DISPLAY=$$WAYLAND_DISPLAY"; \
-			fi; \
-			echo "[DESKTOP] Launching ACOS in GUI mode..."; \
+			echo "[DESKTOP] Launching ACOS..."; \
 			$(QEMU) -m 512M -drive file=fat:rw:$(DIST_DIR),format=raw -vga std -display sdl -serial stdio -bios "$(QEMU_FIRMWARE)"; \
 		else \
 			echo "[DESKTOP] Warning: OVMF firmware not found; cannot launch UEFI VM."; \
@@ -339,31 +296,8 @@ run: dist
 		exit 1; \
 	fi
 
-# Server mode (CLI): no SDL window, all I/O through terminal.
-# Keyboard input goes directly to serial → shell.
-# Use this for CLI-only interaction or when SDL steals focus.
-run-s: dist
-	@if command -v $(QEMU) >/dev/null 2>&1; then \
-		if [ -n "$(QEMU_FIRMWARE)" ]; then \
-			echo "[SERVER] Launching ACOS in CLI mode (no GUI)..."; \
-			$(QEMU) -m 512M -drive file=fat:rw:$(DIST_DIR),format=raw -nographic -bios "$(QEMU_FIRMWARE)"; \
-		else \
-			echo "[SERVER] Warning: OVMF firmware not found."; \
-			exit 1; \
-		fi; \
-	else \
-		echo "[SERVER] Warning: $(QEMU) not found."; \
-		exit 1; \
-	fi
-
-run-win: $(DISK_IMG)
-	qemu-system-x86_64.exe \
-		-L "C:/Program Files/qemu" \
-		-drive if=pflash,format=raw,readonly=on,file="C:\Program Files\qemu\share\edk2-x86_64-code.fd" \
-		-drive format=raw,file=$(DISK_IMG)
-
 clean:
 	rm -f $(BOOT_EFI) $(KERNEL_ELF) $(DISK_IMG)
 	rm -rf $(BUILD_DIR) $(DIST_DIR)
 
-.PHONY: all image run run-s run-win clean
+.PHONY: all image run clean

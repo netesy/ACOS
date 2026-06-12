@@ -1,3 +1,5 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include "layout.h"
 
 namespace acos::gui::widgets {

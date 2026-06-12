@@ -1,6 +1,9 @@
 #include <kernel/syscall/syscall.h>
 #include <kernel/scheduler/scheduler.h>
 #include <kernel/scheduler/process.h>
+#include <kernel/services/service_registry.h>
+#include <kernel/graphics/surface.h>
+#include <kernel/graphics/graphics_manager.h>
 #include <kernel/ipc/channel.h>
 #include <kernel/ipc/notification.h>
 #include <kernel/vfs/file.h>
@@ -265,6 +268,49 @@ extern "C" u64 syscall_dispatch(u64 num, u64 arg1, u64 arg2, u64 arg3, u64 arg4,
             usize max_entries = arg3;
             if (!current) return static_cast<u64>(-1);
             return static_cast<u64>(vfs::VFS::read_dir(path, entries, max_entries));
+        }
+
+        case SyscallNum::ResourceLocate: {
+            const char* name = reinterpret_cast<const char*>(arg1);
+            if (!current || !name) return 0;
+            ipc::Channel* channel = services::locate_service(name);
+            if (!channel) return 0;
+
+            return current->register_channel(channel);
+        }
+
+        case SyscallNum::ResourceRegister: {
+            const char* name = reinterpret_cast<const char*>(arg1);
+            u64 handle = arg2;
+            if (!current || !name) return kErrInvalid;
+            ipc::Channel* channel = current->get_channel(handle);
+            if (!channel) return kErrInvalid;
+
+            if (services::register_service(name, channel, current->id)) {
+                return 0;
+            }
+            return kErrInvalid;
+        }
+
+        case SyscallNum::GraphicsSurfaceCreate: {
+            u32 width = static_cast<u32>(arg1);
+            u32 height = static_cast<u32>(arg2);
+            if (!current) return 0;
+            auto* surface = new graphics::Surface(width, height);
+            return current->register_resource(scheduler::ResourceKind::GraphicsSurface, surface, scheduler::ResourceRights::Read | scheduler::ResourceRights::Write | scheduler::ResourceRights::Transfer);
+        }
+
+        case SyscallNum::GraphicsGetFramebuffer: {
+            if (!current) return 0;
+            auto* display = graphics::GraphicsManager::primary_display();
+            if (!display) return 0;
+            auto* fb = display->get_framebuffer();
+            if (!fb) return 0;
+            
+            // Map the physical framebuffer into the process's address space
+            // For now, return the physical address and let the loader/VMM handle it
+            // In a real microkernel, we'd map it and return the virtual address.
+            return fb->base();
         }
 
         default:

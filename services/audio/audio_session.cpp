@@ -1,4 +1,6 @@
-#include "audio_session.h"
+#include <acos/process.h>
+#include <acos/runtime.h>
+#include <services/audio/audio_session.h>
 
 namespace acos::audio {
 

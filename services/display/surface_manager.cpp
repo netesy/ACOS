@@ -1,5 +1,7 @@
-#include "surface_manager.h"
-#include <kernel/memory/heap.h>
+#include <acos/process.h>
+#include <acos/runtime.h>
+#include <services/display/surface_manager.h>
+#include <acos/process.h>
 
 namespace acos::display {
 

@@ -1,3 +1,5 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include "../button.h"
 #include "../text.h"
 #include "../textbox.h"

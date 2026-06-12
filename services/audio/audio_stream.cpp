@@ -1,4 +1,6 @@
-#include "audio_stream.h"
+#include <acos/process.h>
+#include <acos/runtime.h>
+#include <services/audio/audio_stream.h>
 
 namespace acos::audio {
 

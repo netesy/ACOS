@@ -1,3 +1,5 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include "rtld.h"
 #include "library_manager.h"
 #include "symbol_resolver.h"

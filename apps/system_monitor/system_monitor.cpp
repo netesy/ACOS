@@ -1,5 +1,7 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include "system_monitor.h"
-#include <kernel/scheduler/scheduler.h>
+#include <acos/process.h>
 #include <kernel/memory/pmm.h>
 #include <userland/gui/core/context.h>
 

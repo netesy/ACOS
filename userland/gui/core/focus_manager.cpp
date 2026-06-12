@@ -1,3 +1,5 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include "focus_manager.h"
 #include "../widget.h"
 

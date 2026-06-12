@@ -1,6 +1,8 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include <pthread.h>
 #include <errno.h>
-#include <kernel/scheduler/scheduler.h>
+#include <acos/process.h>
 
 extern "C" {
 
@@ -53,7 +55,6 @@ void pthread_exit(void *retval) {
     }
     acos::scheduler::schedule();
     while (true) {
-        __asm__ volatile("hlt");
     }
 }
 

@@ -1,3 +1,5 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include "desktop_shell.h"
 #include <userland/gui/theme.h>
 #include <userland/gui/core/context.h>
@@ -107,7 +109,7 @@ void DesktopShell::run() {}
 //   - Update clock/status bar periodically
 //   - Handle application launch requests
 void DesktopShell::run_loop() {
-    acos::hal::serial_print("Desktop Shell: run_loop started on shell thread\n");
+    acos::process::log("Desktop Shell: run_loop started on shell thread\n");
 
     while (true) {
         // Send damage notification to keep compositor active
@@ -120,7 +122,6 @@ void DesktopShell::run_loop() {
 
         // Yield CPU — will be replaced by event-driven blocking
         // when input routing is implemented
-        __asm__ volatile("hlt");
     }
 }
 

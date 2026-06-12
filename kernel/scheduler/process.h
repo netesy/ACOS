@@ -18,6 +18,8 @@ enum class ResourceKind : u32 {
     Channel,
     Notification,
     SharedRegion,
+    GraphicsSurface,
+    GraphicsWindow,
 };
 
 namespace ResourceRights {

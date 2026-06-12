@@ -1,3 +1,5 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>

@@ -1,3 +1,5 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include "panel.h"
 #include "core/render_object.h"
 #include "core/render_widgets.h"

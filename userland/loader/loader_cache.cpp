@@ -1,3 +1,5 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include "loader_cache.h"
 #include <libs/runtime/include/acos/runtime.h>
 

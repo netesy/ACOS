@@ -1,3 +1,5 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include "audio_settings.h"
 #include <userland/gui/panel.h>
 #include <userland/gui/theme.h>

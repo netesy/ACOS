@@ -1,6 +1,8 @@
-#include "audio_server.h"
+#include <acos/process.h>
+#include <acos/runtime.h>
+#include <services/audio/audio_server.h>
 #include <kernel/audio/audio_manager.h>
-#include <kernel/memory/heap.h>
+#include <acos/process.h>
 #include <libs/runtime/include/acos/runtime.h>
 
 namespace acos::audio {

@@ -1,3 +1,5 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include <userland/pkg/package_manager.h>
 #include <libc/stdio/stdio.cpp>
 

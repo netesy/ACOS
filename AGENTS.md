@@ -64,7 +64,7 @@ Clang or GCC
 
 Build System:
 
-CMake
+Makefile
 
 Object Format:
 

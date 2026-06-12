@@ -1,6 +1,8 @@
+#include <acos/process.h>
+#include <acos/runtime.h>
 #include <signal.h>
 #include <errno.h>
-#include <kernel/scheduler/scheduler.h>
+#include <acos/process.h>
 
 extern "C" {
 

@@ -1,6 +1,6 @@
 #pragma once
 #include <acos/types.h>
-#include <kernel/graphics/types.h>
+#include <acos/types.h>
 
 namespace acos::gui {
 

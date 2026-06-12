@@ -1,5 +1,5 @@
 #pragma once
-#include <kernel/graphics/renderer.h>
+#include <acos/graphics.h>
 #include <userland/gui/core/context.h>
 #include <userland/gui/text.h>
 #include "shortcut_manager.h"
