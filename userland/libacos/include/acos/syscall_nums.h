@@ -62,14 +62,4 @@ enum class SyscallNum : u64 {
     ResourceRegister = 501
 };
 
-struct ResourceInfo {
-    u64 type;
-    u64 id;
-    u64 rights;
-    u64 owner;
-    u64 state;
-};
-
-extern "C" u64 syscall_dispatch(u64 num, u64 arg1, u64 arg2, u64 arg3, u64 arg4, u64 arg5);
-
 } // namespace acos::sys

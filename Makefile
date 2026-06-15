@@ -5,16 +5,16 @@ AS = clang
 LD = ld
 
 # UEFI Target
-UEFI_CFLAGS = -target x86_64-unknown-windows-coff -ffreestanding -fcf-protection=none -fno-stack-protector -fshort-wchar -mno-red-zone -I. -Ilibs/runtime/include
+UEFI_CFLAGS = -target x86_64-unknown-windows-coff -ffreestanding -fcf-protection=none -fno-stack-protector -fshort-wchar -mno-red-zone -I. -Ilibs/runtime/include -Ilibs/abi/include
 UEFI_LDFLAGS = -m i386pep --subsystem 10 --entry efi_main
 
 # Kernel Target
-KERNEL_CFLAGS = -target x86_64-unknown-elf -nostdinc++ -fno-pic -ffreestanding -fcf-protection=none -fno-stack-protector -fno-exceptions -fno-rtti -mno-red-zone -I. -Ilibs/runtime/include -Iuserland/posix/include -std=c++20 -Wall -Wextra -Werror
+KERNEL_CFLAGS = -target x86_64-unknown-elf -nostdinc++ -fno-pic -ffreestanding -fcf-protection=none -fno-stack-protector -fno-exceptions -fno-rtti -mno-red-zone -I. -Ilibs/runtime/include -Ilibs/abi/include -Iuserland/posix/include -std=c++20 -Wall -Wextra -Werror
 KERNEL_ASFLAGS = -target x86_64-unknown-elf
 KERNEL_LDFLAGS = -target x86_64-unknown-elf -fuse-ld=lld -nostdlib -Wl,-T,linker.ld -Wl,--no-undefined
 
 # Userland Build Flags
-USER_CFLAGS = -target x86_64-unknown-elf -nostdinc++ -ffreestanding -fno-stack-protector -fno-exceptions -fno-rtti -mno-red-zone -I. -Ilibs/runtime/include -Iuserland/libacos/include -std=c++20 -Wall -Wextra -Werror
+USER_CFLAGS = -target x86_64-unknown-elf -nostdinc++ -ffreestanding -fno-stack-protector -fno-exceptions -fno-rtti -mno-red-zone -I. -Ilibs/runtime/include -Ilibs/abi/include -Iuserland/libacos/include -std=c++20 -Wall -Wextra -Werror
 USER_LDFLAGS = -target x86_64-unknown-elf -fuse-ld=lld -nostdlib -Wl,-static
 
 # Files
@@ -117,7 +117,13 @@ LIBACOS_SRCS = \
 	userland/libacos/process.cpp \
 	userland/libacos/memory.cpp \
 	userland/libacos/ipc.cpp \
-	libs/runtime/string.cpp
+	userland/libacos/graphics.cpp \
+	userland/libacos/vfs.cpp \
+	userland/libacos/framebuffer.cpp \
+	userland/libacos/renderer.cpp \
+	userland/libacos/font.cpp \
+	userland/libacos/font_manager.cpp \
+	userland/libacos/string.cpp
 
 LIBACOS_OBJS = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(LIBACOS_SRCS))
 
@@ -244,6 +250,10 @@ $(BUILD_DIR)/drivers/%.o: drivers/%.cpp
 $(BUILD_DIR)/libs/%.o: libs/%.cpp
 	@mkdir -p $(@D)
 	$(CXX) $(KERNEL_CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/userland/libs/%.o: libs/%.cpp
+	@mkdir -p $(@D)
+	$(CXX) $(USER_CFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/userland/libacos/%.o: userland/libacos/%.cpp
 	@mkdir -p $(@D)

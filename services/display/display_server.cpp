@@ -1,10 +1,7 @@
 #include <acos/process.h>
 #include <acos/runtime.h>
+#include <acos/graphics.h>
 #include <services/display/display_server.h>
-#include <kernel/graphics/graphics_manager.h>
-#include <acos/process.h>
-#include <acos/process.h>
-#include <acos/process.h>
 #include <libs/runtime/include/acos/runtime.h>
 
 namespace acos::display {
@@ -15,13 +12,19 @@ DisplayServer::DisplayServer()
 }
 
 bool DisplayServer::initialize() {
-    acos::graphics::DisplayDevice* display = acos::graphics::GraphicsManager::primary_display();
-    if (!display) return false;
+    acos::graphics::FramebufferInfo fb_info;
+    if (!acos::graphics::get_framebuffer_info(&fb_info)) {
+        return false;
+    }
 
-    acos::graphics::Framebuffer* fb = display->get_framebuffer();
+    void* fb_ptr = acos::graphics::get_framebuffer();
+    if (!fb_ptr) return false;
+
+    acos::graphics::Framebuffer* fb = (acos::graphics::Framebuffer*)acos::memory::malloc(sizeof(acos::graphics::Framebuffer));
     if (!fb) return false;
+    new (fb) acos::graphics::Framebuffer((u64)fb_ptr, fb_info.size, fb_info.width, fb_info.height, fb_info.pitch, fb_info.bpp);
 
-    m_compositor = (Compositor*)acos::memory::kmalloc(sizeof(Compositor));
+    m_compositor = (Compositor*)acos::memory::malloc(sizeof(Compositor));
     if (!m_compositor) return false;
     new (m_compositor) Compositor(fb, &m_surface_manager);
 
@@ -125,7 +128,7 @@ void DisplayServer::handle_request(const acos::ipc::Message& msg) {
             if (m_window_count >= MAX_WINDOWS) break;
 
             WindowId id = next_window_id();
-            Window* win = (Window*)acos::memory::kmalloc(sizeof(Window));
+            Window* win = (Window*)acos::memory::malloc(sizeof(Window));
             if (!win) break;
             new (win) Window(id, msg.sender, req->create_window.x, req->create_window.y,
                              req->create_window.width, req->create_window.height);
@@ -164,7 +167,7 @@ void DisplayServer::handle_display_msg(const DisplayMsg& cmd, u64 sender_pid) {
             if (m_window_count >= MAX_WINDOWS) break;
 
             WindowId id = next_window_id();
-            Window* win = (Window*)acos::memory::kmalloc(sizeof(Window));
+            Window* win = (Window*)acos::memory::malloc(sizeof(Window));
             if (!win) break;
             new (win) Window(id, sender_pid,
                              cmd.create_window.x, cmd.create_window.y,

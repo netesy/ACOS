@@ -1,6 +1,6 @@
 #pragma once
 #include <acos/types.h>
-#include <kernel/ipc/channel.h>
+#include <acos/ipc.h>
 #include "window.h"
 #include "surface_manager.h"
 #include "compositor.h"
@@ -61,10 +61,10 @@ public:
     bool send_command(const DisplayMsg& cmd, u64 sender_pid = 0);
 
     // IPC Channels
-    acos::ipc::Channel* command_channel() { return &m_command_channel; }
-    acos::ipc::Channel* graphics_channel() { return &m_command_channel; }
-    acos::ipc::Channel* window_channel() { return &m_command_channel; }
-    acos::ipc::Channel* surface_channel() { return &m_command_channel; }
+    acos::ipc::Channel& command_channel() { return m_command_channel; }
+    acos::ipc::Channel& graphics_channel() { return m_command_channel; }
+    acos::ipc::Channel& window_channel() { return m_command_channel; }
+    acos::ipc::Channel& surface_channel() { return m_command_channel; }
 
     // Desktop background rendering
     void set_desktop_draw(Compositor::DesktopDrawFn fn);

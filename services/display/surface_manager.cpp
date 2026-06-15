@@ -27,9 +27,9 @@ Surface* SurfaceManager::create_surface(u64 owner_pid, u32 width, u32 height, bo
 
             // Use explicit kernel allocation while this service is linked into the kernel image
             // as per the existing Makefile structure, although it's logically a service.
-            m_surfaces[i].buffer = (u32*)acos::memory::kmalloc(width * height * sizeof(u32));
+            m_surfaces[i].buffer = (u32*)acos::memory::malloc(width * height * sizeof(u32));
             if (double_buffered) {
-                m_surfaces[i].back_buffer = (u32*)acos::memory::kmalloc(width * height * sizeof(u32));
+                m_surfaces[i].back_buffer = (u32*)acos::memory::malloc(width * height * sizeof(u32));
             } else {
                 m_surfaces[i].back_buffer = nullptr;
             }
@@ -44,9 +44,9 @@ Surface* SurfaceManager::create_surface(u64 owner_pid, u32 width, u32 height, bo
 void SurfaceManager::destroy_surface(u64 id) {
     for (usize i = 0; i < MAX_SURFACES; i++) {
         if (m_surfaces[i].id == id) {
-            acos::memory::kfree(m_surfaces[i].buffer);
+            acos::memory::free(m_surfaces[i].buffer);
             if (m_surfaces[i].back_buffer) {
-                acos::memory::kfree(m_surfaces[i].back_buffer);
+                acos::memory::free(m_surfaces[i].back_buffer);
             }
             m_surfaces[i].id = 0;
             m_surface_count--;

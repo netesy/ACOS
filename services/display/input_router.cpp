@@ -1,9 +1,9 @@
 #include <acos/process.h>
 #include <acos/runtime.h>
+#include <acos/input.h>
 #include <services/display/input_router.h>
 #include <acos/ipc.h>
 #include <acos/process.h>
-#include <kernel/input/input_manager.h>
 
 namespace acos::display {
 

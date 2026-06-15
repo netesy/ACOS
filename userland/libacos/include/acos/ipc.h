@@ -1,17 +1,10 @@
 #pragma once
 #include <acos/types.h>
+#include <acos/abi/ipc.h>
 
 namespace acos::ipc {
 
-struct Message {
-    u64 sender;
-    u64 receiver;
-    u32 type;
-    u32 flags;
-    u64 size;
-    void* payload;
-    u64 cap_handle;
-};
+using Message = abi::Message;
 
 class Channel {
 public:
@@ -33,5 +26,11 @@ namespace acos::services {
 
 bool register_service(const char* name, u64 channel_handle);
 u64 locate_service(const char* name);
+
+struct ResourceLocator {
+    static u64 find(const char* name) {
+        return locate_service(name);
+    }
+};
 
 } // namespace acos::services

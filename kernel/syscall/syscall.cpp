@@ -12,7 +12,7 @@
 #include <kernel/loader/process_loader.h>
 #include <libs/runtime/include/acos/runtime.h>
 
-namespace acos::syscall {
+namespace acos::sys {
 
 namespace {
 
@@ -143,6 +143,22 @@ extern "C" u64 syscall_dispatch(u64 num, u64 arg1, u64 arg2, u64 arg3, u64 arg4,
 
         case SyscallNum::ResourceQuery: {
             if (!current || !arg2) return kErrInvalid;
+            if (arg1 == 0) {
+                // Special case: handle 0 queries framebuffer info if called by DS
+                auto* display = graphics::GraphicsManager::primary_display();
+                if (display && display->get_framebuffer()) {
+                    auto* fb = display->get_framebuffer();
+                    struct FBInfo { u64 base, size; u32 w, h, p, bpp; };
+                    FBInfo* info = reinterpret_cast<FBInfo*>(arg2);
+                    info->base = 0xC000000000;
+                    info->size = fb->size();
+                    info->w = fb->width();
+                    info->h = fb->height();
+                    info->p = fb->pitch();
+                    info->bpp = 32; // Assuming 32bpp
+                    return 0;
+                }
+            }
             scheduler::ResourceHandleEntry* entry = current->get_handle(arg1);
             if (!entry) return kErrInvalid;
             ResourceInfo* info = reinterpret_cast<ResourceInfo*>(arg2);
@@ -300,17 +316,54 @@ extern "C" u64 syscall_dispatch(u64 num, u64 arg1, u64 arg2, u64 arg3, u64 arg4,
             return current->register_resource(scheduler::ResourceKind::GraphicsSurface, surface, scheduler::ResourceRights::Read | scheduler::ResourceRights::Write | scheduler::ResourceRights::Transfer);
         }
 
+        case SyscallNum::GraphicsWindowCreate: {
+            // u32 width = static_cast<u32>(arg1);
+            // u32 height = static_cast<u32>(arg2);
+            // const char* title = reinterpret_cast<const char*>(arg3);
+            if (!current) return 0;
+            // For now, Windows are purely user-space constructs in DisplayServer.
+            // But we could track them here for capability management.
+            return current->register_resource(scheduler::ResourceKind::GraphicsWindow, nullptr, scheduler::ResourceRights::Read | scheduler::ResourceRights::Write);
+        }
+
+        case SyscallNum::GraphicsPresent: {
+            u64 handle = arg1;
+            if (!current) return kErrInvalid;
+            // In a capability-based system, this might trigger a compositor update
+            // for the surface associated with the handle.
+            (void)handle;
+            return 0;
+        }
+
         case SyscallNum::GraphicsGetFramebuffer: {
             if (!current) return 0;
             auto* display = graphics::GraphicsManager::primary_display();
             if (!display) return 0;
             auto* fb = display->get_framebuffer();
             if (!fb) return 0;
+
+            // Exclusive access check: Only the Display Server should have access.
+            // For now, we allow the first process that asks for it to be the "Display Server".
+            // In a more mature system, we'd check a "DisplayServer" capability.
+            static u64 display_server_pid = 0;
+            if (display_server_pid == 0) {
+                display_server_pid = current->id;
+            } else if (display_server_pid != current->id) {
+                return 0; // Permission Denied
+            }
             
-            // Map the physical framebuffer into the process's address space
-            // For now, return the physical address and let the loader/VMM handle it
-            // In a real microkernel, we'd map it and return the virtual address.
-            return fb->base();
+            // Map the physical framebuffer into the process's address space.
+            // Fixed virtual address for the framebuffer in the service's address space.
+            u64 fb_virt = 0xC000000000; 
+            u64 fb_phys = fb->base();
+            u64 fb_size = fb->size();
+
+            for (u64 offset = 0; offset < fb_size; offset += 4096) {
+                current->address_space->map(fb_virt + offset, fb_phys + offset, 
+                    memory::PageFlags::Present | memory::PageFlags::Writable | memory::PageFlags::User | memory::PageFlags::NoCache);
+            }
+
+            return fb_virt;
         }
 
         default:
@@ -318,4 +371,4 @@ extern "C" u64 syscall_dispatch(u64 num, u64 arg1, u64 arg2, u64 arg3, u64 arg4,
     }
 }
 
-} // namespace acos::syscall
+} // namespace acos::sys

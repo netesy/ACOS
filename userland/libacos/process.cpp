@@ -6,19 +6,19 @@
 namespace acos::process {
 
 u64 get_pid() {
-    return acos::syscall(3); // SyscallNum::GetPid
+    return syscall(sys::SyscallNum::GetPid);
 }
 
 void exit(int status) {
-    acos::syscall(1, status); // SyscallNum::Exit
+    syscall(sys::SyscallNum::Exit, status);
 }
 
 void log(const char* msg) {
-    acos::syscall(303, 1, (u64)msg, strlen(msg)); // SyscallNum::FileWrite to stdout(1)
+    syscall(sys::SyscallNum::FileWrite, 1, (u64)msg, strlen(msg));
 }
 
 void log(const char* msg, unsigned int len) {
-    acos::syscall(303, 1, (u64)msg, len);
+    syscall(sys::SyscallNum::FileWrite, 1, (u64)msg, len);
 }
 
 } // namespace acos::process

@@ -1,8 +1,8 @@
 #include <acos/process.h>
 #include <acos/runtime.h>
+#include <acos/graphics.h>
 #include <services/display/compositor.h>
 #include <libs/runtime/include/acos/runtime.h>
-#include <kernel/graphics/types.h>
 
 namespace acos::display {
 

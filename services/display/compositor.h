@@ -1,7 +1,7 @@
 #pragma once
 #include <acos/types.h>
-#include <kernel/graphics/framebuffer.h>
-#include <kernel/graphics/renderer.h>
+#include <acos/framebuffer.h>
+#include <acos/renderer.h>
 #include "window.h"
 #include "surface_manager.h"
 

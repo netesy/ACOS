@@ -1,13 +1,10 @@
 #pragma once
 #include <acos/types.h>
+#include <acos/abi/vfs.h>
 
 namespace acos::vfs {
 
-enum class NodeType {
-    File,
-    Directory,
-    Device
-};
+using NodeType = abi::NodeType;
 
 // Directory entry structure
 struct DirectoryEntry {

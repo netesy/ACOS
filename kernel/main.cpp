@@ -17,6 +17,7 @@
 #include <kernel/hal/serial.h>
 #include <kernel/hal/console.h>
 #include <kernel/vfs/vfs.h>
+#include <kernel/vfs/file.h>
 #include <kernel/vfs/dev_fs.h>
 #include <kernel/smp/smp.h>
 #include <kernel/smp/cpu.h>

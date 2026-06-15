@@ -1,7 +1,7 @@
 #include <acos/process.h>
 #include <acos/runtime.h>
 #include "cli_shell.h"
-#include <kernel/syscall/syscall.h>
+#include <acos/syscall.h>
 #include <kernel/vfs/vfs.h>
 #include <kernel/hal/serial.h>
 #include <libs/runtime/include/acos/runtime.h>
@@ -11,14 +11,14 @@ namespace acos::shell {
 CLIShell::CLIShell() : m_running(true) {
     ::memcpy(m_cwd, "/", 2);
     // In userland we'd use syscalls to open /dev/console
-    m_console_fd = static_cast<i32>(acos::syscall::syscall_dispatch(static_cast<u64>(acos::syscall::SyscallNum::FileOpen), reinterpret_cast<u64>("/dev/console"), 0, 0, 0, 0));
+    m_console_fd = static_cast<i32>(syscall(sys::SyscallNum::FileOpen, reinterpret_cast<u64>("/dev/console"), 0, 0, 0, 0));
 }
 
 void CLIShell::run() {
     char input_buffer[1024];
 
     acos::process::log("CLIShell: REPL loop starting...\n");
-    acos::syscall::syscall_dispatch(static_cast<u64>(acos::syscall::SyscallNum::FileWrite), m_console_fd, reinterpret_cast<u64>("ACOS CLI Shell v1.0\n"), 20, 0, 0);
+    syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>("ACOS CLI Shell v1.0\n"), 20, 0, 0);
 
     while (m_running) {
         print_prompt();
@@ -27,25 +27,25 @@ void CLIShell::run() {
         usize bytes_read = 0;
         char c;
         while (bytes_read < 1023) {
-            i32 n = static_cast<i32>(acos::syscall::syscall_dispatch(static_cast<u64>(acos::syscall::SyscallNum::FileRead), m_console_fd, reinterpret_cast<u64>(&c), 1, 0, 0));
+            i32 n = static_cast<i32>(syscall(sys::SyscallNum::FileRead, m_console_fd, reinterpret_cast<u64>(&c), 1, 0, 0));
             if (n <= 0) {
                 // Yield to scheduler so other threads can run and
                 // the idle loop can hlt (preventing host CPU livelock).
-                acos::syscall::syscall_dispatch(static_cast<u64>(acos::syscall::SyscallNum::Yield), 0, 0, 0, 0, 0);
+                syscall(sys::SyscallNum::Yield, 0, 0, 0, 0, 0);
                 continue;
             }
 
             if (c == '\r' || c == '\n') {
-                acos::syscall::syscall_dispatch(static_cast<u64>(acos::syscall::SyscallNum::FileWrite), m_console_fd, reinterpret_cast<u64>("\n"), 1, 0, 0);
+                syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>("\n"), 1, 0, 0);
                 break;
             } else if (c == '\b' || c == 127) {
                 if (bytes_read > 0) {
                     bytes_read--;
-                    acos::syscall::syscall_dispatch(static_cast<u64>(acos::syscall::SyscallNum::FileWrite), m_console_fd, reinterpret_cast<u64>("\b \b"), 3, 0, 0);
+                    syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>("\b \b"), 3, 0, 0);
                 }
             } else {
                 input_buffer[bytes_read++] = c;
-                acos::syscall::syscall_dispatch(static_cast<u64>(acos::syscall::SyscallNum::FileWrite), m_console_fd, reinterpret_cast<u64>(&c), 1, 0, 0);
+                syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>(&c), 1, 0, 0);
             }
         }
         input_buffer[bytes_read] = '\0';
@@ -57,8 +57,8 @@ void CLIShell::run() {
 }
 
 void CLIShell::print_prompt() {
-    acos::syscall::syscall_dispatch(static_cast<u64>(acos::syscall::SyscallNum::FileWrite), m_console_fd, reinterpret_cast<u64>(m_cwd), ::strlen(m_cwd), 0, 0);
-    acos::syscall::syscall_dispatch(static_cast<u64>(acos::syscall::SyscallNum::FileWrite), m_console_fd, reinterpret_cast<u64>(" $ "), 3, 0, 0);
+    syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>(m_cwd), ::strlen(m_cwd), 0, 0);
+    syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>(" $ "), 3, 0, 0);
 }
 
 void CLIShell::execute_line(char* line) {
@@ -110,12 +110,12 @@ void CLIShell::execute_line(char* line) {
 
 void CLIShell::cmd_help() {
     const char* msg = "Built-in commands: help, pwd, cd, ls, exit\n";
-    acos::syscall::syscall_dispatch(static_cast<u64>(acos::syscall::SyscallNum::FileWrite), m_console_fd, reinterpret_cast<u64>(msg), ::strlen(msg), 0, 0);
+    syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>(msg), ::strlen(msg), 0, 0);
 }
 
 void CLIShell::cmd_pwd() {
-    acos::syscall::syscall_dispatch(static_cast<u64>(acos::syscall::SyscallNum::FileWrite), m_console_fd, reinterpret_cast<u64>(m_cwd), ::strlen(m_cwd), 0, 0);
-    acos::syscall::syscall_dispatch(static_cast<u64>(acos::syscall::SyscallNum::FileWrite), m_console_fd, reinterpret_cast<u64>("\n"), 1, 0, 0);
+    syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>(m_cwd), ::strlen(m_cwd), 0, 0);
+    syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>("\n"), 1, 0, 0);
 }
 
 void CLIShell::cmd_cd(int argc, char** argv) {
@@ -128,8 +128,8 @@ void CLIShell::cmd_ls(int argc, char** argv) {
     const char* path = (argc > 1) ? argv[1] : m_cwd;
 
     acos::vfs::DirectoryEntry entries[32];
-    i32 count = static_cast<i32>(acos::syscall::syscall_dispatch(
-        static_cast<u64>(acos::syscall::SyscallNum::FileReadDir),
+    i32 count = static_cast<i32>(syscall(
+        sys::SyscallNum::FileReadDir),
         reinterpret_cast<u64>(path),
         reinterpret_cast<u64>(entries),
         32, 0, 0
@@ -137,16 +137,16 @@ void CLIShell::cmd_ls(int argc, char** argv) {
 
     if (count < 0) {
         const char* err = "ls: cannot access directory\n";
-        acos::syscall::syscall_dispatch(static_cast<u64>(acos::syscall::SyscallNum::FileWrite), m_console_fd, reinterpret_cast<u64>(err), ::strlen(err), 0, 0);
+        syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>(err), ::strlen(err), 0, 0);
         return;
     }
 
     for (i32 i = 0; i < count; i++) {
-        acos::syscall::syscall_dispatch(static_cast<u64>(acos::syscall::SyscallNum::FileWrite), m_console_fd, reinterpret_cast<u64>(entries[i].name), ::strlen(entries[i].name), 0, 0);
+        syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>(entries[i].name), ::strlen(entries[i].name), 0, 0);
         if (entries[i].type == acos::vfs::NodeType::Directory) {
-            acos::syscall::syscall_dispatch(static_cast<u64>(acos::syscall::SyscallNum::FileWrite), m_console_fd, reinterpret_cast<u64>("/"), 1, 0, 0);
+            syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>("/"), 1, 0, 0);
         }
-        acos::syscall::syscall_dispatch(static_cast<u64>(acos::syscall::SyscallNum::FileWrite), m_console_fd, reinterpret_cast<u64>("\n"), 1, 0, 0);
+        syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>("\n"), 1, 0, 0);
     }
 }
 
@@ -160,8 +160,8 @@ void CLIShell::execute_external(int argc [[maybe_unused]], char** argv) {
 
     // Try absolute path or relative path directly
     if (argv[0][0] == '/' || argv[0][0] == '.') {
-        child_handle = acos::syscall::syscall_dispatch(
-            static_cast<u64>(acos::syscall::SyscallNum::ProcessCreate),
+        child_handle = syscall(
+            sys::SyscallNum::ProcessCreate),
             reinterpret_cast<u64>(argv[0]), 0, 0, 0, 0
         );
     } else {
@@ -172,8 +172,8 @@ void CLIShell::execute_external(int argc [[maybe_unused]], char** argv) {
             ::memcpy(resolved_path, paths[i], ::strlen(paths[i]));
             ::memcpy(resolved_path + ::strlen(paths[i]), argv[0], ::strlen(argv[0]));
 
-            child_handle = acos::syscall::syscall_dispatch(
-                static_cast<u64>(acos::syscall::SyscallNum::ProcessCreate),
+            child_handle = syscall(
+                sys::SyscallNum::ProcessCreate),
                 reinterpret_cast<u64>(resolved_path), 0, 0, 0, 0
             );
             if (child_handle != static_cast<u64>(-1)) break;
@@ -182,9 +182,9 @@ void CLIShell::execute_external(int argc [[maybe_unused]], char** argv) {
 
     if (child_handle == static_cast<u64>(-1)) {
         const char* err = "shell: command not found: ";
-        acos::syscall::syscall_dispatch(static_cast<u64>(acos::syscall::SyscallNum::FileWrite), m_console_fd, reinterpret_cast<u64>(err), ::strlen(err), 0, 0);
-        acos::syscall::syscall_dispatch(static_cast<u64>(acos::syscall::SyscallNum::FileWrite), m_console_fd, reinterpret_cast<u64>(argv[0]), ::strlen(argv[0]), 0, 0);
-        acos::syscall::syscall_dispatch(static_cast<u64>(acos::syscall::SyscallNum::FileWrite), m_console_fd, reinterpret_cast<u64>("\n"), 1, 0, 0);
+        syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>(err), ::strlen(err), 0, 0);
+        syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>(argv[0]), ::strlen(argv[0]), 0, 0);
+        syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>("\n"), 1, 0, 0);
         return;
     }
 
@@ -200,8 +200,8 @@ void CLIShell::execute_external(int argc [[maybe_unused]], char** argv) {
     // ProcessCreate in my implementation doesn't yet support handle inheritance in arg.
 
     // 3. Start Process
-    acos::syscall::syscall_dispatch(
-        static_cast<u64>(acos::syscall::SyscallNum::ProcessStart),
+    syscall(
+        sys::SyscallNum::ProcessStart),
         child_handle, 0, 0, 0, 0
     );
 
@@ -209,16 +209,16 @@ void CLIShell::execute_external(int argc [[maybe_unused]], char** argv) {
     // Our ThreadJoin syscall takes a thread handle.
     // Let's assume the handle returned by ProcessCreate can be queried for its primary thread.
 
-    acos::syscall::ResourceInfo info;
-    acos::syscall::syscall_dispatch(
-        static_cast<u64>(acos::syscall::SyscallNum::ResourceQuery),
+    sys::ResourceInfo info;
+    syscall(
+        sys::SyscallNum::ResourceQuery),
         child_handle, reinterpret_cast<u64>(&info), 0, 0, 0
     );
 
     // Wait for it to finish.
     // For now, we'll use ThreadJoin on the handle assuming it's waitable or just yield.
-    acos::syscall::syscall_dispatch(
-        static_cast<u64>(acos::syscall::SyscallNum::ThreadJoin),
+    syscall(
+        sys::SyscallNum::ThreadJoin),
         child_handle, 0, 0, 0, 0
     );
 }

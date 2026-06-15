@@ -33,6 +33,7 @@ public:
     u32 width() const { return m_width; }
     u32 height() const { return m_height; }
     u64 base() const { return m_base; }
+    u64 size() const { return m_size; }
     u32 pitch() const { return m_pitch; }
 
 private:

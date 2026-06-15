@@ -1,6 +1,6 @@
 #pragma once
 #include <acos/types.h>
-#include <kernel/input/input_device.h>
+#include <acos/input.h>
 #include "window.h"
 
 namespace acos::display {

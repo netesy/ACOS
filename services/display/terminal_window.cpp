@@ -1,14 +1,12 @@
 #include <acos/process.h>
 #include <acos/runtime.h>
+#include <acos/graphics.h>
+#include <acos/font_manager.h>
 #include <services/display/terminal_window.h>
 #include <services/display/display_server.h>
 #include <services/display/display_protocol.h>
 #include <services/display/window.h>
 #include <services/display/surface_manager.h>
-#include <acos/graphics.h>
-#include <acos/graphics.h>
-#include <acos/process.h>
-#include <acos/process.h>
 #include <libs/runtime/include/acos/runtime.h>
 
 namespace acos::display {
@@ -44,7 +42,7 @@ bool TerminalWindow::initialize(DisplayServer* ds) {
     // let the display server know about us via a setter.
 
     // Allocate the Window object
-    void* win_mem = acos::memory::kmalloc(sizeof(Window));
+    void* win_mem = acos::memory::malloc(sizeof(Window));
     if (!win_mem) return false;
 
     // Window ID = 1 (first user window)
@@ -53,7 +51,7 @@ bool TerminalWindow::initialize(DisplayServer* ds) {
     // Create a surface for the window content
     Surface* surface = ds->surface_manager_ref().create_surface(0, WIN_WIDTH, WIN_HEIGHT);
     if (!surface) {
-        acos::memory::kfree(win_mem);
+        acos::memory::free(win_mem);
         m_window = nullptr;
         return false;
     }
