@@ -6,12 +6,12 @@
 
 namespace acos::gui {
 
-void EventDispatcher::dispatch(const ::acos::input::InputEvent& raw, Ref<Widget> root) {
+void EventDispatcher::dispatch(const ::acos::abi::InputEvent& raw, Ref<Widget> root) {
     if (!root) return;
 
     Event event(raw);
 
-    if (raw.type == ::acos::input::InputType::Mouse) {
+    if (raw.type == ::acos::abi::InputType::Mouse) {
         event.mouse_x = (::acos::i32)((raw.code >> 16) & 0xFFFF);
         event.mouse_y = (::acos::i32)(raw.code & 0xFFFF);
 

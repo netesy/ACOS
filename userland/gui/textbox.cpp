@@ -1,6 +1,7 @@
 #include <acos/process.h>
 #include <acos/runtime.h>
 #include "textbox.h"
+#include <acos/renderer.h>
 #include "core/render_object.h"
 #include "core/render_widgets.h"
 #include "core/context.h"
@@ -34,11 +35,11 @@ void TextBox::update_render_object(Ref<RenderObject> render_object) {
 
 void TextBox::on_event(Event& event) {
     const auto& raw = event.raw;
-    if (raw.type == acos::input::InputType::Mouse) {
+    if (raw.type == acos::abi::InputType::Mouse) {
         if (raw.value & 0x01) { // Left click
             UIContext::get().focus_manager().set_focus(self());
         }
-    } else if (raw.type == acos::input::InputType::Keyboard && m_state == WidgetState::Focused) {
+    } else if (raw.type == acos::abi::InputType::Keyboard && m_state == WidgetState::Focused) {
         if (raw.code == 8) { // Backspace
             if (m_cursor > 0) {
                 m_cursor--;

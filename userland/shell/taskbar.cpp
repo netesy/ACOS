@@ -1,6 +1,7 @@
 #include <acos/process.h>
 #include <acos/runtime.h>
 #include "taskbar.h"
+#include <acos/renderer.h>
 #include <userland/gui/panel.h>
 #include <userland/gui/theme.h>
 #include <userland/gui/icon.h>

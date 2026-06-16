@@ -1,12 +1,12 @@
 #include <acos/process.h>
 #include <acos/runtime.h>
 #include "file_manager.h"
+#include <acos/vfs.h>
 #include <userland/gui/core/context.h>
 #include <userland/gui/button.h>
 #include <userland/gui/listview.h>
 #include <userland/gui/core/flex.h>
 #include <libs/runtime/include/acos/runtime.h>
-#include <kernel/vfs/vfs.h>
 
 namespace acos::apps {
 
@@ -40,8 +40,8 @@ void FileManager::browse(const char* path) {
 
     m_file_list->clear();
 
-    acos::vfs::DirectoryEntry entries[32];
-    i32 count = acos::vfs::VFS::read_dir(path, entries, 32);
+    acos::abi::DirectoryEntry entries[32];
+    i32 count = acos::vfs::read_dir(path, entries, 32);
 
     if (count < 0) {
         m_file_list->add_item("Error reading directory");

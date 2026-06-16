@@ -2,7 +2,7 @@
 #include <acos/runtime.h>
 #include "session_manager.h"
 #include "desktop_shell.h"
-#include <kernel/memory/heap.h>
+#include <acos/runtime.h>
 #include <libs/runtime/include/acos/runtime.h>
 
 namespace acos::shell {

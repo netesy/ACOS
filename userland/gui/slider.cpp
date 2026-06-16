@@ -1,6 +1,7 @@
 #include <acos/process.h>
 #include <acos/runtime.h>
 #include "slider.h"
+#include <acos/renderer.h>
 #include "core/render_object.h"
 #include "core/render_widgets.h"
 #include "core/context.h"

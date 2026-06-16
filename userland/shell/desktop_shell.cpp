@@ -1,12 +1,12 @@
 #include <acos/process.h>
 #include <acos/runtime.h>
 #include "desktop_shell.h"
+#include <acos/renderer.h>
 #include <userland/gui/theme.h>
 #include <userland/gui/core/context.h>
 #include <userland/gui/widgets/fluent.h>
 #include <services/display/display_server.h>
 #include <services/display/display_protocol.h>
-#include <kernel/hal/serial.h>
 #include "taskbar.h"
 #include "launcher.h"
 #include "telemetry_widgets.h"
@@ -115,9 +115,9 @@ void DesktopShell::run_loop() {
         // Send damage notification to keep compositor active
         // (the desktop background is always-dirty for now)
         if (m_ds) {
-            acos::display::DisplayMsg cmd{};
-            cmd.type = acos::display::DisplayMsgType::DamageNotify;
-            m_ds->send_command(cmd);
+            acos::abi::DisplayMsg cmd{};
+            cmd.type = acos::abi::DisplayMsgType::DamageNotify;
+            acos::graphics::send_command_to_ds(cmd);
         }
 
         // Yield CPU — will be replaced by event-driven blocking
@@ -125,7 +125,7 @@ void DesktopShell::run_loop() {
     }
 }
 
-void DesktopShell::draw(acos::graphics::Renderer* renderer) {
+void DesktopShell::draw(::acos::graphics::Renderer* renderer) {
     if (!renderer) return;
     
     // Clear framebuffer to remove any kernel console output

@@ -6,6 +6,7 @@
 #include "animation.h"
 #include "compositor_engine.h"
 
+namespace acos::graphics { class Renderer; }
 namespace acos::gui {
 
 class UIContext {

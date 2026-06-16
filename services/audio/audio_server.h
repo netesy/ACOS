@@ -1,7 +1,7 @@
 #pragma once
 #include "audio_protocol.h"
 #include "audio_mixer.h"
-#include <kernel/ipc/channel.h>
+#include <acos/ipc.h>
 
 namespace acos::audio {
 
@@ -19,7 +19,7 @@ private:
     usize m_stream_count;
     u64 m_next_stream_id;
 
-    acos::ipc::Channel m_channel;
+    u64 m_channel_handle;
     bool m_running;
 };
 

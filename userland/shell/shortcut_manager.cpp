@@ -1,7 +1,7 @@
 #include <acos/process.h>
 #include <acos/runtime.h>
 #include "shortcut_manager.h"
-#include <kernel/vfs/vfs.h>
+#include <acos/vfs.h>
 #include <userland/gui/core/context.h>
 #include <libs/runtime/include/acos/runtime.h>
 
@@ -13,8 +13,8 @@ void DesktopShortcutManager::update() {}
 
 void DesktopShortcutManager::sync() {
     const char* desktop_path = "/userland/desktop/";
-    acos::vfs::DirectoryEntry entries[32];
-    i32 count = acos::vfs::VFS::read_dir(desktop_path, entries, 32);
+    acos::abi::DirectoryEntry entries[32];
+    i32 count = acos::vfs::read_dir(desktop_path, entries, 32);
 
     if (count < 0) return;
 
@@ -54,12 +54,12 @@ void DesktopShortcutManager::sync_file(const char* dir, const char* name) {
     memcpy(full_path, dir, dlen);
     memcpy(full_path + dlen, name, strlen(name) + 1);
 
-    i32 fd = acos::vfs::VFS::open(full_path, 0);
+    i32 fd = acos::vfs::open(full_path, 0);
     if (fd < 0) return;
 
     char buffer[1024];
-    i32 bytes = acos::vfs::VFS::read(fd, buffer, 1023);
-    acos::vfs::VFS::close(fd);
+    i32 bytes = acos::vfs::read(fd, buffer, 1023);
+    acos::vfs::close(fd);
     if (bytes <= 0) return;
     buffer[bytes] = '\0';
 

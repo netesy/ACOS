@@ -1,6 +1,7 @@
 #include <acos/process.h>
 #include <acos/runtime.h>
 #include "volume_indicator.h"
+#include <acos/renderer.h>
 #include <userland/gui/core/render_object.h>
 #include <userland/gui/core/context.h>
 

@@ -6,6 +6,7 @@
 
 namespace acos::display { class DisplayServer; }
 
+namespace acos::graphics { class Renderer; }
 namespace acos::shell {
 
 class DesktopShell {
@@ -20,7 +21,7 @@ public:
     /// Runs forever on the desktop shell thread.
     void run_loop();
 
-    void draw(acos::graphics::Renderer* renderer);
+    void draw(::acos::graphics::Renderer* renderer);
 
     static DesktopShell& get() { return *s_instance; }
     void launch_terminal();

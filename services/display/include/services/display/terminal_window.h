@@ -67,6 +67,5 @@ private:
 };
 
 // Global terminal instance (set by kernelMain)
-extern TerminalWindow* g_terminal_window;
 
 } // namespace acos::display

@@ -29,7 +29,7 @@ void Icon::update_render_object(Ref<RenderObject> render_object) {
 
 void Icon::on_event(Event& event) {
     const auto& raw = event.raw;
-    if (raw.type == ::acos::input::InputType::Mouse) {
+    if (raw.type == ::acos::abi::InputType::Mouse) {
         ::acos::i32 mx = event.mouse_x;
         ::acos::i32 my = event.mouse_y;
         bool pressed = (raw.value & 0x01) != 0;

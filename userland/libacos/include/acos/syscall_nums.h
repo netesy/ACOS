@@ -2,6 +2,7 @@
 #include <acos/types.h>
 
 namespace acos::sys {
+struct ResourceInfo { u64 type; u64 id; u64 rights; u64 owner; u64 state; };
 
 enum class SyscallNum : u64 {
     // Process/Thread (0-99)

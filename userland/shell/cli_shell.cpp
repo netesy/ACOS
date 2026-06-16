@@ -2,15 +2,13 @@
 #include <acos/runtime.h>
 #include "cli_shell.h"
 #include <acos/syscall.h>
-#include <kernel/vfs/vfs.h>
-#include <kernel/hal/serial.h>
-#include <libs/runtime/include/acos/runtime.h>
+#include <acos/abi/vfs.h>
+#include <acos/syscall_nums.h>
 
 namespace acos::shell {
 
 CLIShell::CLIShell() : m_running(true) {
     ::memcpy(m_cwd, "/", 2);
-    // In userland we'd use syscalls to open /dev/console
     m_console_fd = static_cast<i32>(syscall(sys::SyscallNum::FileOpen, reinterpret_cast<u64>("/dev/console"), 0, 0, 0, 0));
 }
 
@@ -29,8 +27,6 @@ void CLIShell::run() {
         while (bytes_read < 1023) {
             i32 n = static_cast<i32>(syscall(sys::SyscallNum::FileRead, m_console_fd, reinterpret_cast<u64>(&c), 1, 0, 0));
             if (n <= 0) {
-                // Yield to scheduler so other threads can run and
-                // the idle loop can hlt (preventing host CPU livelock).
                 syscall(sys::SyscallNum::Yield, 0, 0, 0, 0, 0);
                 continue;
             }
@@ -120,16 +116,15 @@ void CLIShell::cmd_pwd() {
 
 void CLIShell::cmd_cd(int argc, char** argv) {
     if (argc < 2) return;
-    // Basic CD - in a real shell we'd validate path with VFS
     ::memcpy(m_cwd, argv[1], ::strlen(argv[1]) + 1);
 }
 
 void CLIShell::cmd_ls(int argc, char** argv) {
     const char* path = (argc > 1) ? argv[1] : m_cwd;
 
-    acos::vfs::DirectoryEntry entries[32];
+    acos::abi::DirectoryEntry entries[32];
     i32 count = static_cast<i32>(syscall(
-        sys::SyscallNum::FileReadDir),
+        sys::SyscallNum::FileReadDir,
         reinterpret_cast<u64>(path),
         reinterpret_cast<u64>(entries),
         32, 0, 0
@@ -143,7 +138,7 @@ void CLIShell::cmd_ls(int argc, char** argv) {
 
     for (i32 i = 0; i < count; i++) {
         syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>(entries[i].name), ::strlen(entries[i].name), 0, 0);
-        if (entries[i].type == acos::vfs::NodeType::Directory) {
+        if (entries[i].type == acos::abi::NodeType::Directory) {
             syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>("/"), 1, 0, 0);
         }
         syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>("\n"), 1, 0, 0);
@@ -158,14 +153,12 @@ void CLIShell::execute_external(int argc [[maybe_unused]], char** argv) {
     char resolved_path[1024];
     u64 child_handle = static_cast<u64>(-1);
 
-    // Try absolute path or relative path directly
     if (argv[0][0] == '/' || argv[0][0] == '.') {
         child_handle = syscall(
-            sys::SyscallNum::ProcessCreate),
+            sys::SyscallNum::ProcessCreate,
             reinterpret_cast<u64>(argv[0]), 0, 0, 0, 0
         );
     } else {
-        // Try /bin/ and /userland/bin/
         const char* paths[] = {"/bin/", "/userland/bin/", nullptr};
         for (int i = 0; paths[i]; i++) {
             ::memset(resolved_path, 0, 1024);
@@ -173,7 +166,7 @@ void CLIShell::execute_external(int argc [[maybe_unused]], char** argv) {
             ::memcpy(resolved_path + ::strlen(paths[i]), argv[0], ::strlen(argv[0]));
 
             child_handle = syscall(
-                sys::SyscallNum::ProcessCreate),
+                sys::SyscallNum::ProcessCreate,
                 reinterpret_cast<u64>(resolved_path), 0, 0, 0, 0
             );
             if (child_handle != static_cast<u64>(-1)) break;
@@ -188,37 +181,13 @@ void CLIShell::execute_external(int argc [[maybe_unused]], char** argv) {
         return;
     }
 
-    // 2. Duplicate Console Handles (FD 0, 1, 2)
-    // We pass our m_console_fd to the child.
-    // In this simplified model, ResourceDuplicate maps a handle to another in the same or target process.
-    // SyscallNum::ResourceDuplicate(handle, rights, out_handle_ptr)
-    // For simplicity, we assume child inherits or we use ResourceTransfer if we had a target process handle.
-    // The instructions say use ResourceDuplicate to pass handles to child.
-
-    // Actually, ResourceTransfer or a specific argument to ProcessCreate would be better,
-    // but I'll follow "use ResourceDuplicate or ResourceTransfer during ProcessCreate".
-    // ProcessCreate in my implementation doesn't yet support handle inheritance in arg.
-
-    // 3. Start Process
     syscall(
-        sys::SyscallNum::ProcessStart),
+        sys::SyscallNum::ProcessStart,
         child_handle, 0, 0, 0, 0
     );
 
-    // 4. Synchronous Wait (using ThreadJoin on the process handle if it maps to primary thread)
-    // Our ThreadJoin syscall takes a thread handle.
-    // Let's assume the handle returned by ProcessCreate can be queried for its primary thread.
-
-    sys::ResourceInfo info;
     syscall(
-        sys::SyscallNum::ResourceQuery),
-        child_handle, reinterpret_cast<u64>(&info), 0, 0, 0
-    );
-
-    // Wait for it to finish.
-    // For now, we'll use ThreadJoin on the handle assuming it's waitable or just yield.
-    syscall(
-        sys::SyscallNum::ThreadJoin),
+        sys::SyscallNum::ThreadJoin,
         child_handle, 0, 0, 0, 0
     );
 }

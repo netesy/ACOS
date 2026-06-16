@@ -1,12 +1,13 @@
 #pragma once
 #include <acos/types.h>
-#include <kernel/input/input_device.h>
+#include <acos/abi/input.h>
 #include <acos/graphics.h>
 #include "core/ref.h"
 #include "core/vector.h"
 #include "core/layout_types.h"
 #include "core/style.h"
 #include "core/render_object.h"
+namespace acos::graphics { class Renderer; }
 namespace acos::gui {
 
 using ::acos::Vector;

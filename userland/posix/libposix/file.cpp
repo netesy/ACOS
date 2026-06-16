@@ -5,9 +5,8 @@
 #include <sys/stat.h>
 #include <errno.h>
 #include <dirent.h>
-#include <kernel/vfs/vfs.h>
 #include <acos/types.h>
-#include <kernel/memory/heap.h>
+#include <acos/runtime.h>
 #include <libs/runtime/include/acos/runtime.h>
 
 extern "C" {

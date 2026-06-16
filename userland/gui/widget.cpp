@@ -1,6 +1,7 @@
 #include <acos/process.h>
 #include <acos/runtime.h>
 #include "widget.h"
+#include <acos/renderer.h>
 #include "theme.h"
 #include "core/context.h"
 #include "core/event_dispatcher.h"
@@ -23,7 +24,7 @@ void Widget::handle_event(Event& event) {
 
 void Widget::on_event(Event& event) {
     const auto& raw = event.raw;
-    if (raw.type == acos::input::InputType::Keyboard && raw.code == 9 && event.phase == EventPhase::Target) { // Tab key
+    if (raw.type == acos::abi::InputType::Keyboard && raw.code == 9 && event.phase == EventPhase::Target) { // Tab key
         // Focus navigation logic should ideally be in FocusManager,
         // but for now we'll move it to use FocusManager.
         Ref<Widget> next_focus;

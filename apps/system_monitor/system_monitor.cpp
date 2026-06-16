@@ -2,7 +2,6 @@
 #include <acos/runtime.h>
 #include "system_monitor.h"
 #include <acos/process.h>
-#include <kernel/memory/pmm.h>
 #include <userland/gui/core/context.h>
 
 namespace acos::apps {

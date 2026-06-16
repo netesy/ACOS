@@ -1,6 +1,7 @@
 #include <acos/process.h>
 #include <acos/runtime.h>
 #include "telemetry_widgets.h"
+#include <acos/renderer.h>
 #include <userland/gui/core/render_widgets.h>
 #include <userland/gui/core/context.h>
 #include <userland/gui/theme.h>

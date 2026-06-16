@@ -1,6 +1,7 @@
 #include <acos/process.h>
 #include <acos/runtime.h>
 #include "launcher.h"
+#include <acos/renderer.h>
 #include <userland/gui/theme.h>
 #include <userland/gui/text.h>
 #include <userland/gui/core/context.h>

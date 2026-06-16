@@ -1,8 +1,9 @@
 #pragma once
 #include <acos/types.h>
-#include <kernel/audio/audio_driver.h>
+#include <acos/abi/audio.h>
 
 namespace acos::audio {
+using namespace ::acos::abi;
 
 class AudioStream {
 public:

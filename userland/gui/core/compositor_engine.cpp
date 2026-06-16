@@ -4,7 +4,7 @@
 
 namespace acos::gui {
 
-void CompositorEngine::composite() {
+void SoftwareCompositor::composite() {
 }
 
 } // namespace acos::gui

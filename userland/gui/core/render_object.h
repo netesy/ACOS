@@ -6,6 +6,7 @@
 #include "style.h"
 #include "compositor.h"
 
+namespace acos::graphics { class Renderer; }
 namespace acos::gui {
 
 struct Rect {

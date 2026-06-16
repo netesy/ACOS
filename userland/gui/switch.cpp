@@ -1,6 +1,7 @@
 #include <acos/process.h>
 #include <acos/runtime.h>
 #include "switch.h"
+#include <acos/renderer.h>
 #include "core/render_object.h"
 #include "core/render_widgets.h"
 #include "core/context.h"

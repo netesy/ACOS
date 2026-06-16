@@ -14,8 +14,8 @@ KERNEL_ASFLAGS = -target x86_64-unknown-elf
 KERNEL_LDFLAGS = -target x86_64-unknown-elf -fuse-ld=lld -nostdlib -Wl,-T,linker.ld -Wl,--no-undefined
 
 # Userland Build Flags
-USER_CFLAGS = -target x86_64-unknown-elf -nostdinc++ -ffreestanding -fno-stack-protector -fno-exceptions -fno-rtti -mno-red-zone -I. -Ilibs/runtime/include -Ilibs/abi/include -Iuserland/libacos/include -std=c++20 -Wall -Wextra -Werror
-USER_LDFLAGS = -target x86_64-unknown-elf -fuse-ld=lld -nostdlib -Wl,-static
+USER_CFLAGS = -target x86_64-unknown-elf -fno-pic -nostdinc++ -ffreestanding -fno-stack-protector -fno-exceptions -fno-rtti -mno-red-zone -I. -Ilibs/runtime/include -Ilibs/abi/include -Iuserland/libacos/include -std=c++20 -Wall -Wextra -Werror
+USER_LDFLAGS = -target x86_64-unknown-elf -nostdlib -Wl,-static -Wl,-no-pie
 
 # Files
 BOOT_EFI   = acos_boot.efi
@@ -125,7 +125,10 @@ LIBACOS_SRCS = \
 	userland/libacos/font_manager.cpp \
 	userland/libacos/string.cpp
 
+GUI_SRCS = $(wildcard userland/gui/*.cpp) $(wildcard userland/gui/core/*.cpp)
+
 LIBACOS_OBJS = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(LIBACOS_SRCS))
+GUI_OBJS = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(GUI_SRCS))
 
 # Services
 DISPLAY_SERVER_SRCS = \
@@ -156,6 +159,12 @@ DESKTOP_SHELL_SRCS = \
 	userland/shell/telemetry_widgets.cpp \
 	userland/shell/desktop_main.cpp
 
+APP_SRCS = \
+	apps/terminal/terminal.cpp \
+	apps/file_manager/file_manager.cpp \
+	apps/settings/settings.cpp \
+	apps/settings/audio_settings.cpp
+
 CLI_SHELL_SRCS = userland/shell/cli_shell.cpp userland/shell/cli_main.cpp
 
 # Objects
@@ -172,6 +181,7 @@ CLI_SHELL_BIN      = $(DIST_DIR)/bin/cli_shell.elf
 DISPLAY_SERVER_OBJS = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(DISPLAY_SERVER_SRCS))
 AUDIO_SERVER_OBJS   = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(AUDIO_SERVER_SRCS))
 DESKTOP_SHELL_OBJS  = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(DESKTOP_SHELL_SRCS))
+APP_OBJS            = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(APP_SRCS))
 CLI_SHELL_OBJS      = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(CLI_SHELL_SRCS))
 
 SERVICES_BINS = $(DISPLAY_SERVER_BIN) $(AUDIO_SERVER_BIN) $(DESKTOP_SHELL_BIN) $(CLI_SHELL_BIN)
@@ -193,21 +203,21 @@ $(KERNEL_ELF): $(KERNEL_OBJS)
 	ld -T linker.ld -o $@ $^
 
 # Userland linking rules
-$(DISPLAY_SERVER_BIN): $(BUILD_DIR)/userland/libacos/crt0.o $(DISPLAY_SERVER_OBJS) $(LIBACOS_OBJS)
+$(DISPLAY_SERVER_BIN): $(BUILD_DIR)/userland/libacos/crt0.o $(DISPLAY_SERVER_OBJS) $(LIBACOS_OBJS) $(GUI_OBJS)
 	@mkdir -p $(@D)
-	$(LD) -o $@ $^
+	$(CXX) $(USER_LDFLAGS) -o $@ $^
 
 $(AUDIO_SERVER_BIN): $(BUILD_DIR)/userland/libacos/crt0.o $(AUDIO_SERVER_OBJS) $(LIBACOS_OBJS)
 	@mkdir -p $(@D)
-	$(LD) -o $@ $^
+	$(CXX) $(USER_LDFLAGS) -o $@ $^
 
-$(DESKTOP_SHELL_BIN): $(BUILD_DIR)/userland/libacos/crt0.o $(DESKTOP_SHELL_OBJS) $(LIBACOS_OBJS)
+$(DESKTOP_SHELL_BIN): $(BUILD_DIR)/userland/libacos/crt0.o $(DESKTOP_SHELL_OBJS) $(APP_OBJS) $(LIBACOS_OBJS) $(GUI_OBJS)
 	@mkdir -p $(@D)
-	$(LD) -o $@ $^
+	$(CXX) $(USER_LDFLAGS) -o $@ $^
 
 $(CLI_SHELL_BIN): $(BUILD_DIR)/userland/libacos/crt0.o $(CLI_SHELL_OBJS) $(LIBACOS_OBJS)
 	@mkdir -p $(@D)
-	$(LD) -o $@ $^
+	$(CXX) $(USER_LDFLAGS) -o $@ $^
 
 # ----------------------------------------------------
 # Disk Image Creation
@@ -268,6 +278,14 @@ $(BUILD_DIR)/services/%.o: services/%.cpp
 	$(CXX) $(USER_CFLAGS) -Iservices/display/include -Iservices/audio/include -c $< -o $@
 
 $(BUILD_DIR)/userland/shell/%.o: userland/shell/%.cpp
+	@mkdir -p $(@D)
+	$(CXX) $(USER_CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/userland/gui/%.o: userland/gui/%.cpp
+	@mkdir -p $(@D)
+	$(CXX) $(USER_CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/apps/%.o: apps/%.cpp
 	@mkdir -p $(@D)
 	$(CXX) $(USER_CFLAGS) -c $< -o $@
 

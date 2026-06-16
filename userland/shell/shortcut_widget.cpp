@@ -1,6 +1,7 @@
 #include <acos/process.h>
 #include <acos/runtime.h>
 #include "shortcut_widget.h"
+#include <acos/renderer.h>
 #include <userland/gui/core/render_widgets.h>
 #include <userland/gui/core/context.h>
 #include <userland/gui/theme.h>
@@ -99,7 +100,7 @@ void ShortcutWidget::update_render_object(gui::Ref<gui::RenderObject> render_obj
 void ShortcutWidget::on_event(gui::Event& event) {
     const auto& raw = event.raw;
     
-    if (raw.type == acos::input::InputType::Mouse) {
+    if (raw.type == acos::abi::InputType::Mouse) {
         if (event.phase == gui::EventPhase::Target) {
             if (raw.code == 0 && raw.value == 1) { // Left Button Pressed (code 0 = left button)
                 m_state = gui::WidgetState::Pressed;
@@ -122,7 +123,7 @@ void ShortcutWidget::on_event(gui::Event& event) {
                 set_paint_dirty();
             }
         }
-    } else if (raw.type == acos::input::InputType::Mouse && raw.code == 255) { // Mouse Move (placeholder code)
+    } else if (raw.type == acos::abi::InputType::Mouse && raw.code == 255) { // Mouse Move (placeholder code)
         if (m_state != gui::WidgetState::Pressed) {
             m_state = gui::WidgetState::Hovered;
             set_paint_dirty();

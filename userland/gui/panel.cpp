@@ -1,6 +1,7 @@
 #include <acos/process.h>
 #include <acos/runtime.h>
 #include "panel.h"
+#include <acos/renderer.h>
 #include "core/render_object.h"
 #include "core/render_widgets.h"
 #include "core/context.h"
@@ -27,7 +28,7 @@ void Panel::update_render_object(Ref<RenderObject> render_object) {
 
 void Panel::on_event(Event& event) {
     const auto& raw = event.raw;
-    if (raw.type == ::acos::input::InputType::Mouse) {
+    if (raw.type == ::acos::abi::InputType::Mouse) {
         ::acos::i32 mx = event.mouse_x;
         ::acos::i32 my = event.mouse_y;
         bool pressed = (raw.value & 0x01) != 0;

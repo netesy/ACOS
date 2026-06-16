@@ -4,6 +4,8 @@
 #include "core/render_object.h"
 #include "core/render_widgets.h"
 #include "core/context.h"
+#include <acos/font_manager.h>
+#include <acos/font.h>
 
 namespace acos::gui::widgets {
 
@@ -27,10 +29,14 @@ void Text::set_text(const char* text) {
         }
         m_text_buffer[i] = '\0';
 
-        u32 w, h;
-        ::acos::graphics::Font::measure_string_default(m_text_buffer, w, h);
-        m_rect.w = (i32)w;
-        m_rect.h = (i32)h;
+        const ::acos::graphics::Font* font = ::acos::graphics::FontManager::get_ui_font();
+        if (font) {
+            m_rect.w = (i32)(::strlen(m_text_buffer) * font->width());
+            m_rect.h = (i32)font->height();
+        } else {
+            m_rect.w = (i32)(::strlen(m_text_buffer) * 8);
+            m_rect.h = 16;
+        }
     }
     set_paint_dirty();
     set_layout_dirty();

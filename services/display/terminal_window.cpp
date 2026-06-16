@@ -11,7 +11,6 @@
 
 namespace acos::display {
 
-TerminalWindow* g_terminal_window = nullptr;
 
 TerminalWindow::TerminalWindow()
     : m_window(nullptr), m_surface_id(0), m_ds(nullptr),
