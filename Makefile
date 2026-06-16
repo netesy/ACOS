@@ -306,11 +306,17 @@ dist: $(BOOT_EFI) $(KERNEL_ELF) $(SERVICES_BINS)
 	cp $(BOOT_EFI) $(DIST_DIR)/EFI/BOOT/BOOTX64.EFI
 	cp $(KERNEL_ELF) $(DIST_DIR)/kernel.elf
 
-run: dist
+run: $(DISK_IMG)
 	@if command -v $(QEMU) >/dev/null 2>&1; then \
 		if [ -n "$(QEMU_FIRMWARE)" ]; then \
 			echo "[DESKTOP] Launching ACOS..."; \
-			$(QEMU) -m 512M -drive file=fat:rw:$(DIST_DIR),format=raw -vga std -display sdl -serial stdio -bios "$(QEMU_FIRMWARE)"; \
+			$(QEMU) \
+				-m 512M \
+				-drive if=pflash,format=raw,readonly=on,file="$(QEMU_FIRMWARE)" \
+				-drive file=$(DISK_IMG),format=raw \
+				-vga std \
+				-display sdl \
+				-serial stdio; \
 		else \
 			echo "[DESKTOP] Warning: OVMF firmware not found; cannot launch UEFI VM."; \
 			exit 1; \

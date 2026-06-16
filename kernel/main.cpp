@@ -146,6 +146,20 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
         }
     };
 
+    acos::hal::serial_print("Testing root filesystem...\n");
+
+acos::i32 fd = acos::vfs::VFS::open("/kernel.elf", 0);
+
+if (fd >= 0)
+{
+    acos::hal::serial_print("Found kernel.elf\n");
+    acos::vfs::VFS::close(fd);
+}
+else
+{
+    acos::hal::serial_print("Cannot find kernel.elf\n");
+}
+
     if (desktop_mode) {
         spawn_service("/bin/display_server.elf");
         spawn_service("/bin/audio_server.elf");

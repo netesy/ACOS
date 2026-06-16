@@ -9,3 +9,5 @@ OVMF.fd
 *.efi
 *.img
 bin/
+dist/
+build/
