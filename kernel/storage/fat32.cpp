@@ -122,75 +122,101 @@ FAT32FileSystem::FAT32FileSystem(BlockDevice* device) : m_device(device) {}
 vfs::Node* FAT32FileSystem::open(const char* path) {
     if (!path || !m_device) return nullptr;
     
+    // Skip leading slash
+    if (path[0] == '/') path++;
+    if (path[0] == '\0') return nullptr; // Cannot open root directory yet
+
+    return open_internal(m_root_cluster, path);
+}
+
+vfs::Node* FAT32FileSystem::open_internal(u32 cluster, const char* path) {
     u8 sector[512];
-    if (m_device->read_block(0, sector) != 0) return nullptr;
     
-    const u32 root_cluster = *(u32*)(sector + 44);
-    const u32 sectors_per_cluster = sector[13];
-    const u32 bytes_per_sector = *(u16*)(sector + 11);
-    const u32 reserved = *(u16*)(sector + 14);
-    const u32 fats = sector[16];
-    const u32 sectors_per_fat = *(u32*)(sector + 36);
-    const u32 fat_start = reserved;
-    const u32 data_start = reserved + (fats * sectors_per_fat);
+    // Find next component in path
+    char component[256];
+    int comp_idx = 0;
+    const char* remaining = nullptr;
     
-    if (sectors_per_cluster == 0 || bytes_per_sector != 512) return nullptr;
+    while (path[comp_idx] && path[comp_idx] != '/') {
+        component[comp_idx] = path[comp_idx];
+        comp_idx++;
+    }
+    component[comp_idx] = '\0';
     
-    u32 cluster = root_cluster;
+    if (path[comp_idx] == '/') {
+        remaining = path + comp_idx + 1;
+    }
+
     u32 entries_per_sector = 512 / 32;
     
-    while (cluster < 0x0FFFFFF8) {
-        const u32 dir_lba = data_start + ((cluster - 2) * sectors_per_cluster);
-        if (m_device->read_block(dir_lba, sector) != 0) return nullptr;
-        
-        for (u32 i = 0; i < entries_per_sector; i++) {
-            u8* entry = sector + (i * 32);
+    while (cluster >= 2 && cluster < 0x0FFFFFF8) {
+        for (u32 s = 0; s < m_sectors_per_cluster; s++) {
+            const u32 lba = m_data_start + ((cluster - 2) * m_sectors_per_cluster) + s;
+            if (m_device->read_block(lba, sector) != 0) return nullptr;
             
-            // Check for end of directory
-            if (entry[0] == 0) return nullptr;
-            
-            // Skip deleted entries
-            if (entry[0] == 0xE5) continue;
-            
-            // Skip volume labels and directories
-            if (entry[11] & 0x10) continue;
-            
-            // Extract filename (8.3 format)
-            char name[13] = {0};
-            int name_idx = 0;
-            
-            // Copy base name (8 chars)
-            for (int j = 0; j < 8; j++) {
-                if (entry[j] != ' ') {
-                    name[name_idx++] = entry[j];
-                }
-            }
-            
-            // Add dot and extension
-            if (entry[8] != ' ') {
-                name[name_idx++] = '.';
-                for (int j = 8; j < 11; j++) {
+            for (u32 i = 0; i < entries_per_sector; i++) {
+                u8* entry = sector + (i * 32);
+
+                // Check for end of directory
+                if (entry[0] == 0) return nullptr;
+
+                // Skip deleted entries
+                if (entry[0] == 0xE5) continue;
+
+                // Skip volume labels
+                if (entry[11] & 0x08) continue;
+
+                // Extract filename (8.3 format)
+                char name[13] = {0};
+                int name_idx = 0;
+
+                // Copy base name (8 chars)
+                for (int j = 0; j < 8; j++) {
                     if (entry[j] != ' ') {
                         name[name_idx++] = entry[j];
                     }
                 }
-            }
-            name[name_idx] = '\0';
-            
-            // Compare with requested path
-            if (strcmp_impl(name, path) == 0) {
-                FAT32FileNode* node = allocate_node();
-                if (!node) return nullptr;
-                const u32 first_cluster = (static_cast<u32>(*(u16*)(entry + 20)) << 16) | *(u16*)(entry + 26);
-                const u32 file_size = *(u32*)(entry + 28);
-                node->initialize(m_device, first_cluster, file_size, fat_start, data_start, static_cast<u8>(sectors_per_cluster));
-                return node;
+
+                // Add dot and extension
+                if (entry[8] != ' ') {
+                    name[name_idx++] = '.';
+                    for (int j = 8; j < 11; j++) {
+                        if (entry[j] != ' ') {
+                            name[name_idx++] = entry[j];
+                        }
+                    }
+                }
+                name[name_idx] = '\0';
+
+                // Compare with current component
+                if (strcmp_impl(name, component) == 0) {
+                    u32 first_cluster = (static_cast<u32>(*(u16*)(entry + 20)) << 16) | *(u16*)(entry + 26);
+
+                    if (entry[11] & 0x10) { // Directory
+                        if (remaining && *remaining) {
+                            return open_internal(first_cluster, remaining);
+                        } else {
+                            // Should return a DirectoryNode, but for now we only support files
+                            return nullptr;
+                        }
+                    } else { // File
+                        if (remaining && *remaining) {
+                            // Requested subpath of a file
+                            return nullptr;
+                        }
+                        FAT32FileNode* node = allocate_node();
+                        if (!node) return nullptr;
+                        const u32 file_size = *(u32*)(entry + 28);
+                        node->initialize(m_device, first_cluster, file_size, m_fat_start, m_data_start, static_cast<u8>(m_sectors_per_cluster));
+                        return node;
+                    }
+                }
             }
         }
         
         // Move to next cluster in FAT chain
         u32 fat_offset = cluster * 4;
-        u32 fat_block = fat_start + (fat_offset / 512);
+        u32 fat_block = m_fat_start + (fat_offset / 512);
         
         if (m_device->read_block(fat_block, sector) != 0) return nullptr;
         
@@ -198,6 +224,28 @@ vfs::Node* FAT32FileSystem::open(const char* path) {
     }
     
     return nullptr;
+}
+
+bool FAT32FileSystem::probe(void* device, const char* target) {
+    if (!device) return false;
+    BlockDevice* block_device = static_cast<BlockDevice*>(device);
+
+    u8 sector[512];
+    if (block_device->read_block(0, sector) != 0) return false;
+
+    // Verify boot sector signature
+    if (sector[510] != 0x55 || sector[511] != 0xAA) return false;
+
+    // Verify FAT32 signature at offset 82
+    if (sector[82] != 0x28 && sector[82] != 0x29) return false;
+
+    // It's likely FAT32, create a new instance and mount it
+    FAT32FileSystem* fs = new FAT32FileSystem(block_device);
+    if (fs && fs->mount(target)) {
+        vfs::VFS::mount(target, fs);
+        return true;
+    }
+    return false;
 }
 
 bool FAT32FileSystem::mount(const char* target [[maybe_unused]]) {

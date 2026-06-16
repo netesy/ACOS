@@ -34,6 +34,7 @@ public:
     virtual ~FileSystem() = default;
     virtual Node* open(const char* path) = 0;
     virtual bool mount(const char* target) = 0;
+    virtual bool probe(void* device, const char* target) { (void)device; (void)target; return false; }
 };
 
 class File;

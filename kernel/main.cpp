@@ -10,6 +10,10 @@
 #include <kernel/loader/process_loader.h>
 #include <kernel/graphics/graphics_manager.h>
 #include <kernel/audio/audio_manager.h>
+#include <kernel/storage/storage_manager.h>
+#include <kernel/storage/filesystem_manager.h>
+#include <kernel/storage/fat32.h>
+#include <kernel/storage/ahci.h>
 #include <libs/runtime/include/acos/runtime.h>
 #include <drivers/audio/virtio_sound/virtio_sound.h>
 #include <drivers/audio/hda/hda.h>
@@ -93,6 +97,49 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     acos::scheduler::scheduler_init();
     acos::services::init();
 
+    // Initialize storage and mount root filesystem
+    acos::storage::StorageManager::init();
+
+    // Register FAT32 filesystem
+    // We use a static instance for the probe, but probe_and_mount usually expects a prototype or factory.
+    // Given the current FileSystemManager::register_filesystem implementation, it takes a pointer to a FileSystem instance.
+    static acos::storage::FAT32FileSystem fat32_proto(nullptr);
+    acos::storage::FileSystemManager::register_filesystem("fat32", &fat32_proto);
+
+    // TODO: PCI discovery to find AHCI controller.
+    // For now, we'll try a common base address or skip if not found.
+    // In QEMU -device ahci, the BAR5 is typically where the registers are.
+    // Without PCI scanning, this is a placeholder.
+    // Usually it is something like 0xFEB00000 or 0x40000000 depending on config.
+    // Let's assume for now we might have an AHCI controller at a known location if it was passed by bootloader,
+    // but bootloader doesn't pass it.
+
+    // Instead of failing, let's use the RamDisk if it was provided, or wait for PCI.
+    // Given the task is to fix spawning services, and they are likely on the disk image.
+
+    // AHCI fallback: common QEMU address
+    acos::storage::AHCIController ahci(0xFEB00000);
+    if (ahci.initialize()) {
+        acos::hal::serial_print("AHCI: Controller found at 0xFEB00000\n");
+        for (acos::u32 i = 0; i < ahci.port_count(); i++) {
+            acos::storage::AHCIPort* port = ahci.get_port(i);
+            acos::storage::StorageManager::register_device(i, port);
+            // Probe and mount root
+            acos::storage::FileSystemManager::probe_and_mount(port, "/");
+        }
+    } else {
+        acos::hal::serial_print("AHCI: Not found at 0xFEB00000, trying 0x40000000\n");
+        acos::storage::AHCIController ahci2(0x40000000);
+        if (ahci2.initialize()) {
+            acos::hal::serial_print("AHCI: Controller found at 0x40000000\n");
+            for (acos::u32 i = 0; i < ahci2.port_count(); i++) {
+                acos::storage::AHCIPort* port = ahci2.get_port(i);
+                acos::storage::StorageManager::register_device(i, port);
+                acos::storage::FileSystemManager::probe_and_mount(port, "/");
+            }
+        }
+    }
+
     // Register kernel services
     acos::services::ServiceManager::register_service(acos::services::ServiceId::Filesystem, 1);
     acos::services::ServiceManager::register_service(acos::services::ServiceId::Graphics, 2);
@@ -123,7 +170,7 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
             return;
         }
 
-        acos::vfs::File* file = acos::scheduler::process_table_find(0)->get_file(fd);
+        acos::vfs::File* file = acos::scheduler::current_thread()->parent->get_file(fd);
         if (!file) {
             acos::vfs::VFS::close(fd);
             return;

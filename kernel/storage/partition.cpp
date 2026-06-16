@@ -1,4 +1,6 @@
 #include <kernel/storage/partition.h>
+#include <kernel/storage/storage_manager.h>
+#include <kernel/storage/filesystem_manager.h>
 
 namespace acos::storage {
 
@@ -44,7 +46,9 @@ void PartitionManager::enumerate(BlockDevice* device) {
         Partition* part = new Partition(device, start_lba, sector_count);
         if (part) {
             // Register partition
-            // Would add to partition table
+            StorageManager::register_device(0x100 + i, part);
+            // Try to mount root if not already mounted
+            FileSystemManager::probe_and_mount(part, "/");
         }
     }
 }

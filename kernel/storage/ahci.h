@@ -16,6 +16,9 @@ public:
     AHCIController(u64 base_addr);
     bool initialize();
 
+    u32 port_count() const { return m_port_count; }
+    AHCIPort* get_port(u32 index) const { return index < m_port_count ? m_ports[index] : nullptr; }
+
     // Future: Interrupt handling
 private:
     u64 m_base_addr;

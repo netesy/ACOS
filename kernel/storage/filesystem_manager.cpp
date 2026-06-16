@@ -28,9 +28,8 @@ void FileSystemManager::probe_and_mount(BlockDevice* device, const char* path) {
         vfs::FileSystem* fs = g_filesystems[i].fs;
         if (!fs) continue;
         
-        // Try to mount with this filesystem
-        if (fs->mount(path)) {
-            // Successfully mounted
+        // Try to probe with this filesystem
+        if (fs->probe(device, path)) {
             hal::console_print("Mounted ");
             hal::console_print(g_filesystems[i].name);
             hal::console_print(" at ");

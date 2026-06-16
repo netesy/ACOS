@@ -10,8 +10,11 @@ public:
 
     vfs::Node* open(const char* path) override;
     bool mount(const char* target) override;
+    bool probe(void* device, const char* target) override;
 
 private:
+    vfs::Node* open_internal(u32 cluster, const char* path);
+
     BlockDevice* m_device;
     u16 m_bytes_per_sector;
     u8 m_sectors_per_cluster;
