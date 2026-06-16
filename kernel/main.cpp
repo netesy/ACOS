@@ -118,7 +118,7 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     // Given the task is to fix spawning services, and they are likely on the disk image.
 
     // AHCI fallback: common QEMU address
-    acos::storage::AHCIController ahci(0xFEB00000);
+    static acos::storage::AHCIController ahci(0xFEB00000);
     if (ahci.initialize()) {
         acos::hal::serial_print("AHCI: Controller found at 0xFEB00000\n");
         for (acos::u32 i = 0; i < ahci.port_count(); i++) {
@@ -129,7 +129,7 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
         }
     } else {
         acos::hal::serial_print("AHCI: Not found at 0xFEB00000, trying 0x40000000\n");
-        acos::storage::AHCIController ahci2(0x40000000);
+        static acos::storage::AHCIController ahci2(0x40000000);
         if (ahci2.initialize()) {
             acos::hal::serial_print("AHCI: Controller found at 0x40000000\n");
             for (acos::u32 i = 0; i < ahci2.port_count(); i++) {

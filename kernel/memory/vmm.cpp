@@ -89,9 +89,9 @@ void vmm_init(BootInfo* bootInfo) {
     clear_page_table(g_kernel_pml4);
 
     // Identity-map physical memory using 2MB large pages for speed
+    // We map at least 4GB to cover common MMIO regions and ensure the current stack is accessible
     u64 phys_limit = pmm_get_total_memory();
-    if (phys_limit == 0) phys_limit = 0x40000000;
-    if (phys_limit > 0x100000000ULL) phys_limit = 0x100000000ULL;
+    if (phys_limit < 0x100000000ULL) phys_limit = 0x100000000ULL;
 
     // Round up to 2MB boundary
     u64 map_limit = (phys_limit + 0x1FFFFF) & ~0x1FFFFFULL;
