@@ -87,6 +87,7 @@ KERNEL_SRCS = \
 	$(KERNEL_DIR)/main.cpp \
 	$(HAL_DIR)/serial.cpp \
 	$(HAL_DIR)/console.cpp \
+	$(HAL_DIR)/pci.cpp \
 	$(GRAPHICS_DIR)/graphics_manager.cpp \
 	$(GRAPHICS_DIR)/framebuffer.cpp \
 	$(GRAPHICS_DIR)/renderer.cpp \
@@ -312,8 +313,11 @@ run: $(DISK_IMG)
 			echo "[DESKTOP] Launching ACOS..."; \
 			$(QEMU) \
 				-m 512M \
+				-machine q35 \
 				-drive if=pflash,format=raw,readonly=on,file="$(QEMU_FIRMWARE)" \
-				-drive file=$(DISK_IMG),format=raw \
+				-device ahci,id=ahci \
+				-drive file=$(DISK_IMG),format=raw,if=none,id=drive0 \
+				-device ide-hd,drive=drive0,bus=ahci.0 \
 				-vga std \
 				-display sdl \
 				-serial stdio; \

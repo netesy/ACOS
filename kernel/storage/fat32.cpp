@@ -138,8 +138,12 @@ vfs::Node* FAT32FileSystem::open_internal(u32 cluster, const char* path) {
     const char* remaining = nullptr;
     
     while (path[comp_idx] && path[comp_idx] != '/') {
-        component[comp_idx] = path[comp_idx];
-        comp_idx++;
+        if (comp_idx < 255) {
+            component[comp_idx] = path[comp_idx];
+            comp_idx++;
+        } else {
+            return nullptr; // Path component too long
+        }
     }
     component[comp_idx] = '\0';
     

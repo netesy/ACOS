@@ -14,6 +14,7 @@
 #include <kernel/storage/filesystem_manager.h>
 #include <kernel/storage/fat32.h>
 #include <kernel/storage/ahci.h>
+#include <kernel/hal/pci.h>
 #include <libs/runtime/include/acos/runtime.h>
 #include <drivers/audio/virtio_sound/virtio_sound.h>
 #include <drivers/audio/hda/hda.h>
@@ -117,27 +118,23 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     // Instead of failing, let's use the RamDisk if it was provided, or wait for PCI.
     // Given the task is to fix spawning services, and they are likely on the disk image.
 
-    // AHCI fallback: common QEMU address
-    static acos::storage::AHCIController ahci(0xFEB00000);
-    if (ahci.initialize()) {
-        acos::hal::serial_print("AHCI: Controller found at 0xFEB00000\n");
-        for (acos::u32 i = 0; i < ahci.port_count(); i++) {
-            acos::storage::AHCIPort* port = ahci.get_port(i);
-            acos::storage::StorageManager::register_device(i, port);
-            // Probe and mount root
-            acos::storage::FileSystemManager::probe_and_mount(port, "/");
-        }
-    } else {
-        acos::hal::serial_print("AHCI: Not found at 0xFEB00000, trying 0x40000000\n");
-        static acos::storage::AHCIController ahci2(0x40000000);
-        if (ahci2.initialize()) {
-            acos::hal::serial_print("AHCI: Controller found at 0x40000000\n");
-            for (acos::u32 i = 0; i < ahci2.port_count(); i++) {
-                acos::storage::AHCIPort* port = ahci2.get_port(i);
+    // Discover AHCI controller via PCI
+    acos::hal::PCIDevice ahci_dev = acos::hal::PCI::find_device(0x01, 0x06);
+    if (ahci_dev.vendor_id != 0xFFFF) {
+        acos::hal::serial_print("AHCI: Controller found on PCI bus\n");
+        acos::hal::PCI::enable_bus_mastering(ahci_dev);
+        acos::u64 bar5 = acos::hal::PCI::get_bar(ahci_dev, 5);
+
+        static acos::storage::AHCIController ahci_ctrl(bar5);
+        if (ahci_ctrl.initialize()) {
+            for (acos::u32 i = 0; i < ahci_ctrl.port_count(); i++) {
+                acos::storage::AHCIPort* port = ahci_ctrl.get_port(i);
                 acos::storage::StorageManager::register_device(i, port);
                 acos::storage::FileSystemManager::probe_and_mount(port, "/");
             }
         }
+    } else {
+        acos::hal::serial_print("AHCI: Controller not found on PCI\n");
     }
 
     // Register kernel services
