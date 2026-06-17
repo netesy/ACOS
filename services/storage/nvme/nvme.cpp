@@ -1,5 +1,5 @@
 #include "nvme.h"
-#include <kernel/memory/pmm.h>
+#include <acos/syscall.h>
 #include <acos/runtime.h>
 
 namespace acos::drivers::storage {
@@ -18,8 +18,9 @@ bool NVMeController::initialize() {
 
     // 2. Setup Admin Queue
     m_admin_queue.size = 64;
-    m_admin_queue.sq_virt = reinterpret_cast<void*>(acos::memory::pmm_alloc());
-    m_admin_queue.cq_virt = reinterpret_cast<void*>(acos::memory::pmm_alloc());
+    // Syscall to allocate physically contiguous memory (DMA)
+    m_admin_queue.sq_virt = reinterpret_cast<void*>(acos::syscall(acos::sys::SyscallNum::MemoryAllocateContiguous, 1));
+    m_admin_queue.cq_virt = reinterpret_cast<void*>(acos::syscall(acos::sys::SyscallNum::MemoryAllocateContiguous, 1));
     memset(m_admin_queue.sq_virt, 0, 4096);
     memset(m_admin_queue.cq_virt, 0, 4096);
 

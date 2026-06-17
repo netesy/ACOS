@@ -1,6 +1,6 @@
 #include "ps2.h"
-#include <kernel/input/input_manager.h>
-#include <kernel/hal/serial.h>
+#include <acos/syscall.h>
+#include <acos/runtime.h>
 
 namespace acos::drivers::input {
 
@@ -59,19 +59,13 @@ void PS2Controller::init() {
     // 4. Enable devices
     write_command(0xAE);
     write_command(0xA8);
-
-    acos::hal::serial_print("PS/2: Controller initialized\n");
 }
 
 void PS2Controller::handle_interrupt() {
     u8 scancode;
     __asm__ volatile("inb %1, %0" : "=a"(scancode) : "Nd"(PS2_DATA));
 
-    acos::input::InputEvent event;
-    event.type = acos::input::InputType::Keyboard;
-    event.code = scancode;
-    event.value = 1; // Pressed
-    acos::input::InputManager::push_event(event);
+    // In user-space, we'd send an IPC to the input_router or desktop_shell
 }
 
 } // namespace acos::drivers::input

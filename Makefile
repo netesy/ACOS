@@ -58,8 +58,6 @@ KERNEL_SRCS = \
 	$(STORAGE_DIR)/fat32.cpp \
 	$(STORAGE_DIR)/ramdisk.cpp \
 	$(STORAGE_DIR)/storage_manager.cpp \
-	drivers/storage/nvme/nvme.cpp \
-	drivers/usb/xhci/xhci.cpp \
 	$(LOADER_DIR)/process_loader.cpp \
 	$(LOADER_DIR)/elf_loader.cpp \
 	$(LOADER_DIR)/elf.cpp \
@@ -149,7 +147,16 @@ AUDIO_SERVER_SRCS = \
 	services/audio/audio_server.cpp \
 	services/audio/audio_stream.cpp \
 	services/audio/audio_mixer.cpp \
-	services/audio/audio_session.cpp
+	services/audio/audio_session.cpp \
+	services/audio/hda/hda.cpp
+
+PCIE_MANAGER_SRCS = services/pcie_manager/main.cpp
+
+NVME_DRIVER_SRCS = services/storage/nvme/nvme.cpp services/storage/nvme/main.cpp
+
+PS2_DRIVER_SRCS = services/input/ps2/ps2.cpp services/input/ps2/main.cpp
+
+XHCI_DRIVER_SRCS = services/input/xhci/xhci.cpp services/input/xhci/main.cpp
 
 DESKTOP_SHELL_SRCS = \
 	userland/shell/desktop_shell.cpp \
@@ -179,16 +186,24 @@ KERNEL_OBJS = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(KERNEL_SRCS)) \
 # Binaries
 DISPLAY_SERVER_BIN = $(DIST_DIR)/bin/display_server.elf
 AUDIO_SERVER_BIN   = $(DIST_DIR)/bin/audio_server.elf
+PCIE_MANAGER_BIN   = $(DIST_DIR)/bin/pcie_manager.elf
+NVME_DRIVER_BIN    = $(DIST_DIR)/bin/nvme_driver.elf
+PS2_DRIVER_BIN     = $(DIST_DIR)/bin/ps2_driver.elf
+XHCI_DRIVER_BIN    = $(DIST_DIR)/bin/xhci_driver.elf
 DESKTOP_SHELL_BIN  = $(DIST_DIR)/bin/desktop_shell.elf
 CLI_SHELL_BIN      = $(DIST_DIR)/bin/cli_shell.elf
 
 DISPLAY_SERVER_OBJS = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(DISPLAY_SERVER_SRCS))
 AUDIO_SERVER_OBJS   = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(AUDIO_SERVER_SRCS))
+PCIE_MANAGER_OBJS   = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(PCIE_MANAGER_SRCS))
+NVME_DRIVER_OBJS    = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(NVME_DRIVER_SRCS))
+PS2_DRIVER_OBJS     = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(PS2_DRIVER_SRCS))
+XHCI_DRIVER_OBJS    = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(XHCI_DRIVER_SRCS))
 DESKTOP_SHELL_OBJS  = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(DESKTOP_SHELL_SRCS))
 APP_OBJS            = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(APP_SRCS))
 CLI_SHELL_OBJS      = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(CLI_SHELL_SRCS))
 
-SERVICES_BINS = $(DISPLAY_SERVER_BIN) $(AUDIO_SERVER_BIN) $(DESKTOP_SHELL_BIN) $(CLI_SHELL_BIN)
+SERVICES_BINS = $(DISPLAY_SERVER_BIN) $(AUDIO_SERVER_BIN) $(PCIE_MANAGER_BIN) $(NVME_DRIVER_BIN) $(PS2_DRIVER_BIN) $(XHCI_DRIVER_BIN) $(DESKTOP_SHELL_BIN) $(CLI_SHELL_BIN)
 
 # ----------------------------------------------------
 # Build Targets
@@ -212,6 +227,22 @@ $(DISPLAY_SERVER_BIN): $(BUILD_DIR)/userland/libacos/crt0.o $(DISPLAY_SERVER_OBJ
 	$(CXX) $(USER_LDFLAGS) -o $@ $^
 
 $(AUDIO_SERVER_BIN): $(BUILD_DIR)/userland/libacos/crt0.o $(AUDIO_SERVER_OBJS) $(LIBACOS_OBJS)
+	@mkdir -p $(@D)
+	$(CXX) $(USER_LDFLAGS) -o $@ $^
+
+$(PCIE_MANAGER_BIN): $(BUILD_DIR)/userland/libacos/crt0.o $(PCIE_MANAGER_OBJS) $(LIBACOS_OBJS)
+	@mkdir -p $(@D)
+	$(CXX) $(USER_LDFLAGS) -o $@ $^
+
+$(NVME_DRIVER_BIN): $(BUILD_DIR)/userland/libacos/crt0.o $(NVME_DRIVER_OBJS) $(LIBACOS_OBJS)
+	@mkdir -p $(@D)
+	$(CXX) $(USER_LDFLAGS) -o $@ $^
+
+$(PS2_DRIVER_BIN): $(BUILD_DIR)/userland/libacos/crt0.o $(PS2_DRIVER_OBJS) $(LIBACOS_OBJS)
+	@mkdir -p $(@D)
+	$(CXX) $(USER_LDFLAGS) -o $@ $^
+
+$(XHCI_DRIVER_BIN): $(BUILD_DIR)/userland/libacos/crt0.o $(XHCI_DRIVER_OBJS) $(LIBACOS_OBJS)
 	@mkdir -p $(@D)
 	$(CXX) $(USER_LDFLAGS) -o $@ $^
 

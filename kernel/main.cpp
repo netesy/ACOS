@@ -14,13 +14,8 @@
 #include <kernel/storage/filesystem_manager.h>
 #include <kernel/storage/fat32.h>
 #include <kernel/storage/ahci.h>
-#include <drivers/storage/nvme/nvme.h>
-#include <drivers/usb/xhci/xhci.h>
-#include <drivers/input/ps2/ps2.h>
 #include <kernel/hal/pci.h>
 #include <libs/runtime/include/acos/runtime.h>
-#include <drivers/audio/virtio_sound/virtio_sound.h>
-#include <drivers/audio/hda/hda.h>
 
 #include <kernel/hal/serial.h>
 #include <kernel/hal/console.h>
@@ -99,7 +94,6 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
 
     acos::memory::vmm_init(bootInfo);
     acos::scheduler::scheduler_init();
-    acos::drivers::input::PS2Controller::init();
     acos::services::init();
 
     // Initialize storage and mount root filesystem
@@ -122,62 +116,18 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     // Instead of failing, let's use the RamDisk if it was provided, or wait for PCI.
     // Given the task is to fix spawning services, and they are likely on the disk image.
 
-    // Discover AHCI controller via PCI
+    // Legacy Kernel-Mode Bootstrapping (To be migrated to pcie_manager)
     acos::hal::PCIDevice ahci_dev = acos::hal::PCI::find_device(0x01, 0x06);
     if (ahci_dev.vendor_id != 0xFFFF) {
-        acos::hal::serial_print("AHCI: Controller found on PCI bus\n");
         acos::hal::PCI::enable_bus_mastering(ahci_dev);
         acos::u64 bar5 = acos::hal::PCI::get_bar(ahci_dev, 5);
-
         static acos::storage::AHCIController ahci_ctrl(bar5);
         if (ahci_ctrl.initialize()) {
             for (acos::u32 i = 0; i < ahci_ctrl.port_count(); i++) {
-                acos::storage::AHCIPort* port = ahci_ctrl.get_port(i);
-                acos::storage::StorageManager::register_device(i, port);
-                acos::storage::FileSystemManager::probe_and_mount(port, "/");
+                acos::storage::StorageManager::register_device(i, ahci_ctrl.get_port(i));
+                acos::storage::FileSystemManager::probe_and_mount(ahci_ctrl.get_port(i), "/");
             }
         }
-    } else {
-        acos::hal::serial_print("AHCI: Controller not found on PCI\n");
-    }
-
-    // Discover Intel HDA via PCI (Class 04, Subclass 03)
-    acos::hal::PCIDevice hda_dev = acos::hal::PCI::find_device(0x04, 0x03);
-    if (hda_dev.vendor_id != 0xFFFF) {
-        acos::hal::serial_print("HDA: Controller found on PCI bus\n");
-        acos::hal::PCI::enable_bus_mastering(hda_dev);
-        acos::u64 bar0 = acos::hal::PCI::get_bar(hda_dev, 0);
-
-        static acos::drivers::audio::IntelHDA hda_ctrl(bar0);
-        if (hda_ctrl.initialize()) {
-             static acos::audio::AudioDevice hda_dev_obj(0x100, "Intel HDA", &hda_ctrl);
-             acos::audio::AudioManager::register_device(&hda_dev_obj);
-        }
-    }
-
-    // Discover NVMe via PCI (Class 01, Subclass 08)
-    acos::hal::PCIDevice nvme_dev = acos::hal::PCI::find_device(0x01, 0x08);
-    if (nvme_dev.vendor_id != 0xFFFF) {
-        acos::hal::serial_print("NVMe: Controller found on PCI bus\n");
-        acos::hal::PCI::enable_bus_mastering(nvme_dev);
-        acos::u64 bar0 = acos::hal::PCI::get_bar(nvme_dev, 0);
-
-        static acos::drivers::storage::NVMeController nvme_ctrl(bar0);
-        if (nvme_ctrl.initialize()) {
-            acos::storage::StorageManager::register_device(0x200, &nvme_ctrl);
-            acos::storage::FileSystemManager::probe_and_mount(&nvme_ctrl, "/mnt/nvme");
-        }
-    }
-
-    // Discover xHCI via PCI (Class 0C, Subclass 03, PI 30)
-    acos::hal::PCIDevice xhci_dev = acos::hal::PCI::find_device(0x0C, 0x03);
-    if (xhci_dev.vendor_id != 0xFFFF && xhci_dev.prog_if == 0x30) {
-        acos::hal::serial_print("xHCI: Controller found on PCI bus\n");
-        acos::hal::PCI::enable_bus_mastering(xhci_dev);
-        acos::u64 bar0 = acos::hal::PCI::get_bar(xhci_dev, 0);
-
-        static acos::drivers::usb::XHCIController xhci_ctrl(bar0);
-        xhci_ctrl.initialize();
     }
 
     // Register kernel services
@@ -247,8 +197,13 @@ else
     acos::hal::serial_print("Cannot find kernel.elf\n");
 }
 
+    spawn_service("/bin/pcie_manager.elf");
+
     if (desktop_mode) {
         spawn_service("/bin/display_server.elf");
+        spawn_service("/bin/nvme_driver.elf");
+        spawn_service("/bin/ps2_driver.elf");
+        spawn_service("/bin/xhci_driver.elf");
         spawn_service("/bin/audio_server.elf");
         spawn_service("/bin/desktop_shell.elf");
     }

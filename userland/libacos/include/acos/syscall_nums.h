@@ -58,6 +58,12 @@ enum class SyscallNum : u64 {
     GraphicsPresent = 602,
     GraphicsGetFramebuffer = 603,
 
+    // Hardware/Driver (700-799)
+    DeviceMapMMIO = 700,
+    DeviceUnmapMMIO = 701,
+    DeviceBindInterrupt = 702,
+    MemoryAllocateContiguous = 703,
+
     // Service Discovery (500-599)
     ResourceLocate = 500,
     ResourceRegister = 501
