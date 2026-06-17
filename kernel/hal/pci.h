@@ -22,6 +22,9 @@ public:
     static PCIDevice find_device(u8 class_code, u8 subclass);
     static u64 get_bar(const PCIDevice& dev, u8 bar_index);
     static void enable_bus_mastering(const PCIDevice& dev);
+
+    static u8 find_capability(const PCIDevice& dev, u8 cap_id);
+    static void enable_msi(const PCIDevice& dev, u8 vector);
 };
 
 } // namespace acos::hal

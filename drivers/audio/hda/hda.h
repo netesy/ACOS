@@ -5,7 +5,7 @@ namespace acos::drivers::audio {
 
 class IntelHDA : public acos::audio::AudioDriver {
 public:
-    IntelHDA();
+    IntelHDA(u64 bar0);
     bool initialize() override;
     void shutdown() override;
 
@@ -16,6 +16,10 @@ public:
     void pause(u32 device_id) override;
     void resume(u32 device_id) override;
     void stop(u32 device_id) override;
+
+private:
+    u64 m_bar0;
+    volatile u8* m_regs;
 };
 
 } // namespace acos::drivers::audio

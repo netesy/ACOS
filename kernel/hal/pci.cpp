@@ -57,4 +57,39 @@ void PCI::enable_bus_mastering(const PCIDevice& dev) {
     write_config(dev.bus, dev.device, dev.function, 0x04, command);
 }
 
+u8 PCI::find_capability(const PCIDevice& dev, u8 cap_id) {
+    u32 status = read_config(dev.bus, dev.device, dev.function, 0x06);
+    if (!(status & (1 << 4))) return 0; // Capabilities List bit
+
+    u8 ptr = (u8)read_config(dev.bus, dev.device, dev.function, 0x34);
+    while (ptr) {
+        u32 cap = read_config(dev.bus, dev.device, dev.function, ptr);
+        if ((cap & 0xFF) == cap_id) return ptr;
+        ptr = (u8)((cap >> 8) & 0xFF);
+    }
+    return 0;
+}
+
+void PCI::enable_msi(const PCIDevice& dev, u8 vector) {
+    u8 msi_ptr = find_capability(dev, 0x05); // MSI Capability ID
+    if (!msi_ptr) return;
+
+    // Local APIC ID (simplified, assuming BSP)
+    u32 message_addr = 0xFEE00000;
+    u32 message_data = vector;
+
+    write_config(dev.bus, dev.device, dev.function, msi_ptr + 4, message_addr);
+
+    u32 ctrl = read_config(dev.bus, dev.device, dev.function, msi_ptr);
+    if (ctrl & (1 << 23)) { // 64-bit support
+        write_config(dev.bus, dev.device, dev.function, msi_ptr + 8, 0); // Upper address
+        write_config(dev.bus, dev.device, dev.function, msi_ptr + 12, message_data);
+    } else {
+        write_config(dev.bus, dev.device, dev.function, msi_ptr + 8, message_data);
+    }
+
+    ctrl |= (1 << 16); // MSI Enable bit
+    write_config(dev.bus, dev.device, dev.function, msi_ptr, ctrl);
+}
+
 } // namespace acos::hal

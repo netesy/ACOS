@@ -58,6 +58,8 @@ KERNEL_SRCS = \
 	$(STORAGE_DIR)/fat32.cpp \
 	$(STORAGE_DIR)/ramdisk.cpp \
 	$(STORAGE_DIR)/storage_manager.cpp \
+	drivers/storage/nvme/nvme.cpp \
+	drivers/usb/xhci/xhci.cpp \
 	$(LOADER_DIR)/process_loader.cpp \
 	$(LOADER_DIR)/elf_loader.cpp \
 	$(LOADER_DIR)/elf.cpp \
@@ -88,6 +90,7 @@ KERNEL_SRCS = \
 	$(HAL_DIR)/serial.cpp \
 	$(HAL_DIR)/console.cpp \
 	$(HAL_DIR)/pci.cpp \
+	drivers/input/ps2/ps2.cpp \
 	$(GRAPHICS_DIR)/graphics_manager.cpp \
 	$(GRAPHICS_DIR)/framebuffer.cpp \
 	$(GRAPHICS_DIR)/renderer.cpp \
