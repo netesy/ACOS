@@ -13,6 +13,7 @@ static usize g_process_count = 0;
 Process* Process::create() {
     Process* p = reinterpret_cast<Process*>(acos::memory::kmalloc(sizeof(Process)));
     if (!p) return nullptr;
+    memset(p, 0, sizeof(Process));
 
     p->id = g_next_process_id++;
     p->address_space = reinterpret_cast<memory::AddressSpace*>(acos::memory::kmalloc(sizeof(memory::AddressSpace)));

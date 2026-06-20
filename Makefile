@@ -88,7 +88,7 @@ KERNEL_SRCS = \
 	$(HAL_DIR)/serial.cpp \
 	$(HAL_DIR)/console.cpp \
 	$(HAL_DIR)/pci.cpp \
-	drivers/input/ps2/ps2.cpp \
+	services/input/ps2/ps2.cpp \
 	$(GRAPHICS_DIR)/graphics_manager.cpp \
 	$(GRAPHICS_DIR)/framebuffer.cpp \
 	$(GRAPHICS_DIR)/renderer.cpp \
@@ -99,7 +99,6 @@ KERNEL_SRCS = \
 	$(K_AUDIO_DIR)/audio_manager.cpp \
 	$(K_AUDIO_DIR)/audio_device.cpp \
 	$(D_AUDIO_DIR)/virtio_sound/virtio_sound.cpp \
-	$(D_AUDIO_DIR)/hda/hda.cpp \
 	$(SMP_DIR)/smp.cpp \
 	$(SMP_DIR)/cpu.cpp \
 	$(SMP_DIR)/ipi.cpp \
@@ -184,14 +183,14 @@ KERNEL_OBJS = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(KERNEL_SRCS)) \
               $(patsubst %.S, $(BUILD_DIR)/%.o, $(KERNEL_ASM_SRCS))
 
 # Binaries
-DISPLAY_SERVER_BIN = $(DIST_DIR)/bin/display_server.elf
-AUDIO_SERVER_BIN   = $(DIST_DIR)/bin/audio_server.elf
-PCIE_MANAGER_BIN   = $(DIST_DIR)/bin/pcie_manager.elf
-NVME_DRIVER_BIN    = $(DIST_DIR)/bin/nvme_driver.elf
-PS2_DRIVER_BIN     = $(DIST_DIR)/bin/ps2_driver.elf
-XHCI_DRIVER_BIN    = $(DIST_DIR)/bin/xhci_driver.elf
-DESKTOP_SHELL_BIN  = $(DIST_DIR)/bin/desktop_shell.elf
-CLI_SHELL_BIN      = $(DIST_DIR)/bin/cli_shell.elf
+DISPLAY_SERVER_BIN = $(DIST_DIR)/bin/display.elf
+AUDIO_SERVER_BIN   = $(DIST_DIR)/bin/audio.elf
+PCIE_MANAGER_BIN   = $(DIST_DIR)/bin/pcie.elf
+NVME_DRIVER_BIN    = $(DIST_DIR)/bin/nvme.elf
+PS2_DRIVER_BIN     = $(DIST_DIR)/bin/ps2.elf
+XHCI_DRIVER_BIN    = $(DIST_DIR)/bin/xhci.elf
+DESKTOP_SHELL_BIN  = $(DIST_DIR)/bin/desktop.elf
+CLI_SHELL_BIN      = $(DIST_DIR)/bin/cli.elf
 
 DISPLAY_SERVER_OBJS = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(DISPLAY_SERVER_SRCS))
 AUDIO_SERVER_OBJS   = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(AUDIO_SERVER_SRCS))
@@ -273,7 +272,7 @@ $(DISK_IMG): dist
 		$(MCOPY) -i $(DISK_IMG) $(DIST_DIR)/kernel.elf ::/kernel.elf; \
 		$(MMD) -i $(DISK_IMG) ::/bin; \
 		for bin in $(SERVICES_BINS); do \
-			$(MCOPY) -i $(DISK_IMG) $$bin ::/bin/$$(basename $$bin); \
+			$(MCOPY) -v -i $(DISK_IMG) $$bin ::/bin/$$(basename $$bin); \
 		done \
 	else \
 		echo "[IMG] Warning: mtools and mkfs.vfat are required to populate the FAT32 image."; \

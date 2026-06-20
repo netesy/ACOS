@@ -50,27 +50,50 @@ ELFLoadResult ElfLoader::load_executable(memory::AddressSpace* target_as, const 
         }
 
         const u64 vaddr = phdr[i].p_vaddr + load_base;
-        const u64 pages = (phdr[i].p_memsz + 4095) / 4096;
-        u32 flags = memory::PageFlags::User;
+        const u64 memsz = phdr[i].p_memsz;
+        const u64 filesz = phdr[i].p_filesz;
+        const u64 offset = phdr[i].p_offset;
+
+        u64 start_page = vaddr & ~0xFFFULL;
+        u64 end_page = (vaddr + memsz + 4095) & ~0xFFFULL;
+
+        u32 flags = memory::PageFlags::User | memory::PageFlags::Present;
         if ((phdr[i].p_flags & PF_W) != 0) {
             flags |= memory::PageFlags::Writable;
         }
 
-        for (u64 page = 0; page < pages; ++page) {
-            const u64 phys = memory::pmm_alloc();
-            if (!phys) {
-                return {false, 0, 0};
-            }
-            if (!target_as->map(vaddr + page * 4096, phys, flags)) {
-                return {false, 0, 0};
-            }
-        }
+        for (u64 page_addr = start_page; page_addr < end_page; page_addr += 4096) {
+            u64 phys = target_as->translate(page_addr);
 
-        if (phdr[i].p_filesz > 0) {
-            memcpy(reinterpret_cast<void*>(vaddr), reinterpret_cast<const u8*>(elf_data) + phdr[i].p_offset, phdr[i].p_filesz);
-        }
-        if (phdr[i].p_memsz > phdr[i].p_filesz) {
-            memset(reinterpret_cast<void*>(vaddr + phdr[i].p_filesz), 0, phdr[i].p_memsz - phdr[i].p_filesz);
+            // If the page is already identity mapped (phys == virt), we MUST re-map it
+            // to a new physical page to avoid corrupting kernel/MMIO memory.
+            if (!phys || phys == page_addr) {
+                phys = memory::pmm_alloc();
+                if (!phys) return {false, 0, 0};
+                if (!target_as->map(page_addr, phys, flags)) return {false, 0, 0};
+                memset(reinterpret_cast<void*>(phys), 0, 4096);
+            }
+
+            u64 copy_start = (vaddr > page_addr) ? vaddr : page_addr;
+            u64 copy_end = ((vaddr + filesz) < (page_addr + 4096)) ? (vaddr + filesz) : (page_addr + 4096);
+
+            if (copy_start < copy_end) {
+                u64 off_in_page = copy_start - page_addr;
+                u64 off_in_elf = copy_start - vaddr;
+                u64 size_to_copy = copy_end - copy_start;
+                memcpy(reinterpret_cast<void*>(phys + off_in_page),
+                       reinterpret_cast<const u8*>(elf_data) + offset + off_in_elf,
+                       size_to_copy);
+            }
+
+            u64 bss_start = (vaddr + filesz > page_addr) ? vaddr + filesz : page_addr;
+            u64 bss_end = (vaddr + memsz < page_addr + 4096) ? vaddr + memsz : page_addr + 4096;
+
+            if (bss_start < bss_end) {
+                u64 off_in_page = bss_start - page_addr;
+                u64 size_to_zero = bss_end - bss_start;
+                memset(reinterpret_cast<void*>(phys + off_in_page), 0, size_to_zero);
+            }
         }
     }
 

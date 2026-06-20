@@ -6,6 +6,7 @@ namespace acos::storage {
 
 class FAT32FileSystem : public vfs::FileSystem {
 public:
+    FAT32FileSystem() : m_device(nullptr) {}
     FAT32FileSystem(BlockDevice* device);
 
     vfs::Node* open(const char* path) override;

@@ -24,15 +24,26 @@ void PCI::write_config(u8 bus, u8 device, u8 function, u8 offset, u32 value) {
 PCIDevice PCI::find_device(u8 class_code, u8 subclass) {
     for (u16 bus = 0; bus < 256; bus++) {
         for (u8 device = 0; device < 32; device++) {
-            u32 reg0 = read_config((u8)bus, device, 0, 0);
-            if ((reg0 & 0xFFFF) == 0xFFFF) continue;
+            for (u8 function = 0; function < 8; function++) {
+                u32 reg0 = read_config((u8)bus, device, function, 0);
+                if (reg0 != 0xFFFFFFFF) {
+                    // Debug print for all devices if needed
+                }
+                if ((reg0 & 0xFFFF) == 0xFFFF) continue;
 
-            u32 reg2 = read_config((u8)bus, device, 0, 0x08);
-            u8 dev_class = (reg2 >> 24) & 0xFF;
-            u8 dev_subclass = (reg2 >> 16) & 0xFF;
+                u32 reg2 = read_config((u8)bus, device, function, 0x08);
+                u8 dev_class = (reg2 >> 24) & 0xFF;
+                u8 dev_subclass = (reg2 >> 16) & 0xFF;
 
-            if (dev_class == class_code && dev_subclass == subclass) {
-                return {(u8)bus, device, 0, (u16)(reg0 & 0xFFFF), (u16)(reg0 >> 16), dev_class, dev_subclass, (u8)((reg2 >> 8) & 0xFF)};
+                if (dev_class == class_code && dev_subclass == subclass) {
+                    return {(u8)bus, device, function, (u16)(reg0 & 0xFFFF), (u16)(reg0 >> 16), dev_class, dev_subclass, (u8)((reg2 >> 8) & 0xFF)};
+                }
+
+                // If not multi-function, don't check other functions
+                if (function == 0) {
+                    u32 reg3 = read_config((u8)bus, device, 0, 0x0C);
+                    if (!(reg3 & 0x00800000)) break;
+                }
             }
         }
     }
