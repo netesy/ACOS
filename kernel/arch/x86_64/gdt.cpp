@@ -1,4 +1,4 @@
-#include <acos/types.h>
+#include <kernel/hal/gdt.h>
 
 namespace acos::hal {
 
@@ -37,8 +37,18 @@ struct TSSEntry {
 static GDTEntry g_gdt[7];
 static GDTPointer g_gdt_ptr;
 static TSSEntry g_tss;
+static u8 g_tss_stack[16384];
+static u8 g_ist_stack[16384];
+
+void tss_set_rsp0(u64 rsp0) {
+    g_tss.rsp0 = rsp0;
+}
 
 void gdt_init() {
+    for (int i = 0; i < 7; i++) {
+        *reinterpret_cast<u64*>(&g_gdt[i]) = 0;
+    }
+
     // 0: Null
     g_gdt[0] = {0, 0, 0, 0, 0, 0};
     // 1: Kernel Code (0x08)
@@ -49,6 +59,14 @@ void gdt_init() {
     g_gdt[3] = {0, 0, 0, 0xF2, 0x00, 0};
     // 4: User Code   (0x20)
     g_gdt[4] = {0, 0, 0, 0xFA, 0x20, 0};
+
+    // Initialize TSS
+    for (usize i = 0; i < sizeof(g_tss); i++) {
+        reinterpret_cast<u8*>(&g_tss)[i] = 0;
+    }
+    g_tss.rsp0 = reinterpret_cast<u64>(g_tss_stack) + sizeof(g_tss_stack);
+    g_tss.ist1 = reinterpret_cast<u64>(g_ist_stack) + sizeof(g_ist_stack);
+    g_tss.iopb_offset = sizeof(g_tss);
 
     // 5-6: TSS (System segment, 16 bytes)
     u64 tss_base = reinterpret_cast<u64>(&g_tss);

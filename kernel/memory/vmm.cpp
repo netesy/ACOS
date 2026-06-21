@@ -1,6 +1,7 @@
 #include <acos/types.h>
 #include <kernel/memory/pmm.h>
 #include <kernel/hal/serial.h>
+#include <acos/boot_info.h>
 
 namespace acos::memory {
 

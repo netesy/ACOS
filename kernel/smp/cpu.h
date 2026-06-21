@@ -6,9 +6,10 @@
 namespace acos::smp {
 
 struct CpuData {
+    u64 user_rsp;       // Offset 0: Used by syscall_entry
+    u64 kernel_rsp;     // Offset 8: Used by syscall_entry
     u32 apic_id;
     u32 lapic_id;
-    u64 kernel_stack;
     scheduler::Thread* current_thread;
     scheduler::Process* current_process;
     bool is_bsp;

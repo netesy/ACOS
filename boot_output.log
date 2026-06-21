@@ -1,0 +1,136 @@
+[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01HBdsDxe: loading Boot0001 "UEFI QEMU HARDDISK QM00013 " from PciRoot(0x0)/Pci(0x3,0x0)/Sata(0x0,0xFFFF,0x0)
+BdsDxe: starting Boot0001 "UEFI QEMU HARDDISK QM00013 " from PciRoot(0x0)/Pci(0x3,0x0)/Sata(0x0,0xFFFF,0x0)
+ACOS Bootloader: Loading Kernel...
+[BOOT] GOP found: base=0x0000000080000000 size=0x00000000003E8000 w=0x0000000000000500 h=0x0000000000000320 pitch=0x0000000000000500
+ACOS Bootloader: Kernel entry 0x000000000010E6A4
+[BOOT] Memory map: 0x0000000000000012 regions
+ACOS Kernel: Initializing...
+[PMM] Initialized. Kernel image protected.
+[VMM] CR3 loaded
+[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01HBdsDxe: loading Boot0001 "UEFI QEMU HARDDISK QM00013 " from PciRoot(0x0)/Pci(0x3,0x0)/Sata(0x0,0xFFFF,0x0)
+BdsDxe: starting Boot0001 "UEFI QEMU HARDDISK QM00013 " from PciRoot(0x0)/Pci(0x3,0x0)/Sata(0x0,0xFFFF,0x0)
+ACOS Bootloader: Loading Kernel...
+[BOOT] GOP found: base=0x0000000080000000 size=0x00000000003E8000 w=0x0000000000000500 h=0x0000000000000320 pitch=0x0000000000000500
+ACOS Bootloader: Kernel entry 0x000000000010E6A4
+[BOOT] Memory map: 0x0000000000000012 regions
+ACOS Kernel: Initializing...
+[PMM] Initialized. Kernel image protected.
+[VMM] CR3 loaded
+[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01HBdsDxe: loading Boot0001 "UEFI QEMU HARDDISK QM00013 " from PciRoot(0x0)/Pci(0x3,0x0)/Sata(0x0,0xFFFF,0x0)
+BdsDxe: starting Boot0001 "UEFI QEMU HARDDISK QM00013 " from PciRoot(0x0)/Pci(0x3,0x0)/Sata(0x0,0xFFFF,0x0)
+ACOS Bootloader: Loading Kernel...
+[BOOT] GOP found: base=0x0000000080000000 size=0x00000000003E8000 w=0x0000000000000500 h=0x0000000000000320 pitch=0x0000000000000500
+ACOS Bootloader: Kernel entry 0x000000000010E6A4
+[BOOT] Memory map: 0x0000000000000012 regions
+ACOS Kernel: Initializing...
+[PMM] Initialized. Kernel image protected.
+[VMM] CR3 loaded
+[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01HBdsDxe: loading Boot0001 "UEFI QEMU HARDDISK QM00013 " from PciRoot(0x0)/Pci(0x3,0x0)/Sata(0x0,0xFFFF,0x0)
+BdsDxe: starting Boot0001 "UEFI QEMU HARDDISK QM00013 " from PciRoot(0x0)/Pci(0x3,0x0)/Sata(0x0,0xFFFF,0x0)
+ACOS Bootloader: Loading Kernel...
+[BOOT] GOP found: base=0x0000000080000000 size=0x00000000003E8000 w=0x0000000000000500 h=0x0000000000000320 pitch=0x0000000000000500
+ACOS Bootloader: Kernel entry 0x000000000010E6A4
+[BOOT] Memory map: 0x0000000000000012 regions
+ACOS Kernel: Initializing...
+[PMM] Initialized. Kernel image protected.
+[VMM] CR3 loaded
+[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01HBdsDxe: loading Boot0001 "UEFI QEMU HARDDISK QM00013 " from PciRoot(0x0)/Pci(0x3,0x0)/Sata(0x0,0xFFFF,0x0)
+BdsDxe: starting Boot0001 "UEFI QEMU HARDDISK QM00013 " from PciRoot(0x0)/Pci(0x3,0x0)/Sata(0x0,0xFFFF,0x0)
+ACOS Bootloader: Loading Kernel...
+[BOOT] GOP found: base=0x0000000080000000 size=0x00000000003E8000 w=0x0000000000000500 h=0x0000000000000320 pitch=0x0000000000000500
+ACOS Bootloader: Kernel entry 0x000000000010E6A4
+[BOOT] Memory map: 0x0000000000000012 regions
+ACOS Kernel: Initializing...
+[PMM] Initialized. Kernel image protected.
+[VMM] CR3 loaded
+[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01HBdsDxe: loading Boot0001 "UEFI QEMU HARDDISK QM00013 " from PciRoot(0x0)/Pci(0x3,0x0)/Sata(0x0,0xFFFF,0x0)
+BdsDxe: starting Boot0001 "UEFI QEMU HARDDISK QM00013 " from PciRoot(0x0)/Pci(0x3,0x0)/Sata(0x0,0xFFFF,0x0)
+ACOS Bootloader: Loading Kernel...
+[BOOT] GOP found: base=0x0000000080000000 size=0x00000000003E8000 w=0x0000000000000500 h=0x0000000000000320 pitch=0x0000000000000500
+ACOS Bootloader: Kernel entry 0x000000000010E6A4
+[BOOT] Memory map: 0x0000000000000012 regions
+ACOS Kernel: Initializing...
+[PMM] Initialized. Kernel image protected.
+[VMM] CR3 loaded
+[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01HBdsDxe: loading Boot0001 "UEFI QEMU HARDDISK QM00013 " from PciRoot(0x0)/Pci(0x3,0x0)/Sata(0x0,0xFFFF,0x0)
+BdsDxe: starting Boot0001 "UEFI QEMU HARDDISK QM00013 " from PciRoot(0x0)/Pci(0x3,0x0)/Sata(0x0,0xFFFF,0x0)
+ACOS Bootloader: Loading Kernel...
+[BOOT] GOP found: base=0x0000000080000000 size=0x00000000003E8000 w=0x0000000000000500 h=0x0000000000000320 pitch=0x0000000000000500
+ACOS Bootloader: Kernel entry 0x000000000010E6A4
+[BOOT] Memory map: 0x0000000000000012 regions
+ACOS Kernel: Initializing...
+[PMM] Initialized. Kernel image protected.
+[VMM] CR3 loaded
+[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01HBdsDxe: loading Boot0001 "UEFI QEMU HARDDISK QM00013 " from PciRoot(0x0)/Pci(0x3,0x0)/Sata(0x0,0xFFFF,0x0)
+BdsDxe: starting Boot0001 "UEFI QEMU HARDDISK QM00013 " from PciRoot(0x0)/Pci(0x3,0x0)/Sata(0x0,0xFFFF,0x0)
+ACOS Bootloader: Loading Kernel...
+[BOOT] GOP found: base=0x0000000080000000 size=0x00000000003E8000 w=0x0000000000000500 h=0x0000000000000320 pitch=0x0000000000000500
+ACOS Bootloader: Kernel entry 0x000000000010E6A4
+[BOOT] Memory map: 0x0000000000000012 regions
+ACOS Kernel: Initializing...
+[PMM] Initialized. Kernel image protected.
+[VMM] CR3 loaded
+[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01HBdsDxe: loading Boot0001 "UEFI QEMU HARDDISK QM00013 " from PciRoot(0x0)/Pci(0x3,0x0)/Sata(0x0,0xFFFF,0x0)
+BdsDxe: starting Boot0001 "UEFI QEMU HARDDISK QM00013 " from PciRoot(0x0)/Pci(0x3,0x0)/Sata(0x0,0xFFFF,0x0)
+ACOS Bootloader: Loading Kernel...
+[BOOT] GOP found: base=0x0000000080000000 size=0x00000000003E8000 w=0x0000000000000500 h=0x0000000000000320 pitch=0x0000000000000500
+ACOS Bootloader: Kernel entry 0x000000000010E6A4
+[BOOT] Memory map: 0x0000000000000012 regions
+ACOS Kernel: Initializing...
+[PMM] Initialized. Kernel image protected.
+[VMM] CR3 loaded
+[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01HBdsDxe: loading Boot0001 "UEFI QEMU HARDDISK QM00013 " from PciRoot(0x0)/Pci(0x3,0x0)/Sata(0x0,0xFFFF,0x0)
+BdsDxe: starting Boot0001 "UEFI QEMU HARDDISK QM00013 " from PciRoot(0x0)/Pci(0x3,0x0)/Sata(0x0,0xFFFF,0x0)
+ACOS Bootloader: Loading Kernel...
+[BOOT] GOP found: base=0x0000000080000000 size=0x00000000003E8000 w=0x0000000000000500 h=0x0000000000000320 pitch=0x0000000000000500
+ACOS Bootloader: Kernel entry 0x000000000010E6A4
+[BOOT] Memory map: 0x0000000000000012 regions
+ACOS Kernel: Initializing...
+[PMM] Initialized. Kernel image protected.
+[VMM] CR3 loaded
+[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01HBdsDxe: loading Boot0001 "UEFI QEMU HARDDISK QM00013 " from PciRoot(0x0)/Pci(0x3,0x0)/Sata(0x0,0xFFFF,0x0)
+BdsDxe: starting Boot0001 "UEFI QEMU HARDDISK QM00013 " from PciRoot(0x0)/Pci(0x3,0x0)/Sata(0x0,0xFFFF,0x0)
+ACOS Bootloader: Loading Kernel...
+[BOOT] GOP found: base=0x0000000080000000 size=0x00000000003E8000 w=0x0000000000000500 h=0x0000000000000320 pitch=0x0000000000000500
+ACOS Bootloader: Kernel entry 0x000000000010E6A4
+[BOOT] Memory map: 0x0000000000000012 regions
+ACOS Kernel: Initializing...
+[PMM] Initialized. Kernel image protected.
+[VMM] CR3 loaded
+[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01HBdsDxe: loading Boot0001 "UEFI QEMU HARDDISK QM00013 " from PciRoot(0x0)/Pci(0x3,0x0)/Sata(0x0,0xFFFF,0x0)
+BdsDxe: starting Boot0001 "UEFI QEMU HARDDISK QM00013 " from PciRoot(0x0)/Pci(0x3,0x0)/Sata(0x0,0xFFFF,0x0)
+ACOS Bootloader: Loading Kernel...
+[BOOT] GOP found: base=0x0000000080000000 size=0x00000000003E8000 w=0x0000000000000500 h=0x0000000000000320 pitch=0x0000000000000500
+ACOS Bootloader: Kernel entry 0x000000000010E6A4
+[BOOT] Memory map: 0x0000000000000012 regions
+ACOS Kernel: Initializing...
+[PMM] Initialized. Kernel image protected.
+[VMM] CR3 loaded
+[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01HBdsDxe: loading Boot0001 "UEFI QEMU HARDDISK QM00013 " from PciRoot(0x0)/Pci(0x3,0x0)/Sata(0x0,0xFFFF,0x0)
+BdsDxe: starting Boot0001 "UEFI QEMU HARDDISK QM00013 " from PciRoot(0x0)/Pci(0x3,0x0)/Sata(0x0,0xFFFF,0x0)
+ACOS Bootloader: Loading Kernel...
+[BOOT] GOP found: base=0x0000000080000000 size=0x00000000003E8000 w=0x0000000000000500 h=0x0000000000000320 pitch=0x0000000000000500
+ACOS Bootloader: Kernel entry 0x000000000010E6A4
+[BOOT] Memory map: 0x0000000000000012 regions
+ACOS Kernel: Initializing...
+[PMM] Initialized. Kernel image protected.
+[VMM] CR3 loaded
+[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01HBdsDxe: loading Boot0001 "UEFI QEMU HARDDISK QM00013 " from PciRoot(0x0)/Pci(0x3,0x0)/Sata(0x0,0xFFFF,0x0)
+BdsDxe: starting Boot0001 "UEFI QEMU HARDDISK QM00013 " from PciRoot(0x0)/Pci(0x3,0x0)/Sata(0x0,0xFFFF,0x0)
+ACOS Bootloader: Loading Kernel...
+[BOOT] GOP found: base=0x0000000080000000 size=0x00000000003E8000 w=0x0000000000000500 h=0x0000000000000320 pitch=0x0000000000000500
+ACOS Bootloader: Kernel entry 0x000000000010E6A4
+[BOOT] Memory map: 0x0000000000000012 regions
+ACOS Kernel: Initializing...
+[PMM] Initialized. Kernel image protected.
+[VMM] CR3 loaded
+[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01HBdsDxe: loading Boot0001 "UEFI QEMU HARDDISK QM00013 " from PciRoot(0x0)/Pci(0x3,0x0)/Sata(0x0,0xFFFF,0x0)
+BdsDxe: starting Boot0001 "UEFI QEMU HARDDISK QM00013 " from PciRoot(0x0)/Pci(0x3,0x0)/Sata(0x0,0xFFFF,0x0)
+ACOS Bootloader: Loading Kernel...
+[BOOT] GOP found: base=0x0000000080000000 size=0x00000000003E8000 w=0x0000000000000500 h=0x0000000000000320 pitch=0x0000000000000500
+ACOS Bootloader: Kernel entry 0x000000000010E6A4
+[BOOT] Memory map: 0x0000000000000012 regions
+ACOS Kernel: Initializing...
+[PMM] Initialized. Kernel image protected.
+[VMM] CR3 loaded
+qemu-system-x86_64: terminating on signal 15 from pid 11291 (-bash)

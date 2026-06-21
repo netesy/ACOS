@@ -7,6 +7,11 @@ CpuData Cpu::g_cpus[64];
 u32 Cpu::g_cpu_count = 0;
 
 void Cpu::init_bsp() {
+    for (int i = 0; i < 64; i++) {
+        g_cpus[i].user_rsp = 0;
+        g_cpus[i].kernel_rsp = 0;
+    }
+
     g_cpus[0].apic_id = arch::x86_64::LocalApic::get_id();
     g_cpus[0].is_bsp = true;
     g_cpus[0].cpu_index = 0;
@@ -17,6 +22,9 @@ void Cpu::init_bsp() {
     u32 low = static_cast<u32>(addr);
     u32 high = static_cast<u32>(addr >> 32);
     __asm__ volatile("wrmsr" : : "c"(0xC0000101), "a"(low), "d"(high));
+
+    // Also set Kernel GS Base (swapped in on syscall)
+    __asm__ volatile("wrmsr" : : "c"(0xC0000102), "a"(low), "d"(high));
 }
 
 void Cpu::init_ap(u32 apic_id) {

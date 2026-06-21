@@ -24,13 +24,43 @@
 #include <kernel/vfs/dev_fs.h>
 #include <kernel/smp/smp.h>
 #include <kernel/smp/cpu.h>
+#include <kernel/hal/gdt.h>
 
-namespace acos::hal { void gdt_init(); void idt_init(); }
+namespace acos::hal { void idt_init(); }
 namespace acos::memory { void vmm_init(BootInfo* bootInfo); }
 
 static void poll_io() {
     acos::scheduler::Thread* blocked = acos::scheduler::get_console_blocked();
     if (blocked && acos::hal::serial_received()) acos::scheduler::wake_thread(blocked);
+}
+
+extern "C" void k_handle_gp(acos::u64 rip, acos::u64 error_code) {
+    acos::hal::serial_print("GENERAL PROTECTION FAULT at RIP: ");
+    acos::hal::serial_print_hex(rip);
+    acos::hal::serial_print(" Code: ");
+    acos::hal::serial_print_hex(error_code);
+    acos::hal::serial_print("\n");
+    while(1) __asm__ volatile("hlt");
+}
+
+extern "C" void k_handle_pf(acos::u64 rip, acos::u64 error_code, acos::u64 address) {
+    acos::hal::serial_print("PAGE FAULT at RIP: ");
+    acos::hal::serial_print_hex(rip);
+    acos::hal::serial_print(" Addr: ");
+    acos::hal::serial_print_hex(address);
+    acos::hal::serial_print(" Code: ");
+    acos::hal::serial_print_hex(error_code);
+    acos::hal::serial_print("\n");
+    while(1) __asm__ volatile("hlt");
+}
+
+extern "C" void k_handle_df(acos::u64 rip, acos::u64 error_code) {
+    acos::hal::serial_print("DOUBLE FAULT at RIP: ");
+    acos::hal::serial_print_hex(rip);
+    acos::hal::serial_print(" Code: ");
+    acos::hal::serial_print_hex(error_code);
+    acos::hal::serial_print("\n");
+    while(1) __asm__ volatile("hlt");
 }
 
 extern "C" void kernelMain(acos::BootInfo* bootInfo) {

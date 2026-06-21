@@ -28,6 +28,8 @@ struct Thread {
     bool is_user;
     void* return_value;
     Thread* next;  // For run queue linking
+    u64 entry_point;
+    void* arg;
 };
 
 } // namespace acos::scheduler

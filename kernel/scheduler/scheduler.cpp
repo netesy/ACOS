@@ -2,6 +2,7 @@
 #include <kernel/smp/cpu.h>
 #include <kernel/hal/spinlock.h>
 #include <kernel/hal/serial.h>
+#include <kernel/hal/gdt.h>
 #include <kernel/memory/heap.h>
 #include <acos/types.h>
 
@@ -99,6 +100,10 @@ void schedule() {
         next->state = ThreadState::Running;
         cpu->current_thread = next;
         
+        // Update TSS RSP0 and per-CPU kernel_rsp for user->kernel transition
+        hal::tss_set_rsp0(next->stack_top);
+        cpu->kernel_rsp = next->stack_top;
+
         // Release lock before context switch to avoid deadlock
         g_queue_locks[cpu_id].unlock();
 
@@ -163,6 +168,8 @@ Thread* create_thread(ThreadEntry entry, void* arg) {
     thread->is_user = false;
     thread->return_value = nullptr;
     thread->next = nullptr;
+    thread->entry_point = (u64)entry;
+    thread->arg = arg;
     
     // Allocate stack (16KB)
     const usize STACK_SIZE = 16384;
@@ -175,10 +182,6 @@ Thread* create_thread(ThreadEntry entry, void* arg) {
     thread->stack_top = (u64)stack + STACK_SIZE;
     thread->stack_pointer = thread->stack_top;
     
-    // Setup initial stack frame for thread entry
-    // The stack must be compatible with context_switch in switch.S
-    // context_switch pops: rbp, rbx, r12, r13, r14, r15, then ret
-
     // Setup initial stack frame for thread entry
     // The stack must be compatible with context_switch in switch.S
     // context_switch pops: rbp, rbx, r12, r13, r14, r15, then ret
