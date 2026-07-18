@@ -91,22 +91,63 @@ void CLIShell::execute_line(char* line) {
 
     if (::strcmp(argv[0], "help") == 0) {
         cmd_help();
+    } else if (::strcmp(argv[0], "version") == 0) {
+        cmd_version();
+    } else if (::strcmp(argv[0], "clear") == 0) {
+        cmd_clear();
+    } else if (::strcmp(argv[0], "echo") == 0) {
+        cmd_echo(argc, argv);
     } else if (::strcmp(argv[0], "pwd") == 0) {
         cmd_pwd();
     } else if (::strcmp(argv[0], "cd") == 0) {
         cmd_cd(argc, argv);
     } else if (::strcmp(argv[0], "ls") == 0) {
         cmd_ls(argc, argv);
+    } else if (::strcmp(argv[0], "cat") == 0) {
+        cmd_cat(argc, argv);
     } else if (::strcmp(argv[0], "exit") == 0) {
         cmd_exit();
     } else {
-        execute_external(argc, argv);
+        const char* err1 = "Unknown command: ";
+        const char* err2 = "\nType \"help\" for a list of commands.\n";
+        syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>(err1), ::strlen(err1), 0, 0);
+        syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>(argv[0]), ::strlen(argv[0]), 0, 0);
+        syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>(err2), ::strlen(err2), 0, 0);
     }
 }
 
 void CLIShell::cmd_help() {
-    const char* msg = "Built-in commands: help, pwd, cd, ls, exit\n";
+    const char* msg = "ACOS CLI Help. Available built-in commands:\n"
+                      "  help         List all available commands\n"
+                      "  version      Print ACOS version information\n"
+                      "  clear        Clear the screen\n"
+                      "  echo [text]  Print text arguments\n"
+                      "  pwd          Print current working directory\n"
+                      "  cd [dir]     Change current working directory\n"
+                      "  ls [dir]     List directory contents\n"
+                      "  cat [file]   Display file contents\n"
+                      "  exit         Exit the shell cleanly\n";
     syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>(msg), ::strlen(msg), 0, 0);
+}
+
+void CLIShell::cmd_version() {
+    const char* msg = "ACOS Adaptive Capability Operating System v1.0\n";
+    syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>(msg), ::strlen(msg), 0, 0);
+}
+
+void CLIShell::cmd_clear() {
+    const char* msg = "\033[2J\033[H";
+    syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>(msg), ::strlen(msg), 0, 0);
+}
+
+void CLIShell::cmd_echo(int argc, char** argv) {
+    for (int i = 1; i < argc; i++) {
+        syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>(argv[i]), ::strlen(argv[i]), 0, 0);
+        if (i < argc - 1) {
+            syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>(" "), 1, 0, 0);
+        }
+    }
+    syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>("\n"), 1, 0, 0);
 }
 
 void CLIShell::cmd_pwd() {
@@ -115,12 +156,43 @@ void CLIShell::cmd_pwd() {
 }
 
 void CLIShell::cmd_cd(int argc, char** argv) {
-    if (argc < 2) return;
-    ::memcpy(m_cwd, argv[1], ::strlen(argv[1]) + 1);
+    if (argc < 2) {
+        ::memcpy(m_cwd, "/", 2);
+        return;
+    }
+
+    const char* dest = argv[1];
+    if (dest[0] == '/') {
+        ::memcpy(m_cwd, dest, ::strlen(dest) + 1);
+    } else {
+        char resolved_path[1024];
+        ::memset(resolved_path, 0, 1024);
+        ::memcpy(resolved_path, m_cwd, ::strlen(m_cwd));
+        usize cwd_len = ::strlen(m_cwd);
+        if (cwd_len > 1 && m_cwd[cwd_len - 1] != '/') {
+            resolved_path[cwd_len] = '/';
+            cwd_len++;
+        }
+        ::memcpy(resolved_path + cwd_len, dest, ::strlen(dest));
+        ::memcpy(m_cwd, resolved_path, ::strlen(resolved_path) + 1);
+    }
 }
 
 void CLIShell::cmd_ls(int argc, char** argv) {
     const char* path = (argc > 1) ? argv[1] : m_cwd;
+    char resolved_path[1024];
+
+    if (path[0] != '/') {
+        ::memset(resolved_path, 0, 1024);
+        ::memcpy(resolved_path, m_cwd, ::strlen(m_cwd));
+        usize cwd_len = ::strlen(m_cwd);
+        if (cwd_len > 1 && m_cwd[cwd_len - 1] != '/') {
+            resolved_path[cwd_len] = '/';
+            cwd_len++;
+        }
+        ::memcpy(resolved_path + cwd_len, path, ::strlen(path));
+        path = resolved_path;
+    }
 
     acos::abi::DirectoryEntry entries[32];
     i32 count = static_cast<i32>(syscall(
@@ -145,51 +217,59 @@ void CLIShell::cmd_ls(int argc, char** argv) {
     }
 }
 
-void CLIShell::cmd_exit() {
-    m_running = false;
-}
-
-void CLIShell::execute_external(int argc [[maybe_unused]], char** argv) {
-    char resolved_path[1024];
-    u64 child_handle = static_cast<u64>(-1);
-
-    if (argv[0][0] == '/' || argv[0][0] == '.') {
-        child_handle = syscall(
-            sys::SyscallNum::ProcessCreate,
-            reinterpret_cast<u64>(argv[0]), 0, 0, 0, 0
-        );
-    } else {
-        const char* paths[] = {"/bin/", "/userland/bin/", nullptr};
-        for (int i = 0; paths[i]; i++) {
-            ::memset(resolved_path, 0, 1024);
-            ::memcpy(resolved_path, paths[i], ::strlen(paths[i]));
-            ::memcpy(resolved_path + ::strlen(paths[i]), argv[0], ::strlen(argv[0]));
-
-            child_handle = syscall(
-                sys::SyscallNum::ProcessCreate,
-                reinterpret_cast<u64>(resolved_path), 0, 0, 0, 0
-            );
-            if (child_handle != static_cast<u64>(-1)) break;
-        }
+void CLIShell::cmd_cat(int argc, char** argv) {
+    if (argc < 2) {
+        const char* err = "Usage: cat <file>\n";
+        syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>(err), ::strlen(err), 0, 0);
+        return;
     }
 
-    if (child_handle == static_cast<u64>(-1)) {
-        const char* err = "shell: command not found: ";
+    char resolved_path[1024];
+    const char* path = argv[1];
+    if (path[0] != '/') {
+        // Resolve relative path against m_cwd
+        ::memset(resolved_path, 0, 1024);
+        ::memcpy(resolved_path, m_cwd, ::strlen(m_cwd));
+        usize cwd_len = ::strlen(m_cwd);
+        if (cwd_len > 1 && m_cwd[cwd_len - 1] != '/') {
+            resolved_path[cwd_len] = '/';
+            cwd_len++;
+        }
+        ::memcpy(resolved_path + cwd_len, path, ::strlen(path));
+        path = resolved_path;
+    }
+
+    i32 fd = static_cast<i32>(syscall(sys::SyscallNum::FileOpen, reinterpret_cast<u64>(path), 0, 0, 0, 0));
+    if (fd < 0) {
+        const char* err = "cat: cannot open file: ";
         syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>(err), ::strlen(err), 0, 0);
-        syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>(argv[0]), ::strlen(argv[0]), 0, 0);
+        syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>(argv[1]), ::strlen(argv[1]), 0, 0);
         syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>("\n"), 1, 0, 0);
         return;
     }
 
-    syscall(
-        sys::SyscallNum::ProcessStart,
-        child_handle, 0, 0, 0, 0
-    );
+    char buf[256];
+    while (true) {
+        i32 n = static_cast<i32>(syscall(sys::SyscallNum::FileRead, static_cast<u64>(fd), reinterpret_cast<u64>(buf), 256, 0, 0));
+        if (n <= 0) break;
+        syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>(buf), static_cast<u64>(n), 0, 0);
+    }
 
-    syscall(
-        sys::SyscallNum::ThreadJoin,
-        child_handle, 0, 0, 0, 0
-    );
+    syscall(sys::SyscallNum::FileClose, static_cast<u64>(fd), 0, 0, 0, 0);
+}
+
+void CLIShell::cmd_exit() {
+    m_running = false;
+    syscall(sys::SyscallNum::Exit, 0, 0, 0, 0, 0);
+}
+
+void CLIShell::execute_external(int argc [[maybe_unused]], char** argv) {
+    // Simply print unknown command message
+    const char* err1 = "Unknown command: ";
+    const char* err2 = "\nType \"help\" for a list of commands.\n";
+    syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>(err1), ::strlen(err1), 0, 0);
+    syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>(argv[0]), ::strlen(argv[0]), 0, 0);
+    syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>(err2), ::strlen(err2), 0, 0);
 }
 
 } // namespace acos::shell

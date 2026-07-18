@@ -16,9 +16,13 @@ private:
 
     // Built-ins
     void cmd_help();
+    void cmd_version();
+    void cmd_clear();
+    void cmd_echo(int argc, char** argv);
     void cmd_pwd();
     void cmd_cd(int argc, char** argv);
     void cmd_ls(int argc, char** argv);
+    void cmd_cat(int argc, char** argv);
     void cmd_exit();
 
     void execute_external(int argc, char** argv);
