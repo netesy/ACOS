@@ -1,4 +1,5 @@
 #include <kernel/syscall/syscall.h>
+#include <kernel/hal/serial.h>
 #include <kernel/scheduler/scheduler.h>
 #include <kernel/scheduler/process.h>
 #include <kernel/services/service_registry.h>
@@ -31,6 +32,15 @@ bool has_rights(acos::scheduler::Process* process, u64 handle, u64 rights) {
 } // namespace
 
 extern "C" u64 syscall_dispatch(u64 num, u64 arg1, u64 arg2, u64 arg3, u64 arg4, u64 arg5) {
+    acos::hal::serial_print("[SYSCALL] num=");
+    acos::hal::serial_print_hex(num);
+    acos::hal::serial_print(" arg1=");
+    acos::hal::serial_print_hex(arg1);
+    acos::hal::serial_print(" arg2=");
+    acos::hal::serial_print_hex(arg2);
+    acos::hal::serial_print(" arg3=");
+    acos::hal::serial_print_hex(arg3);
+    acos::hal::serial_print("\n");
     (void)arg4; (void)arg5;
     auto* current_thr = scheduler::current_thread();
     if (!current_thr && static_cast<SyscallNum>(num) != SyscallNum::Yield) {

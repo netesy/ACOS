@@ -48,4 +48,17 @@ void serial_print(const char* s) {
     }
 }
 
+void serial_print_hex(u64 val) {
+    char buf[19];
+    buf[0] = '0';
+    buf[1] = 'x';
+    for (int i = 0; i < 16; i++) {
+        int shift = 60 - (i * 4);
+        u8 hex = (val >> shift) & 0xF;
+        buf[2 + i] = (hex < 10) ? ('0' + hex) : ('A' + (hex - 10));
+    }
+    buf[18] = '\0';
+    serial_print(buf);
+}
+
 } // namespace acos::hal

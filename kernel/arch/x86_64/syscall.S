@@ -16,8 +16,13 @@ syscall_entry:
     push %r11
 
     # Call dispatcher
-    # (Simplified: using r10 as 4th arg for C calling convention)
-    mov %r10, %rcx
+    # Map registers from user syscall to kernel syscall_dispatch parameters:
+    # user syscall: rax=num, rdi=arg1, rsi=arg2, r10=arg3, r8=arg4, r9=arg5
+    # kernel C++:   rdi=num, rsi=arg1, rdx=arg2, rcx=arg3, r8=arg4, r9=arg5
+    mov %r10, %rcx   # rcx gets arg3 (from r10)
+    mov %rsi, %rdx   # rdx gets arg2 (from rsi)
+    mov %rdi, %rsi   # rsi gets arg1 (from rdi)
+    mov %rax, %rdi   # rdi gets num  (from rax)
     call syscall_dispatch
 
     # Restore context

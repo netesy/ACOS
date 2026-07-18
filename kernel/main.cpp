@@ -127,23 +127,42 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
         acos::vfs::File* file = acos::scheduler::current_thread()->parent->get_file(fd);
         if (!file) { acos::vfs::VFS::close(fd); return; }
         acos::usize size = file->size();
+        acos::hal::serial_print("Main: size="); acos::hal::serial_print_hex(size); acos::hal::serial_print("\n");
         void* elf_data = acos::memory::kmalloc(size);
+        if (!elf_data) {
+            acos::hal::serial_print("Main: kmalloc failed for ");
+            acos::hal::serial_print(path);
+            acos::hal::serial_print("\n");
+            acos::vfs::VFS::close(fd);
+            return;
+        }
         file->read(elf_data, size);
+        acos::hal::serial_print("Main: read done\n");
         acos::vfs::VFS::close(fd);
         acos::scheduler::Process* child = acos::loader::create_process_from_elf(path, elf_data, size);
+        acos::hal::serial_print("Main: create_process child=");
+        acos::hal::serial_print_hex(reinterpret_cast<acos::u64>(child));
+        acos::hal::serial_print("\n");
+        acos::hal::serial_print("Main: calling kfree...\n");
         acos::memory::kfree(elf_data);
-        if (child && child->primary_thread) acos::scheduler::wake_thread(child->primary_thread);
+        acos::hal::serial_print("Main: kfree done\n");
+        if (child && child->primary_thread) {
+            acos::hal::serial_print("Main: waking thread\n");
+            acos::scheduler::wake_thread(child->primary_thread);
+        }
+        acos::hal::serial_print("Main: Spawn complete\n");
     };
 
-    spawn_service("/bin/pcie.elf");
-    if (desktop_mode) {
-        spawn_service("/bin/display.elf");
-        spawn_service("/bin/nvme.elf");
-        spawn_service("/bin/ps2.elf");
-        spawn_service("/bin/xhci.elf");
-        spawn_service("/bin/audio.elf");
-        spawn_service("/bin/desktop.elf");
-    }
+    // Temporarily disabled other services to simplify debugging of cli.elf
+    // spawn_service("/bin/pcie.elf");
+    // if (desktop_mode) {
+    //     spawn_service("/bin/display.elf");
+    //     spawn_service("/bin/nvme.elf");
+    //     spawn_service("/bin/ps2.elf");
+    //     spawn_service("/bin/xhci.elf");
+    //     spawn_service("/bin/audio.elf");
+    //     spawn_service("/bin/desktop.elf");
+    // }
     spawn_service("/bin/cli.elf");
 
     boot_thread.state = acos::scheduler::ThreadState::Ready;

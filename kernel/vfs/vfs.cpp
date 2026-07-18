@@ -1,3 +1,4 @@
+#include <kernel/hal/serial.h>
 #include <kernel/vfs/vfs.h>
 #include <kernel/vfs/mount.h>
 #include <kernel/vfs/file.h>
@@ -10,9 +11,15 @@
 namespace acos::vfs {
 
 i32 VFS::open(const char* path, u64 flags [[maybe_unused]]) {
+    acos::hal::serial_print("  VFS: open called for ");
+    acos::hal::serial_print(path ? path : "null");
+    acos::hal::serial_print("\n");
     if (!path || path[0] == '\0') return -1;
     MountPoint* mp = MountRegistry::find_mount(path);
-    if (!mp || !mp->fs) return -1;
+    if (!mp || !mp->fs) {
+        acos::hal::serial_print("  VFS: find_mount failed\n");
+        return -1;
+    }
     
     const char* relative_path = path;
     usize mlen = strlen(mp->path);
@@ -20,15 +27,25 @@ i32 VFS::open(const char* path, u64 flags [[maybe_unused]]) {
         relative_path += mlen;
         if (*relative_path == '/') relative_path++;
     }
+    acos::hal::serial_print("  VFS: relative_path: ");
+    acos::hal::serial_print(relative_path);
+    acos::hal::serial_print("\n");
 
     Node* node = mp->fs->open(relative_path);
-    if (!node) return -1;
+    if (!node) {
+        acos::hal::serial_print("  VFS: fs->open failed\n");
+        return -1;
+    }
     File* file = reinterpret_cast<File*>(memory::kmalloc(sizeof(File)));
     if (!file) return -1;
     new (file) File(node);
     scheduler::Process* current = scheduler::current_thread()->parent;
     if (!current) { memory::kfree(file); return -1; }
-    return current->register_file(file);
+    i32 fd = current->register_file(file);
+    acos::hal::serial_print("  VFS: register_file fd=");
+    acos::hal::serial_print_hex(fd);
+    acos::hal::serial_print("\n");
+    return fd;
 }
 
 i32 VFS::close(u64 fd) {

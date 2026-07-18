@@ -97,6 +97,16 @@ void schedule() {
     
     // Switch to next thread
     if (next != current) {
+        acos::hal::serial_print("[SCHED] Switching from thread ");
+        acos::hal::serial_print_hex(current ? current->id : 0);
+        acos::hal::serial_print(" (is_user=");
+        acos::hal::serial_print_hex(current ? current->is_user : 0);
+        acos::hal::serial_print(") to thread ");
+        acos::hal::serial_print_hex(next->id);
+        acos::hal::serial_print(" (is_user=");
+        acos::hal::serial_print_hex(next->is_user);
+        acos::hal::serial_print(")\n");
+
         next->state = ThreadState::Running;
         cpu->current_thread = next;
         

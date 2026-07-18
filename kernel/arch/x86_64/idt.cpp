@@ -21,6 +21,9 @@ static IDTEntry g_idt[256];
 static IDTPointer g_idt_ptr;
 
 extern "C" void syscall_entry();
+extern "C" void isr_gp_handler();
+extern "C" void isr_pf_handler();
+extern "C" void isr_df_handler();
 
 void idt_set_gate(u8 num, u64 base, u16 selector, u8 flags) {
     g_idt[num].base_low = base & 0xFFFF;
@@ -40,6 +43,11 @@ void idt_init() {
     for (int i = 0; i < 256; i++) {
         idt_set_gate(i, 0, 0x08, 0x8E);
     }
+
+    // Set exception handlers
+    idt_set_gate(8, reinterpret_cast<u64>(isr_df_handler), 0x08, 0x8E);
+    idt_set_gate(13, reinterpret_cast<u64>(isr_gp_handler), 0x08, 0x8E);
+    idt_set_gate(14, reinterpret_cast<u64>(isr_pf_handler), 0x08, 0x8E);
 
     __asm__ volatile("lidt %0" : : "m"(g_idt_ptr));
 

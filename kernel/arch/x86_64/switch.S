@@ -28,8 +28,8 @@ context_switch:
 enter_user_mode:
     mov %rsi, %rsp
 
-    # Push SS (User Data)
-    push $0x23
+    # Push SS (User Data - index 3, RPL 3 = 0x1B)
+    push $0x1B
     # Push RSP
     push %rsi
     # Push RFLAGS (Interrupts enabled)
@@ -37,8 +37,8 @@ enter_user_mode:
     pop %rax
     or $0x200, %rax
     push %rax
-    # Push CS (User Code)
-    push $0x1B
+    # Push CS (User Code - index 4, RPL 3 = 0x23)
+    push $0x23
     # Push RIP
     push %rdi
 

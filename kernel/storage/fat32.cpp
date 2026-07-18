@@ -166,6 +166,7 @@ static FAT32DirNode g_dir_nodes[16];
 vfs::Node* allocate_file_node(BlockDevice* device, u32 cluster, u32 size, u32 fat_start, u32 data_start, u8 spc) {
     for (int i = 0; i < 64; i++) {
         if (!g_file_nodes[i].m_is_used) {
+            new (&g_file_nodes[i]) FAT32FileNode();
             g_file_nodes[i].m_is_used = true;
             g_file_nodes[i].initialize(device, cluster, size, fat_start, data_start, spc);
             return &g_file_nodes[i];
@@ -177,6 +178,7 @@ vfs::Node* allocate_file_node(BlockDevice* device, u32 cluster, u32 size, u32 fa
 vfs::Node* allocate_dir_node(BlockDevice* device, u32 cluster, u32 fat_start, u32 data_start, u8 spc) {
     for (int i = 0; i < 16; i++) {
         if (!g_dir_nodes[i].m_is_used) {
+            new (&g_dir_nodes[i]) FAT32DirNode();
             g_dir_nodes[i].m_is_used = true;
             g_dir_nodes[i].initialize(device, cluster, fat_start, data_start, spc);
             return &g_dir_nodes[i];
@@ -258,42 +260,112 @@ static FAT32FileSystem g_filesystems[4];
 static bool g_fs_used[4];
 
 bool FAT32FileSystem::probe(void* device, const char* target) {
+    hal::serial_print("FAT32: probe called\n");
     if (!device) return false;
     BlockDevice* block_device = (BlockDevice*)device;
     u8 sector[512];
-    if (block_device->read_block(0, sector) != 0) return false;
-    if (sector[510] != 0x55 || sector[511] != 0xAA) return false;
+    hal::serial_print("FAT32: reading block 0...\n");
+    if (block_device->read_block(0, sector) != 0) {
+        hal::serial_print("FAT32: read block 0 failed!\n");
+        return false;
+    }
+    hal::serial_print("FAT32: block 0 read successfully\n");
+    hal::serial_print("FAT32: checking magic numbers...\n");
+    if (sector[510] != 0x55 || sector[511] != 0xAA) {
+        hal::serial_print("FAT32: invalid magic 55 AA!\n");
+        return false;
+    }
+    hal::serial_print("FAT32: magic numbers check passed\n");
 
     FAT32FileSystem* fs = nullptr;
     for (int i = 0; i < 4; i++) {
+        hal::serial_print("FAT32: checking slot ");
+        hal::serial_print_hex(i);
+        hal::serial_print("\n");
         if (!g_fs_used[i]) {
             g_fs_used[i] = true;
-            g_filesystems[i] = FAT32FileSystem(block_device);
+            hal::serial_print("FAT32: copying filesystem instance...\n");
+            new (&g_filesystems[i]) FAT32FileSystem(block_device);
             fs = &g_filesystems[i];
+            hal::serial_print("FAT32: instance copied to slot\n");
             break;
         }
     }
 
-    if (fs && fs->mount(target)) {
-        vfs::VFS::mount(target, fs);
-        return true;
+    if (fs) {
+        hal::serial_print("FAT32: calling mount...\n");
+        bool m_res = fs->mount(target);
+        hal::serial_print("FAT32: mount returned ");
+        hal::serial_print_hex(m_res);
+        hal::serial_print("\n");
+        if (m_res) {
+            hal::serial_print("FAT32: mounting via VFS...\n");
+            vfs::VFS::mount(target, fs);
+            hal::serial_print("FAT32: mounted successfully!\n");
+            return true;
+        }
     }
     return false;
 }
 
 bool FAT32FileSystem::mount(const char* target [[maybe_unused]]) {
     u8 sector[512];
-    if (m_device->read_block(0, sector) != 0) return false;
+    hal::serial_print("FAT32: mount - reading block 0...\n");
+    if (m_device->read_block(0, sector) != 0) {
+        hal::serial_print("FAT32: mount - read block 0 failed!\n");
+        return false;
+    }
+    hal::serial_print("FAT32: mount - parsing values...\n");
+
     m_bytes_per_sector = *(u16*)(sector + 11);
-    if (m_bytes_per_sector != 512) return false;
+    hal::serial_print("FAT32: bytes_per_sector=");
+    hal::serial_print_hex(m_bytes_per_sector);
+    hal::serial_print("\n");
+
+    if (m_bytes_per_sector != 512) {
+        hal::serial_print("FAT32: bytes_per_sector is not 512!\n");
+        return false;
+    }
+
     m_sectors_per_cluster = sector[13];
+    hal::serial_print("FAT32: sectors_per_cluster=");
+    hal::serial_print_hex(m_sectors_per_cluster);
+    hal::serial_print("\n");
+
     m_reserved_sectors = *(u16*)(sector + 14);
+    hal::serial_print("FAT32: reserved_sectors=");
+    hal::serial_print_hex(m_reserved_sectors);
+    hal::serial_print("\n");
+
     m_num_fats = sector[16];
+    hal::serial_print("FAT32: num_fats=");
+    hal::serial_print_hex(m_num_fats);
+    hal::serial_print("\n");
+
     m_sectors_per_fat = *(u32*)(sector + 36);
+    hal::serial_print("FAT32: sectors_per_fat=");
+    hal::serial_print_hex(m_sectors_per_fat);
+    hal::serial_print("\n");
+
     m_total_sectors = *(u32*)(sector + 32);
+    hal::serial_print("FAT32: total_sectors=");
+    hal::serial_print_hex(m_total_sectors);
+    hal::serial_print("\n");
+
     m_root_cluster = *(u32*)(sector + 44);
+    hal::serial_print("FAT32: root_cluster=");
+    hal::serial_print_hex(m_root_cluster);
+    hal::serial_print("\n");
+
     m_fat_start = m_reserved_sectors;
     m_data_start = m_reserved_sectors + (m_num_fats * m_sectors_per_fat);
+
+    hal::serial_print("FAT32: m_fat_start=");
+    hal::serial_print_hex(m_fat_start);
+    hal::serial_print(" m_data_start=");
+    hal::serial_print_hex(m_data_start);
+    hal::serial_print("\n");
+
     return true;
 }
 
