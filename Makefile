@@ -175,7 +175,15 @@ APP_SRCS = \
 	apps/settings/settings.cpp \
 	apps/settings/audio_settings.cpp
 
-CLI_SHELL_SRCS = userland/shell/cli_shell.cpp userland/shell/cli_main.cpp
+CLI_SHELL_SRCS = \
+	userland/shell/cli_shell.cpp \
+	userland/shell/cli_main.cpp \
+	userland/shell/variables.cpp \
+	userland/shell/parser.cpp \
+	userland/shell/executor.cpp \
+	userland/shell/console_reader.cpp \
+	userland/shell/history.cpp \
+	userland/shell/completion.cpp
 
 # Objects
 BOOT_OBJS   = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(BOOT_DIR)/main.cpp)

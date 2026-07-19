@@ -102,7 +102,7 @@ scheduler::Process* create_process_from_elf(const char* name, const void* elf_da
     }
     acos::hal::serial_print("  ProcessLoader: allocating stack...\n");
     u64 stack_virt = 0x700000000000;
-    const u64 STACK_PAGES = 16;
+    const u64 STACK_PAGES = 256; // 1MB stack to support robust user programs and large shells
     for (u64 i = 0; i < STACK_PAGES; ++i) {
         u64 phys = memory::pmm_alloc();
         if (phys) {

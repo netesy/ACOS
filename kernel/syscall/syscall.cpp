@@ -132,12 +132,25 @@ extern "C" u64 syscall_dispatch(u64 num, u64 arg1, u64 arg2, u64 arg3, u64 arg4,
         }
 
         case SyscallNum::ThreadJoin: {
-            scheduler::Thread* thread = current ? current->get_thread(arg1) : nullptr;
-            if (!thread) return kErrInvalid;
-            while (thread->state != scheduler::ThreadState::Terminated) {
-                scheduler::schedule();
+            if (!current) return kErrInvalid;
+            scheduler::ResourceHandleEntry* entry = current->get_handle(arg1);
+            if (!entry) return kErrInvalid;
+            if (entry->kind == scheduler::ResourceKind::Thread) {
+                scheduler::Thread* thread = static_cast<scheduler::Thread*>(entry->object);
+                while (thread->state != scheduler::ThreadState::Terminated) {
+                    scheduler::schedule();
+                }
+                return 0;
+            } else if (entry->kind == scheduler::ResourceKind::Process) {
+                scheduler::Process* proc = static_cast<scheduler::Process*>(entry->object);
+                if (proc && proc->primary_thread) {
+                    while (proc->primary_thread->state != scheduler::ThreadState::Terminated) {
+                        scheduler::schedule();
+                    }
+                }
+                return 0;
             }
-            return 0;
+            return kErrInvalid;
         }
 
         case SyscallNum::ThreadTerminate: {
