@@ -1,16 +1,18 @@
 #pragma once
-#include <kernel/graphics/framebuffer.h>
-#include <kernel/graphics/font.h>
-#include <kernel/graphics/types.h>
+#include "framebuffer.h"
+#include "font.h"
+#include "types.h"
+#include "surface.h"
 
 namespace acos::graphics {
 
 class Renderer {
 public:
-    Renderer(Framebuffer* fb);
+    Renderer(Framebuffer* fb, Surface* surface = nullptr);
 
     // Basic drawing
     void draw_pixel(u32 x, u32 y, u32 color);
+    u32 get_pixel(u32 x, u32 y) const;
     void draw_line(u32 x1, u32 y1, u32 x2, u32 y2, u32 color);
     void draw_rect(u32 x, u32 y, u32 w, u32 h, u32 color);
     void fill_rect(u32 x, u32 y, u32 w, u32 h, u32 color);
@@ -36,20 +38,27 @@ public:
     void blend_rect(u32 x, u32 y, u32 w, u32 h, u32 color, u8 alpha);
     void draw_shadow(u32 x, u32 y, u32 w, u32 h, u32 offset, u8 alpha);
     
+    // Blit and copy operations
+    void blit(u32 dx, u32 dy, Surface* src, u32 sx, u32 sy, u32 sw, u32 sh);
+    void copy_rect(u32 dx, u32 dy, u32 sx, u32 sy, u32 w, u32 h);
+    void clear(u32 color);
+
     // Clipping
     void set_clip_rect(const ClipRect& rect);
     void clear_clip_rect();
 
     // Dimensions
-    u32 width() const { return m_fb ? m_fb->width() : 0; }
-    u32 height() const { return m_fb ? m_fb->height() : 0; }
+    u32 width() const;
+    u32 height() const;
 
 private:
     Framebuffer* m_fb;
+    Surface* m_surface;
     ClipRect m_clip_rect;
     bool m_clip_enabled;
 
     bool is_clipped(u32 x, u32 y) const {
+        if (x >= width() || y >= height()) return true;
         if (!m_clip_enabled) return false;
         return x < (u32)m_clip_rect.x || x >= (u32)(m_clip_rect.x + m_clip_rect.w) ||
                y < (u32)m_clip_rect.y || y >= (u32)(m_clip_rect.y + m_clip_rect.h);

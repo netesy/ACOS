@@ -5,6 +5,9 @@
 #include <kernel/services/service_registry.h>
 #include <kernel/graphics/surface.h>
 #include <kernel/graphics/graphics_manager.h>
+#include <kernel/graphics/context.h>
+#include <kernel/graphics/clipping.h>
+#include <kernel/graphics/dirty_region.h>
 #include <kernel/ipc/channel.h>
 #include <kernel/ipc/notification.h>
 #include <kernel/vfs/file.h>
@@ -625,28 +628,32 @@ extern "C" u64 syscall_dispatch(u64 num, u64 arg1, u64 arg2, u64 arg3, u64 arg4,
         case SyscallNum::GraphicsSurfaceCreate: {
             u32 width = static_cast<u32>(arg1);
             u32 height = static_cast<u32>(arg2);
-            if (!current) return 0;
-            auto* surface = new graphics::Surface(width, height);
+            if (!current || width == 0 || height == 0) return 0;
+            void* storage = memory::kmalloc(sizeof(graphics::Surface));
+            if (!storage) return kErrNoMemory;
+            auto* surface = new (storage) graphics::Surface(width, height, true);
             return current->register_resource(scheduler::ResourceKind::GraphicsSurface, surface, scheduler::ResourceRights::Read | scheduler::ResourceRights::Write | scheduler::ResourceRights::Transfer);
         }
 
         case SyscallNum::GraphicsWindowCreate: {
-            // u32 width = static_cast<u32>(arg1);
-            // u32 height = static_cast<u32>(arg2);
-            // const char* title = reinterpret_cast<const char*>(arg3);
             if (!current) return 0;
-            // For now, Windows are purely user-space constructs in DisplayServer.
-            // But we could track them here for capability management.
+            // For now, Windows are user-space constructs. We track them for capability management.
             return current->register_resource(scheduler::ResourceKind::GraphicsWindow, nullptr, scheduler::ResourceRights::Read | scheduler::ResourceRights::Write);
         }
 
         case SyscallNum::GraphicsPresent: {
             u64 handle = arg1;
             if (!current) return kErrInvalid;
-            // In a capability-based system, this might trigger a compositor update
-            // for the surface associated with the handle.
-            (void)handle;
-            return 0;
+            scheduler::ResourceHandleEntry* entry = current->get_handle(handle);
+            if (!entry) return kErrInvalid;
+            if (entry->kind == scheduler::ResourceKind::GraphicsSurface) {
+                auto* surface = static_cast<graphics::Surface*>(entry->object);
+                if (surface) {
+                    surface->swap_buffers();
+                    return 0;
+                }
+            }
+            return kErrInvalid;
         }
 
         case SyscallNum::GraphicsGetFramebuffer: {
@@ -678,6 +685,247 @@ extern "C" u64 syscall_dispatch(u64 num, u64 arg1, u64 arg2, u64 arg3, u64 arg4,
             }
 
             return fb_virt;
+        }
+
+        case SyscallNum::GraphicsDisplayCreate: {
+            if (!current) return 0;
+            auto* display = graphics::GraphicsManager::primary_display();
+            if (!display) return 0;
+            return current->register_resource(scheduler::ResourceKind::GraphicsDisplay, display, scheduler::ResourceRights::Read | scheduler::ResourceRights::Write);
+        }
+
+        case SyscallNum::GraphicsBufferCreate: {
+            u32 size = static_cast<u32>(arg1);
+            if (!current || size == 0) return 0;
+            void* buffer = memory::kmalloc(size);
+            if (!buffer) return kErrNoMemory;
+            return current->register_resource(scheduler::ResourceKind::GraphicsBuffer, buffer, scheduler::ResourceRights::Read | scheduler::ResourceRights::Write);
+        }
+
+        case SyscallNum::GraphicsResourceDestroy: {
+            u64 handle = arg1;
+            if (!current) return kErrInvalid;
+            scheduler::ResourceHandleEntry* entry = current->get_handle(handle);
+            if (!entry) return kErrInvalid;
+
+            if (entry->kind == scheduler::ResourceKind::GraphicsSurface) {
+                auto* surface = static_cast<graphics::Surface*>(entry->object);
+                if (surface) {
+                    surface->~Surface();
+                    memory::kfree(surface);
+                }
+            } else if (entry->kind == scheduler::ResourceKind::GraphicsContext) {
+                auto* ctx = static_cast<graphics::GraphicsContext*>(entry->object);
+                if (ctx) {
+                    ctx->~GraphicsContext();
+                    memory::kfree(ctx);
+                }
+            } else if (entry->kind == scheduler::ResourceKind::GraphicsBuffer) {
+                if (entry->object) {
+                    memory::kfree(entry->object);
+                }
+            }
+
+            return current->close_handle(handle) ? 0 : kErrInvalid;
+        }
+
+        case SyscallNum::GraphicsResourceResize: {
+            u64 handle = arg1;
+            u32 width = static_cast<u32>(arg2);
+            u32 height = static_cast<u32>(arg3);
+            if (!current || width == 0 || height == 0) return kErrInvalid;
+
+            scheduler::ResourceHandleEntry* entry = current->get_handle(handle);
+            if (!entry || (entry->rights & scheduler::ResourceRights::Write) == 0) return kErrAccess;
+
+            if (entry->kind == scheduler::ResourceKind::GraphicsSurface) {
+                auto* surface = static_cast<graphics::Surface*>(entry->object);
+                if (surface) {
+                    surface->resize(width, height);
+                    return 0;
+                }
+            }
+            return kErrInvalid;
+        }
+
+        case SyscallNum::GraphicsContextCreate: {
+            u64 target_handle = arg1;
+            u32 target_type = static_cast<u32>(arg2); // 0 for Display, 1 for Surface
+            if (!current) return 0;
+
+            scheduler::ResourceHandleEntry* entry = current->get_handle(target_handle);
+            if (!entry || (entry->rights & scheduler::ResourceRights::Write) == 0) return kErrAccess;
+
+            graphics::GraphicsContext::TargetType t_type;
+
+            if (target_type == 0 && entry->kind == scheduler::ResourceKind::GraphicsDisplay) {
+                t_type = graphics::GraphicsContext::TargetType::Display;
+            } else if (target_type == 1 && entry->kind == scheduler::ResourceKind::GraphicsSurface) {
+                t_type = graphics::GraphicsContext::TargetType::Surface;
+            } else {
+                return kErrInvalid;
+            }
+
+            void* storage = memory::kmalloc(sizeof(graphics::GraphicsContext));
+            if (!storage) return kErrNoMemory;
+
+            auto* ctx = new (storage) graphics::GraphicsContext(t_type, target_handle);
+            return current->register_resource(scheduler::ResourceKind::GraphicsContext, ctx, scheduler::ResourceRights::Read | scheduler::ResourceRights::Write);
+        }
+
+        case SyscallNum::GraphicsPutPixel: {
+            u64 ctx_handle = arg1;
+            u32 x = static_cast<u32>(arg2);
+            u32 y = static_cast<u32>(arg3);
+            u32 color = static_cast<u32>(arg4);
+
+            if (!current) return kErrInvalid;
+            scheduler::ResourceHandleEntry* entry = current->get_handle(ctx_handle);
+            if (!entry || entry->kind != scheduler::ResourceKind::GraphicsContext || (entry->rights & scheduler::ResourceRights::Write) == 0) return kErrAccess;
+
+            auto* ctx = static_cast<graphics::GraphicsContext*>(entry->object);
+            if (ctx) ctx->put_pixel(x, y, color);
+            return 0;
+        }
+
+        case SyscallNum::GraphicsDrawLine: {
+            u64 ctx_handle = arg1;
+            u32 x1 = static_cast<u32>(arg2 >> 32);
+            u32 y1 = static_cast<u32>(arg2 & 0xFFFFFFFF);
+            u32 x2 = static_cast<u32>(arg3 >> 32);
+            u32 y2 = static_cast<u32>(arg3 & 0xFFFFFFFF);
+            u32 color = static_cast<u32>(arg4);
+
+            if (!current) return kErrInvalid;
+            scheduler::ResourceHandleEntry* entry = current->get_handle(ctx_handle);
+            if (!entry || entry->kind != scheduler::ResourceKind::GraphicsContext || (entry->rights & scheduler::ResourceRights::Write) == 0) return kErrAccess;
+
+            auto* ctx = static_cast<graphics::GraphicsContext*>(entry->object);
+            if (ctx) ctx->draw_line(x1, y1, x2, y2, color);
+            return 0;
+        }
+
+        case SyscallNum::GraphicsDrawRect: {
+            u64 ctx_handle = arg1;
+            u32 x = static_cast<u32>(arg2 >> 32);
+            u32 y = static_cast<u32>(arg2 & 0xFFFFFFFF);
+            u32 w = static_cast<u32>(arg3 >> 32);
+            u32 h = static_cast<u32>(arg3 & 0xFFFFFFFF);
+            u32 color = static_cast<u32>(arg4);
+
+            if (!current) return kErrInvalid;
+            scheduler::ResourceHandleEntry* entry = current->get_handle(ctx_handle);
+            if (!entry || entry->kind != scheduler::ResourceKind::GraphicsContext || (entry->rights & scheduler::ResourceRights::Write) == 0) return kErrAccess;
+
+            auto* ctx = static_cast<graphics::GraphicsContext*>(entry->object);
+            if (ctx) ctx->draw_rect(x, y, w, h, color);
+            return 0;
+        }
+
+        case SyscallNum::GraphicsFillRect: {
+            u64 ctx_handle = arg1;
+            u32 x = static_cast<u32>(arg2 >> 32);
+            u32 y = static_cast<u32>(arg2 & 0xFFFFFFFF);
+            u32 w = static_cast<u32>(arg3 >> 32);
+            u32 h = static_cast<u32>(arg3 & 0xFFFFFFFF);
+            u32 color = static_cast<u32>(arg4);
+
+            if (!current) return kErrInvalid;
+            scheduler::ResourceHandleEntry* entry = current->get_handle(ctx_handle);
+            if (!entry || entry->kind != scheduler::ResourceKind::GraphicsContext || (entry->rights & scheduler::ResourceRights::Write) == 0) return kErrAccess;
+
+            auto* ctx = static_cast<graphics::GraphicsContext*>(entry->object);
+            if (ctx) ctx->fill_rect(x, y, w, h, color);
+            return 0;
+        }
+
+        case SyscallNum::GraphicsDrawCircle: {
+            u64 ctx_handle = arg1;
+            u32 cx = static_cast<u32>(arg2 >> 32);
+            u32 cy = static_cast<u32>(arg2 & 0xFFFFFFFF);
+            u32 radius = static_cast<u32>(arg3);
+            u32 color = static_cast<u32>(arg4);
+
+            if (!current) return kErrInvalid;
+            scheduler::ResourceHandleEntry* entry = current->get_handle(ctx_handle);
+            if (!entry || entry->kind != scheduler::ResourceKind::GraphicsContext || (entry->rights & scheduler::ResourceRights::Write) == 0) return kErrAccess;
+
+            auto* ctx = static_cast<graphics::GraphicsContext*>(entry->object);
+            if (ctx) ctx->draw_circle(cx, cy, radius, color);
+            return 0;
+        }
+
+        case SyscallNum::GraphicsFillCircle: {
+            u64 ctx_handle = arg1;
+            u32 cx = static_cast<u32>(arg2 >> 32);
+            u32 cy = static_cast<u32>(arg2 & 0xFFFFFFFF);
+            u32 radius = static_cast<u32>(arg3);
+            u32 color = static_cast<u32>(arg4);
+
+            if (!current) return kErrInvalid;
+            scheduler::ResourceHandleEntry* entry = current->get_handle(ctx_handle);
+            if (!entry || entry->kind != scheduler::ResourceKind::GraphicsContext || (entry->rights & scheduler::ResourceRights::Write) == 0) return kErrAccess;
+
+            auto* ctx = static_cast<graphics::GraphicsContext*>(entry->object);
+            if (ctx) ctx->fill_circle(cx, cy, radius, color);
+            return 0;
+        }
+
+        case SyscallNum::GraphicsBlit: {
+            u64 ctx_handle = arg1;
+            u32 dx = static_cast<u32>(arg2 >> 32);
+            u32 dy = static_cast<u32>(arg2 & 0xFFFFFFFF);
+            u64 src_surface_handle = arg3;
+            u32 sx = static_cast<u32>(arg4 >> 32);
+            u32 sy = static_cast<u32>(arg4 & 0xFFFFFFFF);
+            u32 sw = static_cast<u32>(arg5 >> 32);
+            u32 sh = static_cast<u32>(arg5 & 0xFFFFFFFF);
+
+            if (!current) return kErrInvalid;
+            scheduler::ResourceHandleEntry* entry = current->get_handle(ctx_handle);
+            if (!entry || entry->kind != scheduler::ResourceKind::GraphicsContext || (entry->rights & scheduler::ResourceRights::Write) == 0) return kErrAccess;
+
+            scheduler::ResourceHandleEntry* src_entry = current->get_handle(src_surface_handle);
+            if (!src_entry || src_entry->kind != scheduler::ResourceKind::GraphicsSurface) return kErrInvalid;
+
+            auto* ctx = static_cast<graphics::GraphicsContext*>(entry->object);
+            auto* src_surf = static_cast<graphics::Surface*>(src_entry->object);
+
+            if (ctx && src_surf) {
+                ctx->blit(dx, dy, src_surf, sx, sy, sw, sh);
+            }
+            return 0;
+        }
+
+        case SyscallNum::GraphicsClear: {
+            u64 ctx_handle = arg1;
+            u32 color = static_cast<u32>(arg2);
+
+            if (!current) return kErrInvalid;
+            scheduler::ResourceHandleEntry* entry = current->get_handle(ctx_handle);
+            if (!entry || entry->kind != scheduler::ResourceKind::GraphicsContext || (entry->rights & scheduler::ResourceRights::Write) == 0) return kErrAccess;
+
+            auto* ctx = static_cast<graphics::GraphicsContext*>(entry->object);
+            if (ctx) ctx->clear(color);
+            return 0;
+        }
+
+        case SyscallNum::GraphicsCopyRect: {
+            u64 ctx_handle = arg1;
+            u32 dx = static_cast<u32>(arg2 >> 32);
+            u32 dy = static_cast<u32>(arg2 & 0xFFFFFFFF);
+            u32 sx = static_cast<u32>(arg3 >> 32);
+            u32 sy = static_cast<u32>(arg3 & 0xFFFFFFFF);
+            u32 w = static_cast<u32>(arg4 >> 32);
+            u32 h = static_cast<u32>(arg4 & 0xFFFFFFFF);
+
+            if (!current) return kErrInvalid;
+            scheduler::ResourceHandleEntry* entry = current->get_handle(ctx_handle);
+            if (!entry || entry->kind != scheduler::ResourceKind::GraphicsContext || (entry->rights & scheduler::ResourceRights::Write) == 0) return kErrAccess;
+
+            auto* ctx = static_cast<graphics::GraphicsContext*>(entry->object);
+            if (ctx) ctx->copy_rect(dx, dy, sx, sy, w, h);
+            return 0;
         }
 
         default:

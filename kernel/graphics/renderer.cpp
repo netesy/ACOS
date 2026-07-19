@@ -1,6 +1,6 @@
-#include <kernel/graphics/renderer.h>
-#include <kernel/graphics/font.h>
-#include <kernel/graphics/types.h>
+#include "renderer.h"
+#include "font.h"
+#include "types.h"
 
 namespace acos::graphics {
 
@@ -21,27 +21,42 @@ float sqrt(float x) {
 }
 }
 
-Renderer::Renderer(Framebuffer* fb) : m_fb(fb), m_clip_enabled(false) {}
+Renderer::Renderer(Framebuffer* fb, Surface* surface)
+    : m_fb(fb), m_surface(surface), m_clip_enabled(false) {}
 
 void Renderer::draw_pixel(u32 x, u32 y, u32 color) {
     if (is_clipped(x, y)) return;
-    m_fb->put_pixel(x, y, color);
+    if (m_fb) {
+        m_fb->put_pixel(x, y, color);
+    } else if (m_surface && m_surface->buffer()) {
+        m_surface->buffer()[y * m_surface->width() + x] = color;
+    }
+}
+
+u32 Renderer::get_pixel(u32 x, u32 y) const {
+    if (x >= width() || y >= height()) return 0;
+    if (m_fb) {
+        return m_fb->get_pixel(x, y);
+    } else if (m_surface && m_surface->buffer()) {
+        return m_surface->buffer()[y * m_surface->width() + x];
+    }
+    return 0;
 }
 
 void Renderer::blend_pixel(u32 x, u32 y, u32 color, u8 alpha) {
     if (is_clipped(x, y)) return;
     if (alpha == 255) {
-        m_fb->put_pixel(x, y, color);
+        draw_pixel(x, y, color);
         return;
     }
     if (alpha == 0) return;
 
-    u32 bg = m_fb->get_pixel(x, y);
+    u32 bg = get_pixel(x, y);
     u32 rb = (color & 0xFF00FF) * alpha + (bg & 0xFF00FF) * (255 - alpha);
     u32 g = (color & 0x00FF00) * alpha + (bg & 0x00FF00) * (255 - alpha);
     u32 blended = ((rb >> 8) & 0xFF00FF) | ((g >> 8) & 0x00FF00);
 
-    m_fb->put_pixel(x, y, 0xFF000000 | blended);
+    draw_pixel(x, y, 0xFF000000 | blended);
 }
 
 void Renderer::draw_line(u32 x1, u32 y1, u32 x2, u32 y2, u32 color) {
@@ -288,7 +303,160 @@ void Renderer::draw_shadow(u32 x, u32 y, u32 w, u32 h, u32 offset, u8 alpha) {
     }
 }
 
+void Renderer::blit(u32 dx, u32 dy, Surface* src, u32 sx, u32 sy, u32 sw, u32 sh) {
+    if (!src || !src->is_valid() || !src->buffer()) return;
+
+    u32 src_w = src->width();
+    u32 src_h = src->height();
+    u32* src_buf = src->buffer();
+
+    u32 tgt_w = width();
+    u32 tgt_h = height();
+
+    if (sw > src_w || sh > src_h) return;
+
+    for (u32 y = 0; y < sh; ++y) {
+        u64 sy_coord_64 = static_cast<u64>(sy) + y;
+        if (sy_coord_64 >= src_h) break;
+        u32 sy_coord = static_cast<u32>(sy_coord_64);
+
+        u64 dy_coord_64 = static_cast<u64>(dy) + y;
+        if (dy_coord_64 >= tgt_h) break;
+        u32 dy_coord = static_cast<u32>(dy_coord_64);
+
+        for (u32 x = 0; x < sw; ++x) {
+            u64 sx_coord_64 = static_cast<u64>(sx) + x;
+            if (sx_coord_64 >= src_w) break;
+            u32 sx_coord = static_cast<u32>(sx_coord_64);
+
+            u64 dx_coord_64 = static_cast<u64>(dx) + x;
+            if (dx_coord_64 >= tgt_w) break;
+            u32 dx_coord = static_cast<u32>(dx_coord_64);
+
+            u32 color = src_buf[sy_coord * src_w + sx_coord];
+            draw_pixel(dx_coord, dy_coord, color);
+        }
+    }
+}
+
+void Renderer::copy_rect(u32 dx, u32 dy, u32 sx, u32 sy, u32 w, u32 h) {
+    u32 tgt_w = width();
+    u32 tgt_h = height();
+
+    if (sy == dy) {
+        if (sx < dx) {
+            // Copy from right to left
+            for (u32 y = 0; y < h; ++y) {
+                u64 sy_coord_64 = static_cast<u64>(sy) + y;
+                if (sy_coord_64 >= tgt_h) continue;
+                u32 sy_coord = static_cast<u32>(sy_coord_64);
+
+                u64 dy_coord_64 = static_cast<u64>(dy) + y;
+                if (dy_coord_64 >= tgt_h) continue;
+                u32 dy_coord = static_cast<u32>(dy_coord_64);
+
+                for (i32 x = (i32)w - 1; x >= 0; --x) {
+                    u64 sx_coord_64 = static_cast<u64>(sx) + x;
+                    if (sx_coord_64 >= tgt_w) continue;
+                    u32 sx_coord = static_cast<u32>(sx_coord_64);
+
+                    u64 dx_coord_64 = static_cast<u64>(dx) + x;
+                    if (dx_coord_64 >= tgt_w) continue;
+                    u32 dx_coord = static_cast<u32>(dx_coord_64);
+
+                    draw_pixel(dx_coord, dy_coord, get_pixel(sx_coord, sy_coord));
+                }
+            }
+        } else {
+            // Copy from left to right
+            for (u32 y = 0; y < h; ++y) {
+                u64 sy_coord_64 = static_cast<u64>(sy) + y;
+                if (sy_coord_64 >= tgt_h) continue;
+                u32 sy_coord = static_cast<u32>(sy_coord_64);
+
+                u64 dy_coord_64 = static_cast<u64>(dy) + y;
+                if (dy_coord_64 >= tgt_h) continue;
+                u32 dy_coord = static_cast<u32>(dy_coord_64);
+
+                for (u32 x = 0; x < w; ++x) {
+                    u64 sx_coord_64 = static_cast<u64>(sx) + x;
+                    if (sx_coord_64 >= tgt_w) continue;
+                    u32 sx_coord = static_cast<u32>(sx_coord_64);
+
+                    u64 dx_coord_64 = static_cast<u64>(dx) + x;
+                    if (dx_coord_64 >= tgt_w) continue;
+                    u32 dx_coord = static_cast<u32>(dx_coord_64);
+
+                    draw_pixel(dx_coord, dy_coord, get_pixel(sx_coord, sy_coord));
+                }
+            }
+        }
+    } else if (sy < dy) {
+        // Copy from bottom to top
+        for (i32 y = (i32)h - 1; y >= 0; --y) {
+            u64 sy_coord_64 = static_cast<u64>(sy) + y;
+            if (sy_coord_64 >= tgt_h) continue;
+            u32 sy_coord = static_cast<u32>(sy_coord_64);
+
+            u64 dy_coord_64 = static_cast<u64>(dy) + y;
+            if (dy_coord_64 >= tgt_h) continue;
+            u32 dy_coord = static_cast<u32>(dy_coord_64);
+
+            for (u32 x = 0; x < w; ++x) {
+                u64 sx_coord_64 = static_cast<u64>(sx) + x;
+                if (sx_coord_64 >= tgt_w) continue;
+                u32 sx_coord = static_cast<u32>(sx_coord_64);
+
+                u64 dx_coord_64 = static_cast<u64>(dx) + x;
+                if (dx_coord_64 >= tgt_w) continue;
+                u32 dx_coord = static_cast<u32>(dx_coord_64);
+
+                draw_pixel(dx_coord, dy_coord, get_pixel(sx_coord, sy_coord));
+            }
+        }
+    } else {
+        // Copy from top to bottom
+        for (u32 y = 0; y < h; ++y) {
+            u64 sy_coord_64 = static_cast<u64>(sy) + y;
+            if (sy_coord_64 >= tgt_h) continue;
+            u32 sy_coord = static_cast<u32>(sy_coord_64);
+
+            u64 dy_coord_64 = static_cast<u64>(dy) + y;
+            if (dy_coord_64 >= tgt_h) continue;
+            u32 dy_coord = static_cast<u32>(dy_coord_64);
+
+            for (u32 x = 0; x < w; ++x) {
+                u64 sx_coord_64 = static_cast<u64>(sx) + x;
+                if (sx_coord_64 >= tgt_w) continue;
+                u32 sx_coord = static_cast<u32>(sx_coord_64);
+
+                u64 dx_coord_64 = static_cast<u64>(dx) + x;
+                if (dx_coord_64 >= tgt_w) continue;
+                u32 dx_coord = static_cast<u32>(dx_coord_64);
+
+                draw_pixel(dx_coord, dy_coord, get_pixel(sx_coord, sy_coord));
+            }
+        }
+    }
+}
+
+void Renderer::clear(u32 color) {
+    fill_rect(0, 0, width(), height(), color);
+}
+
 void Renderer::set_clip_rect(const ClipRect& rect) { m_clip_rect = rect; m_clip_enabled = true; }
 void Renderer::clear_clip_rect() { m_clip_enabled = false; }
+
+u32 Renderer::width() const {
+    if (m_fb) return m_fb->width();
+    if (m_surface) return m_surface->width();
+    return 0;
+}
+
+u32 Renderer::height() const {
+    if (m_fb) return m_fb->height();
+    if (m_surface) return m_surface->height();
+    return 0;
+}
 
 } // namespace acos::graphics

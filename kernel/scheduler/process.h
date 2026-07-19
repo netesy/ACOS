@@ -20,6 +20,9 @@ enum class ResourceKind : u32 {
     SharedRegion,
     GraphicsSurface,
     GraphicsWindow,
+    GraphicsDisplay,
+    GraphicsBuffer,
+    GraphicsContext
 };
 
 namespace ResourceRights {

@@ -93,6 +93,9 @@ KERNEL_SRCS = \
 	$(GRAPHICS_DIR)/framebuffer.cpp \
 	$(GRAPHICS_DIR)/renderer.cpp \
 	$(GRAPHICS_DIR)/surface.cpp \
+	$(GRAPHICS_DIR)/clipping.cpp \
+	$(GRAPHICS_DIR)/dirty_region.cpp \
+	$(GRAPHICS_DIR)/context.cpp \
 	$(GRAPHICS_DIR)/font.cpp \
 	$(GRAPHICS_DIR)/font_manager.cpp \
 	$(KERNEL_DIR)/input/input_manager.cpp \
