@@ -54,6 +54,8 @@ i32 VFS::close(u64 fd) {
     File* file = current->get_file(static_cast<i32>(fd));
     if (!file) return -1;
     current->files[fd] = nullptr;
+    file->~File();
+    memory::kfree(file);
     return 0;
 }
 
@@ -75,6 +77,30 @@ i32 VFS::write(u64 fd, const void* buffer, usize size) {
 
 bool VFS::mount(const char* path, FileSystem* fs) {
     return MountRegistry::mount(path, fs);
+}
+
+i32 VFS::dup2(u64 old_fd, u64 new_fd) {
+    scheduler::Process* current = scheduler::current_thread()->parent;
+    if (!current) return -1;
+    File* file = current->get_file(static_cast<i32>(old_fd));
+    if (!file) return -1;
+    if (new_fd >= scheduler::Process::MAX_FILES) return -1;
+
+    if (current->files[new_fd]) {
+        VFS::close(new_fd);
+    }
+
+    Node* node = file->node();
+    node->add_ref();
+
+    File* new_file = reinterpret_cast<File*>(memory::kmalloc(sizeof(File)));
+    if (!new_file) {
+        node->close_node();
+        return -1;
+    }
+    new (new_file) File(node);
+    current->files[new_fd] = new_file;
+    return static_cast<i32>(new_fd);
 }
 
 i32 VFS::read_dir(const char* path, DirectoryEntry* entries, usize max_entries) {

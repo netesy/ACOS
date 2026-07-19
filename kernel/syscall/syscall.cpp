@@ -31,6 +31,190 @@ bool has_rights(acos::scheduler::Process* process, u64 handle, u64 rights) {
 
 } // namespace
 
+class PipeNode final {
+public:
+    PipeNode() : m_reader_refs(0), m_writer_refs(0), m_head(0), m_tail(0), m_count(0), m_closed(false) {
+        m_buffer = static_cast<char*>(memory::kmalloc(65536)); // 64KB buffer
+        if (m_buffer) {
+            memset(m_buffer, 0, 65536);
+        }
+        for (usize i = 0; i < ipc::Channel::MAX_WAITERS; i++) {
+            m_readers[i] = nullptr;
+            m_writers[i] = nullptr;
+        }
+        m_reader_count = 0;
+        m_writer_count = 0;
+    }
+
+    ~PipeNode() {
+        if (m_buffer) {
+            memory::kfree(m_buffer);
+        }
+    }
+
+    void add_ref(bool is_writer) {
+        hal::ScopedLock lock(m_lock);
+        if (is_writer) m_writer_refs++;
+        else m_reader_refs++;
+    }
+
+    void dec_ref(bool is_writer) {
+        hal::ScopedLock lock(m_lock);
+        if (is_writer) {
+            if (m_writer_refs > 0) m_writer_refs--;
+        } else {
+            if (m_reader_refs > 0) m_reader_refs--;
+        }
+        if (m_writer_refs == 0 && m_reader_refs == 0) {
+            close_internal();
+        }
+    }
+
+    i32 read(usize size, void* buffer) {
+        hal::ScopedLock lock(m_lock);
+        char* out = static_cast<char*>(buffer);
+        usize copied = 0;
+
+        while (copied < size) {
+            if (m_count > 0) {
+                out[copied++] = m_buffer[m_head];
+                m_head = (m_head + 1) % 65536;
+                m_count--;
+
+                // Wake one waiting writer
+                if (m_writer_count > 0) {
+                    scheduler::wake_thread(m_writers[0]);
+                    for (usize i = 0; i < m_writer_count - 1; i++) m_writers[i] = m_writers[i+1];
+                    m_writer_count--;
+                }
+            } else {
+                if (m_closed || m_writer_refs == 0 || copied > 0) {
+                    break;
+                }
+                // Block reader
+                auto* current = scheduler::current_thread();
+                if (m_reader_count < ipc::Channel::MAX_WAITERS) {
+                    m_readers[m_reader_count++] = current;
+                    m_lock.unlock();
+                    scheduler::block_thread(current);
+                    m_lock.lock();
+                } else {
+                    break;
+                }
+            }
+        }
+        return static_cast<i32>(copied);
+    }
+
+    i32 write(usize size, const void* buffer) {
+        hal::ScopedLock lock(m_lock);
+        const char* in = static_cast<const char*>(buffer);
+        usize copied = 0;
+
+        while (copied < size) {
+            if (m_closed || m_reader_refs == 0) return -1;
+            if (m_count < 65536) {
+                m_buffer[m_tail] = in[copied++];
+                m_tail = (m_tail + 1) % 65536;
+                m_count++;
+
+                // Wake one waiting reader
+                if (m_reader_count > 0) {
+                    scheduler::wake_thread(m_readers[0]);
+                    for (usize i = 0; i < m_reader_count - 1; i++) m_readers[i] = m_readers[i+1];
+                    m_reader_count--;
+                }
+            } else {
+                // Block writer
+                auto* current = scheduler::current_thread();
+                if (m_writer_count < ipc::Channel::MAX_WAITERS) {
+                    m_writers[m_writer_count++] = current;
+                    m_lock.unlock();
+                    scheduler::block_thread(current);
+                    m_lock.lock();
+                } else {
+                    break;
+                }
+            }
+        }
+        return static_cast<i32>(copied);
+    }
+
+    u64 size() const { return m_count; }
+
+    void close_internal() {
+        m_closed = true;
+        for (usize i = 0; i < m_reader_count; i++) {
+            scheduler::wake_thread(m_readers[i]);
+        }
+        m_reader_count = 0;
+        for (usize i = 0; i < m_writer_count; i++) {
+            scheduler::wake_thread(m_writers[i]);
+        }
+        m_writer_count = 0;
+    }
+
+    u32 m_reader_refs;
+    u32 m_writer_refs;
+
+private:
+    hal::SpinLock m_lock;
+    char* m_buffer;
+    usize m_head;
+    usize m_tail;
+    usize m_count;
+    bool m_closed;
+
+    scheduler::Thread* m_readers[ipc::Channel::MAX_WAITERS];
+    usize m_reader_count;
+    scheduler::Thread* m_writers[ipc::Channel::MAX_WAITERS];
+    usize m_writer_count;
+};
+
+class PipeFileNode final : public vfs::Node {
+public:
+    PipeFileNode(PipeNode* shared, bool is_writer) : m_shared(shared), m_is_writer(is_writer), m_node_refs(1) {
+        m_shared->add_ref(m_is_writer);
+    }
+
+    ~PipeFileNode() override {}
+
+    void add_ref() override {
+        m_node_refs++;
+    }
+
+    void close_node() override {
+        m_node_refs--;
+        if (m_node_refs == 0) {
+            m_shared->dec_ref(m_is_writer);
+            if (m_shared->m_writer_refs == 0 && m_shared->m_reader_refs == 0) {
+                m_shared->~PipeNode();
+                memory::kfree(m_shared);
+            }
+            this->~PipeFileNode();
+            memory::kfree(this);
+        }
+    }
+
+    i32 read(u64 offset [[maybe_unused]], usize size, void* buffer) override {
+        if (m_is_writer) return -1;
+        return m_shared->read(size, buffer);
+    }
+
+    i32 write(u64 offset [[maybe_unused]], usize size, const void* buffer) override {
+        if (!m_is_writer) return -1;
+        return m_shared->write(size, buffer);
+    }
+
+    u64 size() const override { return m_shared->size(); }
+    vfs::NodeType type() const override { return vfs::NodeType::File; }
+
+private:
+    PipeNode* m_shared;
+    bool m_is_writer;
+    u32 m_node_refs;
+};
+
 extern "C" u64 syscall_dispatch(u64 num, u64 arg1, u64 arg2, u64 arg3, u64 arg4, u64 arg5) {
     acos::hal::serial_print("[SYSCALL] num=");
     acos::hal::serial_print_hex(num);
@@ -190,6 +374,18 @@ extern "C" u64 syscall_dispatch(u64 num, u64 arg1, u64 arg2, u64 arg3, u64 arg4,
             info->rights = entry->rights;
             info->owner = entry->owner_process_id;
             info->state = 0;
+
+            if (entry->kind == scheduler::ResourceKind::Process) {
+                scheduler::Process* proc = static_cast<scheduler::Process*>(entry->object);
+                if (proc && proc->primary_thread) {
+                    info->state = (proc->primary_thread->state == scheduler::ThreadState::Terminated) ? 3 : 0;
+                }
+            } else if (entry->kind == scheduler::ResourceKind::Thread) {
+                scheduler::Thread* thread = static_cast<scheduler::Thread*>(entry->object);
+                if (thread) {
+                    info->state = (thread->state == scheduler::ThreadState::Terminated) ? 3 : 0;
+                }
+            }
             return 0;
         }
 
@@ -313,6 +509,95 @@ extern "C" u64 syscall_dispatch(u64 num, u64 arg1, u64 arg2, u64 arg3, u64 arg4,
             usize max_entries = arg3;
             if (!current) return static_cast<u64>(-1);
             return static_cast<u64>(vfs::VFS::read_dir(path, entries, max_entries));
+        }
+
+        case SyscallNum::FileDup: {
+            if (!current) return kErrInvalid;
+            return static_cast<u64>(vfs::VFS::dup2(arg1, arg2));
+        }
+
+        case SyscallNum::PipeCreate: {
+            if (!current) return kErrInvalid;
+            i32* fds = reinterpret_cast<i32*>(arg1);
+            if (!fds) return kErrInvalid;
+
+            void* storage = memory::kmalloc(sizeof(PipeNode));
+            if (!storage) return kErrNoMemory;
+            PipeNode* pipe_shared = new (storage) PipeNode();
+
+            void* rd_storage = memory::kmalloc(sizeof(PipeFileNode));
+            if (!rd_storage) {
+                pipe_shared->~PipeNode();
+                memory::kfree(pipe_shared);
+                return kErrNoMemory;
+            }
+            PipeFileNode* rd_node = new (rd_storage) PipeFileNode(pipe_shared, false);
+
+            void* wr_storage = memory::kmalloc(sizeof(PipeFileNode));
+            if (!wr_storage) {
+                rd_node->~PipeFileNode();
+                memory::kfree(rd_node);
+                pipe_shared->~PipeNode();
+                memory::kfree(pipe_shared);
+                return kErrNoMemory;
+            }
+            PipeFileNode* wr_node = new (wr_storage) PipeFileNode(pipe_shared, true);
+
+            void* rd_file_storage = memory::kmalloc(sizeof(vfs::File));
+            if (!rd_file_storage) {
+                wr_node->~PipeFileNode();
+                memory::kfree(wr_node);
+                rd_node->~PipeFileNode();
+                memory::kfree(rd_node);
+                pipe_shared->~PipeNode();
+                memory::kfree(pipe_shared);
+                return kErrNoMemory;
+            }
+            vfs::File* rd_file = new (rd_file_storage) vfs::File(rd_node);
+
+            void* wr_file_storage = memory::kmalloc(sizeof(vfs::File));
+            if (!wr_file_storage) {
+                memory::kfree(rd_file_storage);
+                wr_node->~PipeFileNode();
+                memory::kfree(wr_node);
+                rd_node->~PipeFileNode();
+                memory::kfree(rd_node);
+                pipe_shared->~PipeNode();
+                memory::kfree(pipe_shared);
+                return kErrNoMemory;
+            }
+            vfs::File* wr_file = new (wr_file_storage) vfs::File(wr_node);
+
+            i32 rd_fd = current->register_file(rd_file);
+            if (rd_fd < 0) {
+                memory::kfree(wr_file_storage);
+                memory::kfree(rd_file_storage);
+                wr_node->~PipeFileNode();
+                memory::kfree(wr_node);
+                rd_node->~PipeFileNode();
+                memory::kfree(rd_node);
+                pipe_shared->~PipeNode();
+                memory::kfree(pipe_shared);
+                return kErrNoMemory;
+            }
+
+            i32 wr_fd = current->register_file(wr_file);
+            if (wr_fd < 0) {
+                current->files[rd_fd] = nullptr;
+                memory::kfree(wr_file_storage);
+                memory::kfree(rd_file_storage);
+                wr_node->~PipeFileNode();
+                memory::kfree(wr_node);
+                rd_node->~PipeFileNode();
+                memory::kfree(rd_node);
+                pipe_shared->~PipeNode();
+                memory::kfree(pipe_shared);
+                return kErrNoMemory;
+            }
+
+            fds[0] = rd_fd;
+            fds[1] = wr_fd;
+            return 0;
         }
 
         case SyscallNum::ResourceLocate: {

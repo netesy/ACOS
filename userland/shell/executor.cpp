@@ -2,6 +2,7 @@
 #include "variables.h"
 #include "history.h"
 #include <acos/vfs.h>
+#include <acos/process.h>
 #include <acos/syscall.h>
 #include <acos/syscall_nums.h>
 #include <libs/runtime/include/acos/runtime.h>
@@ -105,7 +106,7 @@ bool ShellExecutor::is_builtin(const char* cmd) {
         "mkdir", "rmdir", "touch", "rm", "cp", "mv", "stat", "tree",
         "find", "which", "env", "set", "alias", "unalias", "history",
         "time", "sleep", "mount", "ps", "kill", "reboot", "shutdown",
-        "exit"
+        "exit", "jobs", "wait", "fg", "bg"
     };
     for (usize i = 0; i < sizeof(builtins)/sizeof(builtins[0]); i++) {
         if (strcmp(cmd, builtins[i]) == 0) return true;
@@ -148,6 +149,127 @@ i32 ShellExecutor::execute_builtin(const Command& cmd, char* cwd, i32 console_fd
     if (strcmp(name, "kill") == 0) return builtin_kill(argc, argv, console_fd);
     if (strcmp(name, "reboot") == 0) return builtin_reboot(argc, argv, console_fd);
     if (strcmp(name, "shutdown") == 0) return builtin_shutdown(argc, argv, console_fd);
+
+    if (strcmp(name, "jobs") == 0) {
+        int job_idx = 1;
+        for (u64 h = 1; h < 256; h++) {
+            sys::ResourceInfo info;
+            u64 res = syscall(sys::SyscallNum::ResourceQuery, h, reinterpret_cast<u64>(&info), 0, 0, 0);
+            if (res == 0 && info.type == 1) { // 1 = ResourceKind::Process
+                sys_write_str(console_fd, "[");
+                char idx_str[16];
+                int idx_len = 0;
+                int val = job_idx++;
+                char rev[16];
+                int r_idx = 0;
+                while (val > 0 && r_idx < 15) {
+                    rev[r_idx++] = '0' + (val % 10);
+                    val /= 10;
+                }
+                for (int k = r_idx - 1; k >= 0; k--) idx_str[idx_len++] = rev[k];
+                idx_str[idx_len] = '\0';
+                sys_write_str(console_fd, idx_str);
+                sys_write_str(console_fd, "] ");
+
+                sys_write_str(console_fd, "Handle ");
+                char h_str[16];
+                int h_len = 0;
+                val = h;
+                r_idx = 0;
+                while (val > 0 && r_idx < 15) {
+                    rev[r_idx++] = '0' + (val % 10);
+                    val /= 10;
+                }
+                for (int k = r_idx - 1; k >= 0; k--) h_str[h_len++] = rev[k];
+                h_str[h_len] = '\0';
+                sys_write_str(console_fd, h_str);
+
+                if (info.state == 3) {
+                    sys_write_str(console_fd, "   Terminated\n");
+                } else {
+                    sys_write_str(console_fd, "   Running\n");
+                }
+            }
+        }
+        return 0;
+    }
+
+    if (strcmp(name, "wait") == 0) {
+        for (u64 h = 1; h < 256; h++) {
+            sys::ResourceInfo info;
+            u64 res = syscall(sys::SyscallNum::ResourceQuery, h, reinterpret_cast<u64>(&info), 0, 0, 0);
+            if (res == 0 && info.type == 1 && info.state != 3) {
+                syscall(sys::SyscallNum::ThreadJoin, h, 0, 0, 0, 0);
+                syscall(sys::SyscallNum::ResourceClose, h, 0, 0, 0, 0);
+            }
+        }
+        return 0;
+    }
+
+    if (strcmp(name, "fg") == 0) {
+        u64 target_handle = 0;
+        if (argc >= 2) {
+            char* arg = argv[1];
+            u64 val = 0;
+            for (int k = 0; arg[k]; k++) {
+                if (arg[k] >= '0' && arg[k] <= '9') {
+                    val = val * 10 + (arg[k] - '0');
+                }
+            }
+            target_handle = val;
+        } else {
+            for (u64 h = 1; h < 256; h++) {
+                sys::ResourceInfo info;
+                u64 res = syscall(sys::SyscallNum::ResourceQuery, h, reinterpret_cast<u64>(&info), 0, 0, 0);
+                if (res == 0 && info.type == 1 && info.state != 3) {
+                    target_handle = h;
+                    break;
+                }
+            }
+        }
+
+        if (target_handle > 0) {
+            sys_write_str(console_fd, "Bringing job to foreground...\n");
+            syscall(sys::SyscallNum::ThreadJoin, target_handle, 0, 0, 0, 0);
+            syscall(sys::SyscallNum::ResourceClose, target_handle, 0, 0, 0, 0);
+            return 0;
+        } else {
+            print_error(console_fd, "fg", "No such job");
+            return 1;
+        }
+    }
+
+    if (strcmp(name, "bg") == 0) {
+        u64 target_handle = 0;
+        if (argc >= 2) {
+            char* arg = argv[1];
+            u64 val = 0;
+            for (int k = 0; arg[k]; k++) {
+                if (arg[k] >= '0' && arg[k] <= '9') {
+                    val = val * 10 + (arg[k] - '0');
+                }
+            }
+            target_handle = val;
+        } else {
+            for (u64 h = 1; h < 256; h++) {
+                sys::ResourceInfo info;
+                u64 res = syscall(sys::SyscallNum::ResourceQuery, h, reinterpret_cast<u64>(&info), 0, 0, 0);
+                if (res == 0 && info.type == 1 && info.state != 3) {
+                    target_handle = h;
+                    break;
+                }
+            }
+        }
+
+        if (target_handle > 0) {
+            syscall(sys::SyscallNum::ProcessStart, target_handle, 0, 0, 0, 0);
+            sys_write_str(console_fd, "Resuming job in background...\n");
+            return 0;
+        } else {
+            print_error(console_fd, "bg", "No such job");
+            return 1;
+        }
+    }
 
     return -1;
 }
@@ -707,7 +829,187 @@ i32 ShellExecutor::builtin_shutdown(int argc [[maybe_unused]], char** argv [[may
     return 0;
 }
 
-i32 ShellExecutor::execute_external(const Command& cmd, char* cwd, i32 in_fd [[maybe_unused]], i32 out_fd) {
+bool ShellExecutor::match_pattern(const char* name, const char* pattern) {
+    const char* p = pattern;
+    const char* n = name;
+    const char* star = nullptr;
+    const char* s_n = n;
+    while (*n) {
+        if (*p == '*') {
+            star = p++;
+            s_n = n;
+        } else if (*p == *n) {
+            p++;
+            n++;
+        } else if (star) {
+            p = star + 1;
+            n = ++s_n;
+        } else {
+            return false;
+        }
+    }
+    while (*p == '*') p++;
+    return *p == '\0';
+}
+
+void ShellExecutor::glob_directory(const char* real_dir, const char* prefix_to_prepend, const char* pattern, char** out_argv, int& out_argc, int max_argc) {
+    static vfs::DirectoryEntry entries[128];
+    i32 n = vfs::read_dir(real_dir, entries, 128);
+    if (n < 0) return;
+
+    for (i32 i = 0; i < n; i++) {
+        if (strcmp(entries[i].name, ".") == 0 || strcmp(entries[i].name, "..") == 0) {
+            continue;
+        }
+        if (match_pattern(entries[i].name, pattern)) {
+            if (out_argc < max_argc) {
+                char path[1024];
+                usize plen = strlen(prefix_to_prepend);
+                memcpy(path, prefix_to_prepend, plen);
+                usize elen = strlen(entries[i].name);
+                memcpy(path + plen, entries[i].name, elen + 1);
+
+                char* saved = static_cast<char*>(memory::kmalloc(plen + elen + 1));
+                if (saved) {
+                    memcpy(saved, path, plen + elen + 1);
+                    out_argv[out_argc++] = saved;
+                }
+            }
+        }
+    }
+}
+
+void ShellExecutor::glob_recursive(const char* real_dir, const char* prefix_to_prepend, const char* pattern, char** out_argv, int& out_argc, int max_argc) {
+    const char* match_pat = pattern;
+    if (strncmp(pattern, "**/", 3) == 0) {
+        match_pat = pattern + 3;
+    } else if (strcmp(pattern, "**") == 0) {
+        match_pat = "*";
+    }
+
+    static vfs::DirectoryEntry entries[64];
+    i32 n = vfs::read_dir(real_dir, entries, 64);
+    if (n < 0) return;
+
+    for (i32 i = 0; i < n; i++) {
+        if (strcmp(entries[i].name, ".") == 0 || strcmp(entries[i].name, "..") == 0) {
+            continue;
+        }
+
+        char sub_prefix[1024];
+        usize plen = strlen(prefix_to_prepend);
+        memcpy(sub_prefix, prefix_to_prepend, plen);
+        usize elen = strlen(entries[i].name);
+        memcpy(sub_prefix + plen, entries[i].name, elen);
+        usize sub_len = plen + elen;
+        sub_prefix[sub_len] = '\0';
+
+        if (match_pattern(entries[i].name, match_pat)) {
+            if (out_argc < max_argc) {
+                char* saved = static_cast<char*>(memory::kmalloc(sub_len + 1));
+                if (saved) {
+                    memcpy(saved, sub_prefix, sub_len + 1);
+                    out_argv[out_argc++] = saved;
+                }
+            }
+        }
+
+        if (entries[i].type == vfs::NodeType::Directory) {
+            char sub_real_dir[1024];
+            usize rlen = strlen(real_dir);
+            memcpy(sub_real_dir, real_dir, rlen);
+            if (rlen > 0 && sub_real_dir[rlen-1] != '/') {
+                sub_real_dir[rlen++] = '/';
+            }
+            memcpy(sub_real_dir + rlen, entries[i].name, elen + 1);
+
+            sub_prefix[sub_len++] = '/';
+            sub_prefix[sub_len] = '\0';
+
+            glob_recursive(sub_real_dir, sub_prefix, pattern, out_argv, out_argc, max_argc);
+        }
+    }
+}
+
+void ShellExecutor::expand_wildcards(Command& cmd, const char* cwd) {
+    char* new_argv[128];
+    int new_argc = 0;
+
+    for (int i = 0; i < cmd.argc; i++) {
+        char* arg = cmd.argv[i];
+        bool has_wildcard = false;
+        bool is_recursive = false;
+        for (int k = 0; arg[k]; k++) {
+            if (arg[k] == '*') {
+                has_wildcard = true;
+                if (k > 0 && arg[k-1] == '*') {
+                    is_recursive = true;
+                }
+            }
+        }
+
+        if (!has_wildcard) {
+            new_argv[new_argc++] = arg;
+            continue;
+        }
+
+        int old_argc = new_argc;
+
+        char prefix_to_prepend[1024];
+        char pattern[256];
+        int last_slash = -1;
+        for (int k = 0; arg[k]; k++) {
+            if (arg[k] == '/') {
+                last_slash = k;
+            }
+        }
+
+        if (last_slash != -1) {
+            memcpy(prefix_to_prepend, arg, last_slash + 1);
+            prefix_to_prepend[last_slash + 1] = '\0';
+            usize pat_len = strlen(arg + last_slash + 1);
+            if (pat_len < 255) {
+                memcpy(pattern, arg + last_slash + 1, pat_len + 1);
+            } else {
+                pattern[0] = '\0';
+            }
+        } else {
+            prefix_to_prepend[0] = '\0';
+            usize pat_len = strlen(arg);
+            if (pat_len < 255) {
+                memcpy(pattern, arg, pat_len + 1);
+            } else {
+                pattern[0] = '\0';
+            }
+        }
+
+        char real_dir[1024];
+        if (prefix_to_prepend[0] == '\0') {
+            resolve_path(cwd, ".", real_dir);
+        } else {
+            resolve_path(cwd, prefix_to_prepend, real_dir);
+        }
+
+        if (is_recursive) {
+            glob_recursive(real_dir, prefix_to_prepend, pattern, new_argv, new_argc, 128);
+        } else {
+            glob_directory(real_dir, prefix_to_prepend, pattern, new_argv, new_argc, 128);
+        }
+
+        if (new_argc == old_argc) {
+            new_argv[new_argc++] = arg;
+        } else {
+            memory::kfree(arg);
+        }
+    }
+
+    cmd.argc = new_argc;
+    for (int i = 0; i < new_argc; i++) {
+        cmd.argv[i] = new_argv[i];
+    }
+}
+
+i32 ShellExecutor::execute_external(const Command& cmd, char* cwd, i32 in_fd [[maybe_unused]], i32 out_fd, bool is_background) {
     const char* cmd_name = cmd.argv[0];
     char full_path[1024];
     bool found = false;
@@ -776,6 +1078,27 @@ i32 ShellExecutor::execute_external(const Command& cmd, char* cwd, i32 in_fd [[m
     // Start the process
     syscall(sys::SyscallNum::ProcessStart, proc, 0, 0, 0, 0);
 
+    if (is_background) {
+        sys_write_str(out_fd, "[");
+        char idx_str[24];
+        int idx_len = 0;
+        u64 val = proc;
+        if (val == 0) idx_str[idx_len++] = '0';
+        else {
+            char rev[24];
+            int r_idx = 0;
+            while (val > 0 && r_idx < 23) {
+                rev[r_idx++] = '0' + (val % 10);
+                val /= 10;
+            }
+            for (int k = r_idx - 1; k >= 0; k--) idx_str[idx_len++] = rev[k];
+        }
+        idx_str[idx_len] = '\0';
+        sys_write_str(out_fd, idx_str);
+        sys_write_str(out_fd, "]\n");
+        return 0;
+    }
+
     // Join and block until process terminates
     syscall(sys::SyscallNum::ThreadJoin, proc, 0, 0, 0, 0);
 
@@ -790,31 +1113,52 @@ i32 ShellExecutor::execute(const Pipeline& pipeline, char* cwd, i32 console_fd [
 
     i32 last_exit_code = 0;
 
+    // Create capability-managed IPC pipes/channels for pipeline connections
+    i32 pipe_fds[16][2];
+    for (int i = 0; i < pipeline.command_count - 1; i++) {
+        if (vfs::pipe(pipe_fds[i]) < 0) {
+            print_error(console_fd, "pipeline", "Failed to create IPC pipe");
+            return 1;
+        }
+    }
+
     // Loop through commands in pipeline
-    // For local pipelining, we use temporary files: /.pipe_0, /.pipe_1...
     for (int i = 0; i < pipeline.command_count; i++) {
-        const Command& cmd = pipeline.commands[i];
+        Command cmd = pipeline.commands[i];
+        if (cmd.argc == 0) continue;
+
+        // Detect background modifier
+        bool is_background = false;
+        if (cmd.argc > 0) {
+            char* last_arg = cmd.argv[cmd.argc - 1];
+            usize arg_len = strlen(last_arg);
+            if (strcmp(last_arg, "&") == 0) {
+                is_background = true;
+                cmd.argc--; // Remove "&"
+            } else if (arg_len > 0 && last_arg[arg_len - 1] == '&') {
+                is_background = true;
+                last_arg[arg_len - 1] = '\0';
+                if (last_arg[0] == '\0') {
+                    cmd.argc--;
+                }
+            }
+        }
+
+        // Expand wildcards
+        expand_wildcards(cmd, cwd);
         if (cmd.argc == 0) continue;
 
         // High-level File Hijacking (occupy FD 0 and FD 1)
-        // If there's an upstream command, hijack FD 0 (stdin) to previous pipe file
+        // If there's an upstream command, hijack FD 0 (stdin) to previous pipe read end
         if (i > 0) {
-            char pipe_name[64];
-            memcpy(pipe_name, "/.pipe_", 7);
-            pipe_name[7] = '0' + (i - 1);
-            pipe_name[8] = '\0';
-            vfs::close(0);
-            vfs::open(pipe_name, 0); // Re-opens previous pipe on FD 0
+            vfs::dup2(pipe_fds[i - 1][0], 0);
+            vfs::close(pipe_fds[i - 1][0]);
         }
 
-        // If there's a downstream command, hijack FD 1 (stdout) to current pipe file
+        // If there's a downstream command, hijack FD 1 (stdout) to current pipe write end
         if (i < pipeline.command_count - 1) {
-            char pipe_name[64];
-            memcpy(pipe_name, "/.pipe_", 7);
-            pipe_name[7] = '0' + i;
-            pipe_name[8] = '\0';
-            vfs::close(1);
-            vfs::open(pipe_name, 1); // Re-opens current pipe on FD 1
+            vfs::dup2(pipe_fds[i][1], 1);
+            vfs::close(pipe_fds[i][1]);
         }
 
         // Overwrite with explicit redirections if defined in the command
@@ -840,7 +1184,7 @@ i32 ShellExecutor::execute(const Pipeline& pipeline, char* cwd, i32 console_fd [
             last_exit_code = execute_builtin(cmd, cwd, 1); // write to standard stdout (FD 1)
         } else {
             // It is an external command
-            last_exit_code = execute_external(cmd, cwd, 0, 1);
+            last_exit_code = execute_external(cmd, cwd, 0, 1, is_background);
         }
 
         // Restore Standard I/O (FD 0 and FD 1) to console immediately after command execution!
@@ -848,6 +1192,20 @@ i32 ShellExecutor::execute(const Pipeline& pipeline, char* cwd, i32 console_fd [
         vfs::open("/dev/console", 0); // FD 0 back to console
         vfs::close(1);
         vfs::open("/dev/console", 0); // FD 1 back to console
+
+        // Free any newly allocated strings by wildcard expansion
+        for (int j = 0; j < cmd.argc; j++) {
+            bool is_original = false;
+            for (int k = 0; k < pipeline.commands[i].argc; k++) {
+                if (cmd.argv[j] == pipeline.commands[i].argv[k]) {
+                    is_original = true;
+                    break;
+                }
+            }
+            if (!is_original) {
+                memory::kfree(cmd.argv[j]);
+            }
+        }
     }
 
     // Save last exit code to variable $?

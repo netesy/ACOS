@@ -31,4 +31,12 @@ NodeType get_node_type(const char* path) {
     return (NodeType)syscall(sys::SyscallNum::ResourceQuery, (u64)path); // Reuse ResourceQuery for NodeType
 }
 
+i32 pipe(i32 fds[2]) {
+    return (i32)syscall(sys::SyscallNum::PipeCreate, (u64)fds);
+}
+
+i32 dup2(i32 old_fd, i32 new_fd) {
+    return (i32)syscall(sys::SyscallNum::FileDup, (u64)old_fd, (u64)new_fd);
+}
+
 } // namespace acos::vfs

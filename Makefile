@@ -279,6 +279,8 @@ $(DISK_IMG): dist
 		$(MCOPY) -i $(DISK_IMG) $(DIST_DIR)/EFI/BOOT/BOOTX64.EFI ::/EFI/BOOT/BOOTX64.EFI; \
 		$(MCOPY) -i $(DISK_IMG) $(DIST_DIR)/kernel.elf ::/kernel.elf; \
 		$(MCOPY) -i $(DISK_IMG) README.TXT ::/README.TXT; \
+		echo "fs0:\\EFI\\BOOT\\BOOTX64.EFI" > startup.nsh; \
+		$(MCOPY) -i $(DISK_IMG) startup.nsh ::/startup.nsh; \
 		$(MMD) -i $(DISK_IMG) ::/bin; \
 		for bin in $(SERVICES_BINS); do \
 			$(MCOPY) -v -i $(DISK_IMG) $$bin ::/bin/$$(basename $$bin); \

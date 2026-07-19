@@ -233,6 +233,14 @@ bool ConsoleReader::read_line(i32 console_fd, const char* cwd, char* out_buf, us
                     }
                 }
                 state = Normal;
+            } else if (c == 'H') { // Home Key
+                cursor_pos = 0;
+                redraw_line(prompt, out_buf, cursor_pos, console_fd);
+                state = Normal;
+            } else if (c == 'F') { // End Key
+                cursor_pos = len;
+                redraw_line(prompt, out_buf, cursor_pos, console_fd);
+                state = Normal;
             } else if (c == '3') {
                 state = DeleteKey;
             } else {
@@ -248,8 +256,29 @@ bool ConsoleReader::read_line(i32 console_fd, const char* cwd, char* out_buf, us
         }
 
         // Normal character processing
-        if (c == 0x1B) {
+        if (c == 0x1b) {
             state = Escape;
+            continue;
+        }
+
+        if (c == 0x03) { // Ctrl+C
+            sys_write_str(console_fd, "^C\n");
+            out_buf[0] = '\0';
+            len = 0;
+            cursor_pos = 0;
+            sys_write_str(console_fd, prompt);
+            history_index = HistoryManager::count();
+            continue;
+        } else if (c == 0x04) { // Ctrl+D
+            if (len == 0) {
+                sys_write_str(console_fd, "exit\n");
+                memcpy(out_buf, "exit", 5);
+                return true;
+            }
+            continue;
+        } else if (c == 0x0c) { // Ctrl+L
+            sys_write_str(console_fd, "\033[2J\033[H");
+            redraw_line(prompt, out_buf, cursor_pos, console_fd);
             continue;
         }
 

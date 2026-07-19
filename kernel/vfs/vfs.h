@@ -21,6 +21,8 @@ public:
     virtual i32 write(u64 offset, usize size, const void* buffer) = 0;
     virtual u64 size() const = 0;
     virtual NodeType type() const = 0;
+    virtual void add_ref() {}
+    virtual void close_node() {}
     
     // Directory operations
     virtual i32 read_dir(u64 offset, DirectoryEntry* entries, usize max_entries) {
@@ -47,6 +49,7 @@ public:
     static i32 read(u64 fd, void* buffer, usize size);
     static i32 write(u64 fd, const void* buffer, usize size);
     static bool mount(const char* path, FileSystem* fs);
+    static i32 dup2(u64 old_fd, u64 new_fd);
     
     // Directory operations
     static i32 read_dir(const char* path, DirectoryEntry* entries, usize max_entries);

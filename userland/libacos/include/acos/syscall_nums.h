@@ -44,6 +44,8 @@ enum class SyscallNum : u64 {
     FileWrite = 303,
     FileSeek = 304,
     FileReadDir = 305,
+    PipeCreate = 310,
+    FileDup = 311,
 
     // Network (400-499)
     SocketCreate = 400,

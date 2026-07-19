@@ -73,6 +73,7 @@ extern "C" void k_handle_df(acos::u64 rip, acos::u64 error_code) {
 }
 
 static bool g_shift_pressed = false;
+static bool g_ctrl_pressed = false;
 
 static const char kbd_us_map[128] = {
     0,  27, '1', '2', '3', '4', '5', '6', '7', '8',	/* 9 */
@@ -155,6 +156,53 @@ extern "C" void k_handle_kbd() {
         return;
     }
 
+    if (scancode == 0x1D) {
+        g_ctrl_pressed = true;
+        acos::arch::x86_64::LocalApic::eoi();
+        return;
+    }
+    if (scancode == 0x9D) {
+        g_ctrl_pressed = false;
+        acos::arch::x86_64::LocalApic::eoi();
+        return;
+    }
+
+    if (scancode == 0x48) { // Up Arrow
+        console_push_char('\033'); console_push_char('['); console_push_char('A');
+        acos::arch::x86_64::LocalApic::eoi();
+        return;
+    }
+    if (scancode == 0x50) { // Down Arrow
+        console_push_char('\033'); console_push_char('['); console_push_char('B');
+        acos::arch::x86_64::LocalApic::eoi();
+        return;
+    }
+    if (scancode == 0x4B) { // Left Arrow
+        console_push_char('\033'); console_push_char('['); console_push_char('D');
+        acos::arch::x86_64::LocalApic::eoi();
+        return;
+    }
+    if (scancode == 0x4D) { // Right Arrow
+        console_push_char('\033'); console_push_char('['); console_push_char('C');
+        acos::arch::x86_64::LocalApic::eoi();
+        return;
+    }
+    if (scancode == 0x47) { // Home Key
+        console_push_char('\033'); console_push_char('['); console_push_char('H');
+        acos::arch::x86_64::LocalApic::eoi();
+        return;
+    }
+    if (scancode == 0x4F) { // End Key
+        console_push_char('\033'); console_push_char('['); console_push_char('F');
+        acos::arch::x86_64::LocalApic::eoi();
+        return;
+    }
+    if (scancode == 0x53) { // Delete Key
+        console_push_char('\033'); console_push_char('['); console_push_char('3'); console_push_char('~');
+        acos::arch::x86_64::LocalApic::eoi();
+        return;
+    }
+
     if (scancode & 0x80) {
         // Release event
         acos::arch::x86_64::LocalApic::eoi();
@@ -162,6 +210,24 @@ extern "C" void k_handle_kbd() {
     }
 
     if (scancode < 128) {
+        if (g_ctrl_pressed) {
+            if (scancode == 0x2E) { // Ctrl+C
+                console_push_char(0x03);
+                acos::arch::x86_64::LocalApic::eoi();
+                return;
+            }
+            if (scancode == 0x20) { // Ctrl+D
+                console_push_char(0x04);
+                acos::arch::x86_64::LocalApic::eoi();
+                return;
+            }
+            if (scancode == 0x26) { // Ctrl+L
+                console_push_char(0x0C);
+                acos::arch::x86_64::LocalApic::eoi();
+                return;
+            }
+        }
+
         char ascii = g_shift_pressed ? kbd_us_shift_map[scancode] : kbd_us_map[scancode];
         if (ascii != 0) {
             acos::hal::serial_print("[PS2] ascii='");

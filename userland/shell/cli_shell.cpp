@@ -38,6 +38,7 @@ void CLIShell::execute_startup_scripts() {
             if (n <= 0) {
                 if (len > 0) {
                     line_buf[len] = '\0';
+                    perform_command_substitution(line_buf);
                     static Pipeline pipeline;
                     if (CommandLineParser::parse(line_buf, pipeline)) {
                         ShellExecutor::execute(pipeline, m_cwd, m_console_fd);
@@ -55,6 +56,7 @@ void CLIShell::execute_startup_scripts() {
             if (c == '\n' || c == '\r') {
                 if (len > 0) {
                     line_buf[len] = '\0';
+                    perform_command_substitution(line_buf);
                     static Pipeline pipeline;
                     if (CommandLineParser::parse(line_buf, pipeline)) {
                         ShellExecutor::execute(pipeline, m_cwd, m_console_fd);
@@ -74,6 +76,92 @@ void CLIShell::execute_startup_scripts() {
             }
         }
         vfs::close(fd);
+    }
+}
+
+void CLIShell::perform_command_substitution(char* buffer) {
+    char* sub_start = nullptr;
+    for (int k = 0; buffer[k]; k++) {
+        if (buffer[k] == '$' && buffer[k+1] == '(') {
+            sub_start = buffer + k;
+            break;
+        }
+    }
+
+    if (sub_start) {
+        char* sub_end = sub_start + 2;
+        int paren_count = 1;
+        while (*sub_end) {
+            if (*sub_end == '(') paren_count++;
+            else if (*sub_end == ')') {
+                paren_count--;
+                if (paren_count == 0) break;
+            }
+            sub_end++;
+        }
+
+        if (*sub_end == ')') {
+            char inner_cmd[512];
+            usize inner_len = sub_end - (sub_start + 2);
+            if (inner_len > 511) inner_len = 511;
+            memcpy(inner_cmd, sub_start + 2, inner_len);
+            inner_cmd[inner_len] = '\0';
+
+            // Recursively evaluate any command substitution inside the inner command first!
+            perform_command_substitution(inner_cmd);
+
+            // Create a pipe for capturing stdout
+            i32 sub_pipe_fds[2];
+            if (vfs::pipe(sub_pipe_fds) >= 0) {
+                static Pipeline sub_pipeline;
+                if (CommandLineParser::parse(inner_cmd, sub_pipeline)) {
+                    // Temporarily redirect stdout to pipe writer
+                    i32 saved_stdout = vfs::open("/dev/console", 0);
+                    vfs::dup2(1, saved_stdout);
+                    vfs::dup2(sub_pipe_fds[1], 1);
+                    vfs::close(sub_pipe_fds[1]);
+
+                    // Execute inner command
+                    ShellExecutor::execute(sub_pipeline, m_cwd, m_console_fd);
+
+                    // Restore stdout in parent shell
+                    vfs::dup2(saved_stdout, 1);
+                    vfs::close(saved_stdout);
+
+                    // Clean pipeline arguments memory
+                    for (int sc = 0; sc < sub_pipeline.command_count; sc++) {
+                        for (int sa = 0; sa < sub_pipeline.commands[sc].argc; sa++) {
+                            memory::kfree(sub_pipeline.commands[sc].argv[sa]);
+                        }
+                    }
+
+                    // Read captured stdout from read end of pipe
+                    char sub_output[1024] = {0};
+                    i32 n_bytes = vfs::read(sub_pipe_fds[0], sub_output, 1023);
+                    vfs::close(sub_pipe_fds[0]);
+
+                    if (n_bytes > 0) {
+                        sub_output[n_bytes] = '\0';
+                        while (n_bytes > 0 && (sub_output[n_bytes - 1] == '\n' || sub_output[n_bytes - 1] == '\r' || sub_output[n_bytes - 1] == ' ')) {
+                            sub_output[--n_bytes] = '\0';
+                        }
+                    }
+
+                    static char temp_reconstructed[2048];
+                    usize prefix_len = sub_start - buffer;
+                    memcpy(temp_reconstructed, buffer, prefix_len);
+                    usize output_len = strlen(sub_output);
+                    memcpy(temp_reconstructed + prefix_len, sub_output, output_len);
+                    usize suffix_len = strlen(sub_end + 1);
+                    memcpy(temp_reconstructed + prefix_len + output_len, sub_end + 1, suffix_len + 1);
+
+                    memcpy(buffer, temp_reconstructed, strlen(temp_reconstructed) + 1);
+                } else {
+                    vfs::close(sub_pipe_fds[0]);
+                    vfs::close(sub_pipe_fds[1]);
+                }
+            }
+        }
     }
 }
 
@@ -122,6 +210,9 @@ void CLIShell::run() {
         } else {
             memcpy(expanded_buffer, input_buffer, strlen(input_buffer) + 1);
         }
+
+        // Perform command substitution
+        perform_command_substitution(expanded_buffer);
 
         // Process exit check
         if (strcmp(expanded_buffer, "exit") == 0) {

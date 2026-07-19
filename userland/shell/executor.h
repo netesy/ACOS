@@ -46,13 +46,19 @@ private:
     static i32 builtin_reboot(int argc, char** argv, i32 fd);
     static i32 builtin_shutdown(int argc, char** argv, i32 fd);
 
-    static i32 execute_external(const Command& cmd, char* cwd, i32 in_fd, i32 out_fd);
+    static i32 execute_external(const Command& cmd, char* cwd, i32 in_fd, i32 out_fd, bool is_background = false);
 
     // Helpers
     static void resolve_path(const char* cwd, const char* path, char* out_resolved);
     static void print_error(i32 fd, const char* cmd, const char* msg);
     static void recursive_tree(const char* dir, int depth, i32 fd);
     static void recursive_find(const char* dir, const char* pattern, i32 fd);
+
+    // Wildcard Globbing Helpers
+    static void expand_wildcards(Command& cmd, const char* cwd);
+    static bool match_pattern(const char* name, const char* pattern);
+    static void glob_directory(const char* real_dir, const char* prefix_to_prepend, const char* pattern, char** out_argv, int& out_argc, int max_argc);
+    static void glob_recursive(const char* real_dir, const char* prefix_to_prepend, const char* pattern, char** out_argv, int& out_argc, int max_argc);
 };
 
 } // namespace acos::shell

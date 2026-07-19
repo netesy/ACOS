@@ -1,8 +1,15 @@
 #include <kernel/vfs/file.h>
+#include <kernel/memory/heap.h>
 
 namespace acos::vfs {
 
 File::File(Node* node) : m_node(node), m_offset(0) {}
+
+File::~File() {
+    if (m_node) {
+        m_node->close_node();
+    }
+}
 
 i32 File::read(void* buffer, usize size) {
     if (!m_node) return -1;

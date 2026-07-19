@@ -7,6 +7,9 @@ namespace acos::vfs {
 class File {
 public:
     File(Node* node);
+    ~File();
+
+    Node* node() const { return m_node; }
 
     i32 read(void* buffer, usize size);
     i32 write(const void* buffer, usize size);

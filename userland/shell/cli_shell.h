@@ -12,6 +12,7 @@ public:
 
 private:
     void execute_startup_scripts();
+    void perform_command_substitution(char* buffer);
 
     char m_cwd[1024];
     bool m_running;
