@@ -31,6 +31,17 @@ void CLIShell::run() {
                 continue;
             }
 
+            if (c >= 32 && c <= 126) {
+                acos::process::log("[CLI] received '");
+                char s[2] = {c, '\0'};
+                acos::process::log(s);
+                acos::process::log("'\n");
+            } else if (c == '\b' || c == 127) {
+                acos::process::log("[CLI] received Backspace\n");
+            } else if (c == '\n' || c == '\r') {
+                acos::process::log("[CLI] received Enter\n");
+            }
+
             if (c == '\r' || c == '\n') {
                 syscall(sys::SyscallNum::FileWrite, m_console_fd, reinterpret_cast<u64>("\n"), 1, 0, 0);
                 break;

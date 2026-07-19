@@ -1,11 +1,46 @@
 #include <kernel/vfs/console_node.h>
 #include <kernel/hal/console.h>
 #include <kernel/hal/serial.h>
+#include <kernel/scheduler/scheduler.h>
 
 // Microkernel: the console node only writes to the HAL console and serial.
 // Graphics-based terminal is now a user-space service.
 
 namespace acos::vfs {
+
+static char g_console_buffer[1024];
+static usize g_console_head = 0;
+static usize g_console_tail = 0;
+static usize g_console_count = 0;
+
+extern "C" void console_push_char(char c) {
+    if (g_console_count < 1024) {
+        g_console_buffer[g_console_tail] = c;
+        g_console_tail = (g_console_tail + 1) % 1024;
+        g_console_count++;
+
+        // Debug Logging
+        hal::serial_print("[Console] queued '");
+        char s[2] = {c, '\0'};
+        hal::serial_print(s);
+        hal::serial_print("'\n");
+
+        auto* blocked = scheduler::get_console_blocked();
+        if (blocked) {
+            hal::serial_print("[Console] waking blocked reader\n");
+            scheduler::clear_console_blocked(blocked);
+            scheduler::wake_thread(blocked);
+        }
+    }
+}
+
+extern "C" char console_pop_char() {
+    if (g_console_count == 0) return 0;
+    char c = g_console_buffer[g_console_head];
+    g_console_head = (g_console_head + 1) % 1024;
+    g_console_count--;
+    return c;
+}
 
 i32 ConsoleNode::read(u64 offset [[maybe_unused]], usize size, void* buffer) {
     if (!buffer || size == 0) return 0;
@@ -14,15 +49,22 @@ i32 ConsoleNode::read(u64 offset [[maybe_unused]], usize size, void* buffer) {
     usize read_bytes = 0;
 
     while (read_bytes < size) {
-        if (hal::serial_received()) {
-            buf[read_bytes++] = hal::serial_read();
+        __asm__ volatile("cli");
+        char c = console_pop_char();
+        if (c != 0) {
+            __asm__ volatile("sti");
+            buf[read_bytes++] = c;
         } else {
-            // If we already have data, return it now.
-            if (read_bytes > 0) break;
+            if (read_bytes > 0) {
+                __asm__ volatile("sti");
+                break;
+            }
 
-            // Halt CPU until next hardware event.
-            __asm__ volatile("hlt");
-
+            auto* current = scheduler::current_thread();
+            scheduler::set_console_blocked(current);
+            current->state = scheduler::ThreadState::Blocked;
+            __asm__ volatile("sti");
+            scheduler::schedule();
         }
     }
 

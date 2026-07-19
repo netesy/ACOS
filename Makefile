@@ -270,6 +270,7 @@ $(DISK_IMG): dist
 		$(MMD) -i $(DISK_IMG) ::/EFI/BOOT; \
 		$(MCOPY) -i $(DISK_IMG) $(DIST_DIR)/EFI/BOOT/BOOTX64.EFI ::/EFI/BOOT/BOOTX64.EFI; \
 		$(MCOPY) -i $(DISK_IMG) $(DIST_DIR)/kernel.elf ::/kernel.elf; \
+		$(MCOPY) -i $(DISK_IMG) README.TXT ::/README.TXT; \
 		$(MMD) -i $(DISK_IMG) ::/bin; \
 		for bin in $(SERVICES_BINS); do \
 			$(MCOPY) -v -i $(DISK_IMG) $$bin ::/bin/$$(basename $$bin); \

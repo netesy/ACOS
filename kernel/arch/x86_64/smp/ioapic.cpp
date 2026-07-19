@@ -26,4 +26,16 @@ void IoApic::set_irq(u8 irq, u8 vector, u32 cpu_apic_id) {
     write(0x11 + irq * 2, high);
 }
 
+void IoApic::mask(u8 irq) {
+    u32 low = read(0x10 + irq * 2);
+    low |= (1 << 16); // Set mask bit
+    write(0x10 + irq * 2, low);
+}
+
+void IoApic::unmask(u8 irq) {
+    u32 low = read(0x10 + irq * 2);
+    low &= ~(1 << 16); // Clear mask bit
+    write(0x10 + irq * 2, low);
+}
+
 } // namespace acos::arch::x86_64

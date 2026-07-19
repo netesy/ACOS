@@ -277,7 +277,13 @@ extern "C" u64 syscall_dispatch(u64 num, u64 arg1, u64 arg2, u64 arg3, u64 arg4,
             void* buffer = reinterpret_cast<void*>(arg2);
             usize size = arg3;
             if (!current) return static_cast<u64>(-1);
-            return static_cast<u64>(vfs::VFS::read(fd, buffer, size));
+            u64 res = static_cast<u64>(vfs::VFS::read(fd, buffer, size));
+            if (res > 0 && res < 100) {
+                acos::hal::serial_print("[Syscall] read returned ");
+                acos::hal::serial_print_hex(res);
+                acos::hal::serial_print(" byte(s)\n");
+            }
+            return res;
         }
 
         case SyscallNum::FileWrite: {
