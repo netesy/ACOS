@@ -6,6 +6,15 @@ Status: Strategic
 
 ---
 
+# Naming Convention
+
+- **Asade**: The complete operating system
+- **ACOS**: The kernel component of Asade
+
+This roadmap describes the development of the Asade operating system, including the ACOS kernel and system services.
+
+---
+
 # Phase 0
 
 Project Foundation

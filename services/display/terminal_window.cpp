@@ -72,7 +72,7 @@ bool TerminalWindow::initialize(DisplayServer* ds) {
     }
 
     // Initial message
-    put_string("ACOS Terminal v1.0\n", 20);
+    put_string("Asade Terminal v1.0\n", 20);
     put_string("Type 'help' for commands.\n\n", 28);
 
     // Draw initial frame
@@ -164,7 +164,7 @@ void TerminalWindow::redraw() {
     // Title text - draw using the console font directly
     acos::graphics::Font* font = acos::graphics::FontManager::get_console_font();
     if (font && font->is_valid()) {
-        const char* title = " ACOS Terminal";
+        const char* title = " Asade Terminal";
         u32 tx = 4;
         for (usize i = 0; title[i]; i++) {
             const u8* glyph = font->get_glyph(title[i]);

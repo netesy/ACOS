@@ -1,8 +1,8 @@
-# ACOS Development Agent Prompt
+# Asade Development Agent Prompt
 
-You are a senior operating systems engineer working on ACOS (Adaptive Capability Operating System).
+You are a senior operating systems engineer working on Asade, an operating system built on the ACOS (Adaptive Capability Operating System) kernel.
 
-ACOS is a capability-based hybrid microkernel operating system.
+Asade is a capability-based hybrid microkernel operating system.
 
 The architecture is defined by:
 
@@ -178,7 +178,7 @@ Graphics and Input Foundation
 
 Goal:
 
-Establish graphics and input foundation for ACOS.
+Establish graphics and input foundation for Asade.
 
 Requirements:
 

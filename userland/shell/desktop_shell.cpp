@@ -34,7 +34,7 @@ void DesktopShell::initialize() {
     auto top_bar = Panel()
         .glass(true)
         .background(0xCC0A0A0B)
-        .padding(0, 16, 0, 16)
+        .padding(0, 16, 0, 32)
         .preferred_height(48)
         .fixed(0, 0, -1, 0);      // top=0, right=0, bottom=unset, left=0
 
@@ -47,7 +47,7 @@ void DesktopShell::initialize() {
     auto top_left = Row()
         .spacing(24)
         .cross_axis_alignment(CrossAxisAlignment::Center);
-    top_left->add_child(Text("ACOS_KERNEL").color(0xFFFFFFFF).font_size(16));
+    top_left->add_child(Text("Asade").color(0xFFFFFFFF).font_size(16));
     top_left->add_child(Text("System").color(0xFFFFFFFF).border(0xFFFFFFFF, 1));
     top_left->add_child(Text("Network").color(0xFF888888));
     top_left->add_child(Text("Security").color(0xFF888888));
@@ -81,7 +81,8 @@ void DesktopShell::initialize() {
     // ========== DESKTOP AREA — fills remaining space ==========
     auto desktop = Panel()
         .background(0)           // transparent — shows console clear color behind
-        .flex_grow(1);
+        .flex_grow(1)
+        .padding(0, 0, 0, 32);    // Add left padding to desktop area
     root->add_child(desktop);
 
     // ========== BOTTOM DOCK — fixed to bottom center ==========

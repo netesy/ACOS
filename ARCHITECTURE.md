@@ -8,7 +8,7 @@ Status: Constitutional
 
 # Purpose
 
-This document defines the architectural boundaries of ACOS.
+This document defines the architectural boundaries of Asade.
 
 Any implementation detail may change.
 
@@ -16,9 +16,16 @@ These principles may not.
 
 ---
 
+# Naming Convention
+
+- **Asade**: The complete operating system
+- **ACOS**: The kernel component of Asade
+
+---
+
 # System Vision
 
-ACOS is a capability-based hybrid microkernel operating system designed for:
+Asade is a capability-based hybrid microkernel operating system built on the ACOS kernel, designed for:
 
 * Desktop Computing
 * Server Computing
@@ -44,7 +51,7 @@ Hardware
 
 Layer 1
 
-ACOS Core Kernel
+ACOS Core Kernel (Asade Kernel)
 
 Layer 2
 
@@ -162,7 +169,7 @@ Tier 1
 
 # Scheduling Model
 
-ACOS schedules:
+Asade schedules:
 
 * CPU
 * GPU
@@ -178,7 +185,7 @@ Scheduling is resource-centric rather than CPU-centric.
 
 # Distribution Philosophy
 
-ACOS is Local-First.
+Asade is Local-First.
 
 Distributed services are optional.
 
@@ -211,7 +218,7 @@ No subsystem may:
 
 # Success Criteria
 
-A successful ACOS system:
+A successful Asade system:
 
 * Survives driver crashes
 * Survives service crashes

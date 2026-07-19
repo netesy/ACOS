@@ -245,8 +245,9 @@ void console_clear(u32 color) {
     }
 }
 
-static u32 cursor_x = 0;
-static u32 cursor_y = 0;
+static constexpr u32 CONSOLE_LEFT_MARGIN = 8;  // Left margin to prevent text cutoff
+static u32 cursor_x = CONSOLE_LEFT_MARGIN;
+static u32 cursor_y = 8;
 
 void console_print(const char* s, u32 color) {
     if (!g_fb || !s) {
@@ -255,13 +256,13 @@ void console_print(const char* s, u32 color) {
 
     while (*s) {
         if (*s == '\n') {
-            cursor_x = 0;
+            cursor_x = CONSOLE_LEFT_MARGIN;
             cursor_y += 10;
         } else {
             console_putchar(*s, cursor_x, cursor_y, color);
             cursor_x += 8;
             if (g_fb && cursor_x + 8 > g_fb->width) {
-                cursor_x = 0;
+                cursor_x = CONSOLE_LEFT_MARGIN;
                 cursor_y += 10;
             }
         }

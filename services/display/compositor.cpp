@@ -48,7 +48,7 @@ void Compositor::compose() {
     if (m_desktop_draw) {
         m_desktop_draw(&m_renderer);
     } else {
-        // Default: ACOS Synthetic background
+        // Default: Asade Synthetic background
         m_fb->clear(0xFF0A0A0B);
     }
 

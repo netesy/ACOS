@@ -8,11 +8,20 @@ Status: Constitutional
 
 # Purpose
 
-This document defines the internal architecture of the ACOS kernel.
+This document defines the internal architecture of the ACOS kernel, which is the kernel component of the Asade operating system.
 
 The kernel is the most privileged component of the system.
 
 Changes to kernel architecture require formal review.
+
+---
+
+# Naming Convention
+
+- **Asade**: The complete operating system
+- **ACOS**: The kernel component of Asade
+
+This document specifically describes the ACOS kernel architecture.
 
 ---
 
