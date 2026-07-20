@@ -47,7 +47,7 @@ Taskbar::Taskbar() {
 
     root_layout->add_child(create_dock_item(gui::widgets::IconType::Terminal, [](void*){ DesktopShell::get().launch_terminal(); }));
     root_layout->add_child(create_dock_item(gui::widgets::IconType::Files, [](void*){ DesktopShell::get().launch_file_manager(); }));
-    root_layout->add_child(create_dock_item(gui::widgets::IconType::Code, [](void*){}));
+    root_layout->add_child(create_dock_item(gui::widgets::IconType::Monitor, [](void*){ DesktopShell::get().toggle_launcher(); }));
     root_layout->add_child(create_dock_item(gui::widgets::IconType::Settings, [](void*){ DesktopShell::get().launch_settings(); }));
 
     add_child(root_layout.static_cast_to<gui::Widget>());

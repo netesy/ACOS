@@ -30,6 +30,7 @@ public:
 
     void update_status_bar();
     void toggle_search();
+    void toggle_launcher();
 
     DesktopShortcutManager& shortcut_manager() { return m_shortcut_manager; }
 
@@ -43,6 +44,7 @@ private:
     gui::Ref<gui::widgets::Text> m_ip_text;
     gui::Ref<gui::widgets::Text> m_clock_text;
     gui::Ref<gui::Widget> m_search_modal;
+    gui::Ref<gui::Widget> m_launcher;
     DesktopShortcutManager m_shortcut_manager;
 
     // Display server reference for IPC
