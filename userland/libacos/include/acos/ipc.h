@@ -20,6 +20,32 @@ u64 channel_create();
 bool channel_send(u64 handle, const void* data, usize size);
 bool channel_receive(u64 handle, void* data, usize size);
 
+class Notification {
+public:
+    Notification();
+    ~Notification();
+
+    void signal();
+    void wait();
+    u64 handle() const { return m_handle; }
+private:
+    u64 m_handle;
+};
+
+class SharedMemory {
+public:
+    SharedMemory(usize size);
+    ~SharedMemory();
+
+    void* map(u64 flags = 0);
+    void unmap();
+    u64 handle() const { return m_handle; }
+private:
+    u64 m_handle;
+    void* m_ptr;
+    usize m_size;
+};
+
 } // namespace acos::ipc
 
 namespace acos::services {

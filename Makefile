@@ -131,7 +131,10 @@ LIBACOS_SRCS = \
 	userland/libacos/font.cpp \
 	userland/libacos/font_manager.cpp \
 	userland/libacos/string.cpp \
-	userland/libacos/input.cpp
+	userland/libacos/input.cpp \
+	userland/libacos/net.cpp \
+	userland/libacos/utility.cpp \
+	userland/libacos/app.cpp
 
 GUI_SRCS = $(wildcard userland/gui/*.cpp) $(wildcard userland/gui/core/*.cpp)
 
