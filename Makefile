@@ -9,7 +9,7 @@ UEFI_CFLAGS = -target x86_64-unknown-windows-coff -ffreestanding -fcf-protection
 UEFI_LDFLAGS = -m i386pep --subsystem 10 --entry efi_main
 
 # Kernel Target
-KERNEL_CFLAGS = -target x86_64-unknown-elf -nostdinc++ -fno-pic -ffreestanding -fcf-protection=none -fno-stack-protector -fno-exceptions -fno-rtti -mno-red-zone -I. -Ilibs/runtime/include -Ilibs/abi/include -Iuserland/posix/include -std=c++20 -Wall -Wextra -Werror
+KERNEL_CFLAGS = -target x86_64-unknown-elf -nostdinc++ -fno-pic -ffreestanding -fcf-protection=none -fno-stack-protector -fno-exceptions -fno-rtti -mno-red-zone -I. -Ilibs/runtime/include -Ilibs/abi/include -Iuserland/posix/include -std=c++20 -Wall -Wextra -Werror -D_KERNEL
 KERNEL_ASFLAGS = -target x86_64-unknown-elf
 KERNEL_LDFLAGS = -target x86_64-unknown-elf -fuse-ld=lld -nostdlib -Wl,-T,linker.ld -Wl,--no-undefined
 
@@ -99,6 +99,9 @@ KERNEL_SRCS = \
 	$(GRAPHICS_DIR)/font.cpp \
 	$(GRAPHICS_DIR)/font_manager.cpp \
 	$(KERNEL_DIR)/input/input_manager.cpp \
+	$(KERNEL_DIR)/input/input_queue.cpp \
+	$(KERNEL_DIR)/input/keyboard_manager.cpp \
+	$(KERNEL_DIR)/input/mouse_manager.cpp \
 	$(K_AUDIO_DIR)/audio_manager.cpp \
 	$(K_AUDIO_DIR)/audio_device.cpp \
 	$(D_AUDIO_DIR)/virtio_sound/virtio_sound.cpp \
@@ -127,7 +130,8 @@ LIBACOS_SRCS = \
 	userland/libacos/renderer.cpp \
 	userland/libacos/font.cpp \
 	userland/libacos/font_manager.cpp \
-	userland/libacos/string.cpp
+	userland/libacos/string.cpp \
+	userland/libacos/input.cpp
 
 GUI_SRCS = $(wildcard userland/gui/*.cpp) $(wildcard userland/gui/core/*.cpp)
 
@@ -174,6 +178,10 @@ DESKTOP_SHELL_SRCS = \
 
 APP_SRCS = \
 	apps/terminal/terminal.cpp \
+	apps/terminal/terminal_buffer.cpp \
+	apps/terminal/terminal_parser.cpp \
+	apps/terminal/terminal_session.cpp \
+	apps/terminal/terminal_view.cpp \
 	apps/file_manager/file_manager.cpp \
 	apps/settings/settings.cpp \
 	apps/settings/audio_settings.cpp

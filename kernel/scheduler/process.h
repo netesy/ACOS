@@ -22,7 +22,9 @@ enum class ResourceKind : u32 {
     GraphicsWindow,
     GraphicsDisplay,
     GraphicsBuffer,
-    GraphicsContext
+    GraphicsContext,
+    InputQueue,
+    InputDevice
 };
 
 namespace ResourceRights {

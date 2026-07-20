@@ -7,6 +7,8 @@ u64 get_pid();
 void exit(int status);
 void log(const char* msg);
 void log(const char* msg, unsigned int len);
+u64 create_thread(void (*entry)(void*), void* arg);
+void start_thread(u64 thread_handle);
 
 } // namespace acos::process
 

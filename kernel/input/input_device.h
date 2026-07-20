@@ -12,6 +12,7 @@ public:
     virtual ~InputDevice() = default;
     virtual bool initialize() = 0;
     virtual InputType type() const = 0;
+    virtual const char* name() const = 0;
 };
 
 } // namespace acos::input

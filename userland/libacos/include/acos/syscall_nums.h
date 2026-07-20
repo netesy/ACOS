@@ -80,6 +80,11 @@ enum class SyscallNum : u64 {
     DeviceBindInterrupt = 702,
     MemoryAllocateContiguous = 703,
 
+    // Input Subsystem (710-719)
+    InputQueueCreate = 710,
+    InputQueuePop = 711,
+    InputDeviceOpen = 712,
+
     // Service Discovery (500-599)
     ResourceLocate = 500,
     ResourceRegister = 501

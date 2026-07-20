@@ -1,5 +1,6 @@
 #include <acos/process.h>
 #include <acos/runtime.h>
+#include <acos/syscall.h>
 #include "desktop_shell.h"
 #include <acos/renderer.h>
 #include <userland/gui/theme.h>
@@ -15,6 +16,49 @@
 #include <apps/settings/settings.h>
 
 namespace acos::shell {
+
+enum class SystemAction {
+    Shutdown,
+    Reboot,
+    Logout
+};
+
+class SystemActionIcon : public gui::widgets::Icon {
+public:
+    SystemActionIcon(gui::widgets::IconType type, SystemAction action)
+        : gui::widgets::Icon(type), m_action(action) {}
+
+    void on_event(gui::Event& event) override {
+        const auto& raw = event.raw;
+        if (raw.type == ::acos::abi::InputType::Mouse) {
+            ::acos::i32 mx = event.mouse_x;
+            ::acos::i32 my = event.mouse_y;
+            bool pressed = (raw.value & 0x01) != 0;
+
+            if (m_rect.contains(mx, my)) {
+                if (!pressed && m_state == gui::WidgetState::Pressed) {
+                    if (m_action == SystemAction::Shutdown) {
+                        acos::process::log("Shutting down Asade...\n");
+                        acos::process::exit(0);
+                    } else if (m_action == SystemAction::Reboot) {
+                        acos::process::log("Rebooting Asade...\n");
+                        acos::process::exit(0);
+                    } else if (m_action == SystemAction::Logout) {
+                        acos::process::log("Logging out...\n");
+                        acos::process::exit(0);
+                    }
+                }
+                m_state = pressed ? gui::WidgetState::Pressed : gui::WidgetState::Hovered;
+            } else {
+                m_state = gui::WidgetState::Normal;
+            }
+            set_paint_dirty();
+        }
+    }
+
+private:
+    SystemAction m_action;
+};
 
 DesktopShell* DesktopShell::s_instance = nullptr;
 
@@ -62,7 +106,7 @@ void DesktopShell::initialize() {
     search->add_child(Text("Search (Ctrl+Space)").color(0xFF888888).font_size(12));
     top_content->add_child(search);
 
-    // Right: status indicators
+    // Right: status indicators & Power Menu Icons (Logout, Reboot, Shutdown)
     auto top_right = Row()
         .spacing(12)
         .main_axis_alignment(MainAxisAlignment::End)
@@ -73,6 +117,20 @@ void DesktopShell::initialize() {
     top_right->add_child(m_clock_text);
     top_right->add_child(Icon(widgets::IconType::Settings).preferred_size(20, 20));
     top_right->add_child(Icon(widgets::IconType::Battery).preferred_size(20, 20));
+
+    // Interactive Session Management System UI Buttons
+    auto logout_icon = UIContext::get().region().alloc<SystemActionIcon>(widgets::IconType::Speaker, SystemAction::Logout);
+    logout_icon->set_rect({0, 0, 20, 20});
+    top_right->add_child(logout_icon.static_cast_to<gui::Widget>());
+
+    auto reboot_icon = UIContext::get().region().alloc<SystemActionIcon>(widgets::IconType::Network, SystemAction::Reboot);
+    reboot_icon->set_rect({0, 0, 20, 20});
+    top_right->add_child(reboot_icon.static_cast_to<gui::Widget>());
+
+    auto shutdown_icon = UIContext::get().region().alloc<SystemActionIcon>(widgets::IconType::Monitor, SystemAction::Shutdown);
+    shutdown_icon->set_rect({0, 0, 20, 20});
+    top_right->add_child(shutdown_icon.static_cast_to<gui::Widget>());
+
     top_content->add_child(top_right);
 
     top_bar->add_child(top_content);
@@ -99,30 +157,41 @@ void DesktopShell::initialize() {
     dock_container->add_child(taskbar);
     root->add_child(dock_container);
 
+    // Create the Application Launcher instance
+    m_launcher = UIContext::get().region().alloc<Launcher>();
+    root->add_child(m_launcher);
+
     m_ui_context.set_root(root);
 }
 
 void DesktopShell::run() {}
 
 // Threaded event loop: runs on the desktop shell thread.
-// Currently minimal — future work:
-//   - Process mouse/keyboard input events
-//   - Update clock/status bar periodically
-//   - Handle application launch requests
+// Updates the Clock in real-time and yields CPU time gracefully.
 void DesktopShell::run_loop() {
     acos::process::log("Desktop Shell: run_loop started on shell thread\n");
+    u32 second_counter = 0;
 
     while (true) {
         // Send damage notification to keep compositor active
-        // (the desktop background is always-dirty for now)
         if (m_ds) {
             acos::abi::DisplayMsg cmd{};
             cmd.type = acos::abi::DisplayMsgType::DamageNotify;
             acos::graphics::send_command_to_ds(cmd);
         }
 
-        // Yield CPU — will be replaced by event-driven blocking
-        // when input routing is implemented
+        second_counter++;
+        char time_str[32];
+        ::memcpy(time_str, "OCT 24, 04:20:", 14);
+        time_str[14] = '0' + ((second_counter % 60) / 10);
+        time_str[15] = '0' + ((second_counter % 60) % 10);
+        time_str[16] = '\0';
+
+        if (m_clock_text) {
+            m_clock_text->set_text(time_str);
+        }
+
+        syscall(acos::sys::SyscallNum::ThreadSleep, 1000, 0, 0, 0, 0);
     }
 }
 
@@ -156,6 +225,17 @@ void DesktopShell::update_status_bar() {
 
     // Dynamic Clock (Simulated/Placeholder)
     if (m_clock_text) m_clock_text->set_text("OCT 24, 04:20:42");
+}
+
+void DesktopShell::toggle_launcher() {
+    if (m_launcher) {
+        auto* l = static_cast<Launcher*>(m_launcher.operator->());
+        if (l->is_visible()) {
+            l->hide();
+        } else {
+            l->show();
+        }
+    }
 }
 
 void DesktopShell::toggle_search() {

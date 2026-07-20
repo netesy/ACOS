@@ -15,6 +15,9 @@
 #include <kernel/memory/heap.h>
 #include <kernel/loader/process_loader.h>
 #include <libs/runtime/include/acos/runtime.h>
+#include <kernel/input/input_manager.h>
+#include <kernel/input/input_queue.h>
+#include <kernel/input/input_device.h>
 
 namespace acos::sys {
 
@@ -293,11 +296,22 @@ extern "C" u64 syscall_dispatch(u64 num, u64 arg1, u64 arg2, u64 arg3, u64 arg4,
 
         case SyscallNum::ProcessStart: {
             if (!current) return kErrInvalid;
-            scheduler::Process* target = current->get_process(arg1);
-            if (!target || !target->primary_thread) return kErrInvalid;
-
-            scheduler::wake_thread(target->primary_thread);
-            return 0;
+            scheduler::ResourceHandleEntry* entry = current->get_handle(arg1);
+            if (!entry) return kErrInvalid;
+            if (entry->kind == scheduler::ResourceKind::Process) {
+                scheduler::Process* target = static_cast<scheduler::Process*>(entry->object);
+                if (target && target->primary_thread) {
+                    scheduler::wake_thread(target->primary_thread);
+                    return 0;
+                }
+            } else if (entry->kind == scheduler::ResourceKind::Thread) {
+                scheduler::Thread* target = static_cast<scheduler::Thread*>(entry->object);
+                if (target) {
+                    scheduler::wake_thread(target);
+                    return 0;
+                }
+            }
+            return kErrInvalid;
         }
 
         case SyscallNum::ProcessTerminate: {
@@ -348,8 +362,21 @@ extern "C" u64 syscall_dispatch(u64 num, u64 arg1, u64 arg2, u64 arg3, u64 arg4,
         }
 
         case SyscallNum::ResourceClose:
-        case SyscallNum::ResourceRevoke:
-            return (current && current->close_handle(arg1)) ? 0 : kErrInvalid;
+        case SyscallNum::ResourceRevoke: {
+            if (current) {
+                scheduler::ResourceHandleEntry* entry = current->get_handle(arg1);
+                if (entry && entry->kind == scheduler::ResourceKind::InputQueue) {
+                    auto* queue = static_cast<input::InputQueue*>(entry->object);
+                    if (queue) {
+                        input::InputManager::unregister_queue(queue);
+                        queue->~InputQueue();
+                        memory::kfree(queue);
+                    }
+                }
+                return current->close_handle(arg1) ? 0 : kErrInvalid;
+            }
+            return kErrInvalid;
+        }
 
         case SyscallNum::ResourceQuery: {
             if (!current || !arg2) return kErrInvalid;
@@ -926,6 +953,39 @@ extern "C" u64 syscall_dispatch(u64 num, u64 arg1, u64 arg2, u64 arg3, u64 arg4,
             auto* ctx = static_cast<graphics::GraphicsContext*>(entry->object);
             if (ctx) ctx->copy_rect(dx, dy, sx, sy, w, h);
             return 0;
+        }
+
+        case SyscallNum::InputQueueCreate: {
+            if (!current) return kErrInvalid;
+            void* storage = memory::kmalloc(sizeof(input::InputQueue));
+            if (!storage) return kErrNoMemory;
+            auto* queue = new (storage) input::InputQueue();
+            input::InputManager::register_queue(queue, current->id);
+            return current->register_resource(scheduler::ResourceKind::InputQueue, queue, scheduler::ResourceRights::Read | scheduler::ResourceRights::Write | scheduler::ResourceRights::Transfer | scheduler::ResourceRights::Delegate);
+        }
+
+        case SyscallNum::InputQueuePop: {
+            // Secure userspace pointer boundaries validation (prevents Write-What-Where exploits)
+            if (!current || !arg2 || arg2 >= 0x800000000000ULL) return kErrInvalid;
+
+            scheduler::ResourceHandleEntry* entry = current->get_handle(arg1);
+            if (!entry || entry->kind != scheduler::ResourceKind::InputQueue || (entry->rights & scheduler::ResourceRights::Read) == 0) return kErrAccess;
+
+            auto* queue = static_cast<input::InputQueue*>(entry->object);
+            input::InputEvent ev;
+            bool block = (arg3 != 0);
+            if (queue->pop_event(ev, block)) {
+                *reinterpret_cast<input::InputEvent*>(arg2) = ev;
+                return 1;
+            }
+            return 0;
+        }
+
+        case SyscallNum::InputDeviceOpen: {
+            if (!current) return kErrInvalid;
+            auto* dev = input::InputManager::get_device_by_type(static_cast<input::InputType>(arg1));
+            if (!dev) return kErrInvalid;
+            return current->register_resource(scheduler::ResourceKind::InputDevice, dev, scheduler::ResourceRights::Read | scheduler::ResourceRights::Transfer);
         }
 
         default:

@@ -9,6 +9,9 @@ public:
     static void init();
     static void handle_interrupt();
 
+    static void handle_keyboard_interrupt();
+    static void handle_mouse_interrupt();
+
 private:
     static void wait_write();
     static void wait_read();
