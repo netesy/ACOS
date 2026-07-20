@@ -178,6 +178,10 @@ DESKTOP_SHELL_SRCS = \
 
 APP_SRCS = \
 	apps/terminal/terminal.cpp \
+	apps/terminal/terminal_buffer.cpp \
+	apps/terminal/terminal_parser.cpp \
+	apps/terminal/terminal_session.cpp \
+	apps/terminal/terminal_view.cpp \
 	apps/file_manager/file_manager.cpp \
 	apps/settings/settings.cpp \
 	apps/settings/audio_settings.cpp

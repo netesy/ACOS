@@ -296,11 +296,22 @@ extern "C" u64 syscall_dispatch(u64 num, u64 arg1, u64 arg2, u64 arg3, u64 arg4,
 
         case SyscallNum::ProcessStart: {
             if (!current) return kErrInvalid;
-            scheduler::Process* target = current->get_process(arg1);
-            if (!target || !target->primary_thread) return kErrInvalid;
-
-            scheduler::wake_thread(target->primary_thread);
-            return 0;
+            scheduler::ResourceHandleEntry* entry = current->get_handle(arg1);
+            if (!entry) return kErrInvalid;
+            if (entry->kind == scheduler::ResourceKind::Process) {
+                scheduler::Process* target = static_cast<scheduler::Process*>(entry->object);
+                if (target && target->primary_thread) {
+                    scheduler::wake_thread(target->primary_thread);
+                    return 0;
+                }
+            } else if (entry->kind == scheduler::ResourceKind::Thread) {
+                scheduler::Thread* target = static_cast<scheduler::Thread*>(entry->object);
+                if (target) {
+                    scheduler::wake_thread(target);
+                    return 0;
+                }
+            }
+            return kErrInvalid;
         }
 
         case SyscallNum::ProcessTerminate: {
