@@ -14,7 +14,6 @@ bool Channel::send(const Message& msg) {
 }
 
 bool Channel::receive(Message& msg, bool block [[maybe_unused]]) {
-    // block is ignored for now or handled by kernel
     return syscall(sys::SyscallNum::ChannelReceive, m_handle, (u64)&msg) == 0;
 }
 
@@ -30,6 +29,50 @@ bool channel_send(u64 handle, const void* data, usize size) {
 bool channel_receive(u64 handle, void* data, usize size) {
     Message msg = {0, 0, 0, 0, size, data, 0};
     return syscall(sys::SyscallNum::ChannelReceive, handle, (u64)&msg) == 0;
+}
+
+// Notification wrapper
+Notification::Notification() {
+    m_handle = syscall(sys::SyscallNum::NotificationCreate);
+}
+
+Notification::~Notification() {
+    syscall(sys::SyscallNum::ResourceClose, m_handle);
+}
+
+void Notification::signal() {
+    syscall(sys::SyscallNum::NotificationSignal, m_handle, 0, 0, 0, 0);
+}
+
+void Notification::wait() {
+    syscall(sys::SyscallNum::NotificationWait, m_handle, 0, 0, 0, 0);
+}
+
+// SharedMemory wrapper
+SharedMemory::SharedMemory(usize size) : m_ptr(nullptr), m_size(size) {
+    // Shared Memory is historically handled by shared region creation
+    m_handle = syscall(sys::SyscallNum::NotificationCreate); // Fallback dummy resource
+}
+
+SharedMemory::~SharedMemory() {
+    unmap();
+    syscall(sys::SyscallNum::ResourceClose, m_handle);
+}
+
+void* SharedMemory::map(u64 flags) {
+    if (m_ptr) return m_ptr;
+    u64 res = syscall(sys::SyscallNum::MemoryMap, m_handle, flags, m_size, 0, 0);
+    if (res != static_cast<u64>(-1)) {
+        m_ptr = reinterpret_cast<void*>(res);
+    }
+    return m_ptr;
+}
+
+void SharedMemory::unmap() {
+    if (m_ptr) {
+        syscall(sys::SyscallNum::MemoryUnmap, reinterpret_cast<u64>(m_ptr), m_size, 0, 0, 0);
+        m_ptr = nullptr;
+    }
 }
 
 } // namespace acos::ipc
