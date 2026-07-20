@@ -25,6 +25,7 @@ extern "C" void isr_gp_handler();
 extern "C" void isr_pf_handler();
 extern "C" void isr_df_handler();
 extern "C" void isr_kbd_handler();
+extern "C" void isr_mouse_handler();
 
 void idt_set_gate(u8 num, u64 base, u16 selector, u8 flags) {
     g_idt[num].base_low = base & 0xFFFF;
@@ -51,6 +52,8 @@ void idt_init() {
     idt_set_gate(14, reinterpret_cast<u64>(isr_pf_handler), 0x08, 0x8E);
     // Keyboard interrupt vector (0x20 is IRQ0, 0x21 is IRQ1 keyboard)
     idt_set_gate(0x21, reinterpret_cast<u64>(isr_kbd_handler), 0x08, 0x8E);
+    // Mouse interrupt vector (0x2C is IRQ12 mouse)
+    idt_set_gate(0x2C, reinterpret_cast<u64>(isr_mouse_handler), 0x08, 0x8E);
 
     __asm__ volatile("lidt %0" : : "m"(g_idt_ptr));
 

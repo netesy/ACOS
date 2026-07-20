@@ -28,11 +28,18 @@
 #include <kernel/arch/x86_64/smp/lapic.h>
 #include <kernel/arch/x86_64/smp/ioapic.h>
 #include <services/input/ps2/ps2.h>
+#include <kernel/input/input_manager.h>
+#include <kernel/input/keyboard_manager.h>
+#include <kernel/input/mouse_manager.h>
 
 namespace acos::hal { void idt_init(); }
 namespace acos::memory { void vmm_init(BootInfo* bootInfo); }
 
 extern "C" void console_push_char(char c);
+
+extern "C" void k_handle_mouse() {
+    acos::drivers::input::PS2Controller::handle_mouse_interrupt();
+}
 
 static void poll_io() {
     if (acos::hal::serial_received()) {
@@ -72,173 +79,8 @@ extern "C" void k_handle_df(acos::u64 rip, acos::u64 error_code) {
     while(1) __asm__ volatile("hlt");
 }
 
-static bool g_shift_pressed = false;
-static bool g_ctrl_pressed = false;
-
-static const char kbd_us_map[128] = {
-    0,  27, '1', '2', '3', '4', '5', '6', '7', '8',	/* 9 */
-  '9', '0', '-', '=', '\b',	/* Backspace */
-  '\t',			/* Tab */
-  'q', 'w', 'e', 'r',	/* 19 */
-  't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n',	/* Enter key */
-    0,			/* 29   - Control */
-  'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';',	/* 39 */
- '\'', '`',   0,		/* Left shift */
- '\\', 'z', 'x', 'c', 'v', 'b', 'n',			/* 49 */
-  'm', ',', '.', '/',   0,				/* Right shift */
-  '*',
-    0,	/* Alt */
-  ' ',	/* Space bar */
-    0,	/* Caps lock */
-    0,	/* 59 - F1 key ... > */
-    0,   0,   0,   0,   0,   0,   0,   0,
-    0,	/* < ... F10 */
-    0,	/* 69 - Num lock*/
-    0,	/* Scroll Lock */
-    0,	/* Home key */
-    0,	/* Up Arrow */
-    0,	/* Page Up */
-  '-',
-    0,	/* Left Arrow */
-    0,
-    0,	/* Right Arrow */
-  '+',
-    0,	/* 79 - End key*/
-    0,	/* Down Arrow */
-    0,	/* Page Down */
-    0,	/* Insert Key */
-    0,	/* Delete Key */
-    0,   0,   0,
-    0,	/* F11 Key */
-    0,	/* F12 Key */
-    0,	/* All other keys are undefined */
-};
-
-static const char kbd_us_shift_map[128] = {
-    0,  27, '!', '@', '#', '$', '%', '^', '&', '*',	/* 9 */
-  '(', ')', '_', '+', '\b',	/* Backspace */
-  '\t',			/* Tab */
-  'Q', 'W', 'E', 'R',	/* 19 */
-  'T', 'Y', 'U', 'I', 'O', 'P', '{', '}', '\n',	/* Enter key */
-    0,			/* 29   - Control */
-  'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ':',	/* 39 */
- '\"', '~',   0,		/* Left shift */
- '|', 'Z', 'X', 'C', 'V', 'B', 'N',			/* 49 */
-  'M', '<', '>', '?',   0,				/* Right shift */
-  '*',
-    0,	/* Alt */
-  ' ',	/* Space bar */
-    0,	/* Caps lock */
-};
-
-static inline uint8_t inb(uint16_t port) {
-    uint8_t ret;
-    __asm__ volatile("inb %1, %0" : "=a"(ret) : "Nd"(port));
-    return ret;
-}
-
 extern "C" void k_handle_kbd() {
-    acos::u8 scancode = inb(0x60);
-
-    acos::hal::serial_print("[PS2] IRQ1 received\n");
-    acos::hal::serial_print("[PS2] scancode=");
-    acos::hal::serial_print_hex(scancode);
-    acos::hal::serial_print("\n");
-
-    if (scancode == 0x2A || scancode == 0x36) {
-        g_shift_pressed = true;
-        acos::arch::x86_64::LocalApic::eoi();
-        return;
-    }
-    if (scancode == 0xAA || scancode == 0xB6) {
-        g_shift_pressed = false;
-        acos::arch::x86_64::LocalApic::eoi();
-        return;
-    }
-
-    if (scancode == 0x1D) {
-        g_ctrl_pressed = true;
-        acos::arch::x86_64::LocalApic::eoi();
-        return;
-    }
-    if (scancode == 0x9D) {
-        g_ctrl_pressed = false;
-        acos::arch::x86_64::LocalApic::eoi();
-        return;
-    }
-
-    if (scancode == 0x48) { // Up Arrow
-        console_push_char('\033'); console_push_char('['); console_push_char('A');
-        acos::arch::x86_64::LocalApic::eoi();
-        return;
-    }
-    if (scancode == 0x50) { // Down Arrow
-        console_push_char('\033'); console_push_char('['); console_push_char('B');
-        acos::arch::x86_64::LocalApic::eoi();
-        return;
-    }
-    if (scancode == 0x4B) { // Left Arrow
-        console_push_char('\033'); console_push_char('['); console_push_char('D');
-        acos::arch::x86_64::LocalApic::eoi();
-        return;
-    }
-    if (scancode == 0x4D) { // Right Arrow
-        console_push_char('\033'); console_push_char('['); console_push_char('C');
-        acos::arch::x86_64::LocalApic::eoi();
-        return;
-    }
-    if (scancode == 0x47) { // Home Key
-        console_push_char('\033'); console_push_char('['); console_push_char('H');
-        acos::arch::x86_64::LocalApic::eoi();
-        return;
-    }
-    if (scancode == 0x4F) { // End Key
-        console_push_char('\033'); console_push_char('['); console_push_char('F');
-        acos::arch::x86_64::LocalApic::eoi();
-        return;
-    }
-    if (scancode == 0x53) { // Delete Key
-        console_push_char('\033'); console_push_char('['); console_push_char('3'); console_push_char('~');
-        acos::arch::x86_64::LocalApic::eoi();
-        return;
-    }
-
-    if (scancode & 0x80) {
-        // Release event
-        acos::arch::x86_64::LocalApic::eoi();
-        return;
-    }
-
-    if (scancode < 128) {
-        if (g_ctrl_pressed) {
-            if (scancode == 0x2E) { // Ctrl+C
-                console_push_char(0x03);
-                acos::arch::x86_64::LocalApic::eoi();
-                return;
-            }
-            if (scancode == 0x20) { // Ctrl+D
-                console_push_char(0x04);
-                acos::arch::x86_64::LocalApic::eoi();
-                return;
-            }
-            if (scancode == 0x26) { // Ctrl+L
-                console_push_char(0x0C);
-                acos::arch::x86_64::LocalApic::eoi();
-                return;
-            }
-        }
-
-        char ascii = g_shift_pressed ? kbd_us_shift_map[scancode] : kbd_us_map[scancode];
-        if (ascii != 0) {
-            acos::hal::serial_print("[PS2] ascii='");
-            char s[2] = {ascii, '\0'};
-            acos::hal::serial_print(s);
-            acos::hal::serial_print("'\n");
-            console_push_char(ascii);
-        }
-    }
-
-    acos::arch::x86_64::LocalApic::eoi();
+    acos::drivers::input::PS2Controller::handle_keyboard_interrupt();
 }
 
 extern "C" void kernelMain(acos::BootInfo* bootInfo) {
@@ -281,6 +123,7 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     acos::services::ServiceManager::register_service(acos::services::ServiceId::Filesystem, 1);
     acos::services::ServiceManager::register_service(acos::services::ServiceId::Graphics, 2);
     acos::services::ServiceManager::register_service(acos::services::ServiceId::Audio, 3);
+    acos::input::InputManager::init();
     if (desktop_mode) acos::graphics::GraphicsManager::init(bootInfo->framebuffer);
     acos::audio::AudioManager::init();
 
@@ -351,6 +194,8 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     acos::arch::x86_64::IoApic::init(0xFEC00000);
     acos::arch::x86_64::IoApic::set_irq(1, 0x21, 0);
     acos::arch::x86_64::IoApic::unmask(1);
+    acos::arch::x86_64::IoApic::set_irq(12, 0x2C, 0);
+    acos::arch::x86_64::IoApic::unmask(12);
 
     // Initialize PS/2 Keyboard Controller to enable keyboard interrupts (IRQ1)
     acos::drivers::input::PS2Controller::init();
