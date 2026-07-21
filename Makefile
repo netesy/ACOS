@@ -9,12 +9,12 @@ UEFI_CFLAGS = -target x86_64-unknown-windows-coff -ffreestanding -fcf-protection
 UEFI_LDFLAGS = -m i386pep --subsystem 10 --entry efi_main
 
 # Kernel Target
-KERNEL_CFLAGS = -target x86_64-unknown-elf -nostdinc++ -fno-pic -ffreestanding -fcf-protection=none -fno-stack-protector -fno-exceptions -fno-rtti -mno-red-zone -I. -Ilibs/runtime/include -Ilibs/abi/include -Iuserland/posix/include -std=c++20 -Wall -Wextra -Werror -D_KERNEL
+KERNEL_CFLAGS = -target x86_64-unknown-elf -nostdinc++ -fno-pic -ffreestanding -fcf-protection=none -fno-stack-protector -fno-exceptions -fno-rtti -mno-red-zone -O2 -I. -Ilibs/runtime/include -Ilibs/abi/include -Iuserland/posix/include -std=c++20 -Wall -Wextra -Werror -D_KERNEL
 KERNEL_ASFLAGS = -target x86_64-unknown-elf
 KERNEL_LDFLAGS = -target x86_64-unknown-elf -fuse-ld=lld -nostdlib -Wl,-T,linker.ld -Wl,--no-undefined
 
 # Userland Build Flags
-USER_CFLAGS = -target x86_64-unknown-elf -fno-pic -nostdinc++ -ffreestanding -fno-stack-protector -fno-exceptions -fno-rtti -mno-red-zone -I. -Ilibs/runtime/include -Ilibs/abi/include -Iuserland/libacos/include -std=c++20 -Wall -Wextra -Werror
+USER_CFLAGS = -target x86_64-unknown-elf -fno-pic -nostdinc++ -ffreestanding -fno-stack-protector -fno-exceptions -fno-rtti -mno-red-zone -O2 -I. -Ilibs/runtime/include -Ilibs/abi/include -Iuserland/libacos/include -std=c++20 -Wall -Wextra -Werror
 USER_LDFLAGS = -target x86_64-unknown-elf -nostdlib -Wl,-static -Wl,-no-pie
 
 # Files

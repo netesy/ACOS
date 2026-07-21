@@ -9,7 +9,7 @@
 namespace acos::graphics { class Renderer; }
 namespace acos::gui {
 
-struct Rect {
+struct alignas(16) Rect {
     ::acos::i32 x, y, w, h;
     bool contains(::acos::i32 px, ::acos::i32 py) const {
         return px >= x && px < x + w && py >= y && py < y + h;

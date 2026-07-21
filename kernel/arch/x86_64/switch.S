@@ -26,6 +26,8 @@ context_switch:
 .global enter_user_mode
 # void enter_user_mode(u64 entry, u64 stack)
 enter_user_mode:
+    # Subtract 8 from stack pointer to ensure 16-byte alignment of stack frames in user mode
+    sub $8, %rsi
     mov %rsi, %rsp
 
     # Push SS (User Data - index 3, RPL 3 = 0x1B)
