@@ -3,6 +3,8 @@
 #include <acos/syscall.h>
 #include "desktop_shell.h"
 #include <acos/renderer.h>
+#include <acos/graphics.h>
+#include <acos/input.h>
 #include <userland/gui/theme.h>
 #include <userland/gui/core/context.h>
 #include <userland/gui/widgets/fluent.h>
@@ -62,7 +64,7 @@ private:
 
 DesktopShell* DesktopShell::s_instance = nullptr;
 
-DesktopShell::DesktopShell() : m_ds(nullptr) {
+DesktopShell::DesktopShell() : m_ds(nullptr), m_mouse_x(400), m_mouse_y(300), m_mouse_pressed(false) {
     s_instance = this;
     gui::widgets::init_synthetic_theme();
 }
@@ -170,28 +172,79 @@ void DesktopShell::run() {}
 // Updates the Clock in real-time and yields CPU time gracefully.
 void DesktopShell::run_loop() {
     acos::process::log("Desktop Shell: run_loop started on shell thread\n");
+
+    // 1. Get Framebuffer and initialize Renderer
+    acos::graphics::FramebufferInfo fb_info;
+    if (!acos::graphics::get_framebuffer_info(&fb_info)) {
+        acos::process::log("Desktop Shell Error: Failed to get framebuffer info\n");
+        return;
+    }
+
+    void* fb_ptr = acos::graphics::get_framebuffer();
+    if (!fb_ptr) {
+        acos::process::log("Desktop Shell Error: Failed to get framebuffer pointer\n");
+        return;
+    }
+
+    acos::graphics::Framebuffer fb(reinterpret_cast<u64>(fb_ptr), fb_info.size, fb_info.width, fb_info.height, fb_info.pitch, fb_info.bpp);
+    acos::graphics::Renderer renderer(&fb);
+
+    // 2. Create Input Queue
+    u64 queue_handle = acos::input::create_queue();
+    if (queue_handle == 0 || queue_handle == static_cast<u64>(-1)) {
+        acos::process::log("Desktop Shell Error: Failed to create input queue\n");
+        return;
+    }
+
+    u32 last_clock_tick = 0;
     u32 second_counter = 0;
 
+    // Draw the initial state of the desktop
+    draw(&renderer);
+
     while (true) {
-        // Send damage notification to keep compositor active
-        if (m_ds) {
-            acos::abi::DisplayMsg cmd{};
-            cmd.type = acos::abi::DisplayMsgType::DamageNotify;
-            acos::graphics::send_command_to_ds(cmd);
+        bool needs_draw = false;
+
+        // Update clock / telemetry once per second
+        last_clock_tick++;
+        if (last_clock_tick >= 100) { // ~1 second (100 * 10ms)
+            last_clock_tick = 0;
+            second_counter++;
+
+            char time_str[32];
+            ::memcpy(time_str, "OCT 24, 04:20:", 14);
+            time_str[14] = '0' + ((second_counter % 60) / 10);
+            time_str[15] = '0' + ((second_counter % 60) % 10);
+            time_str[16] = '\0';
+
+            if (m_clock_text) {
+                m_clock_text->set_text(time_str);
+            }
+            needs_draw = true;
         }
 
-        second_counter++;
-        char time_str[32];
-        ::memcpy(time_str, "OCT 24, 04:20:", 14);
-        time_str[14] = '0' + ((second_counter % 60) / 10);
-        time_str[15] = '0' + ((second_counter % 60) % 10);
-        time_str[16] = '\0';
+        // Poll and handle input events
+        acos::input::InputEvent ev;
+        while (acos::input::pop_event(queue_handle, ev, false)) {
+            if (ev.type == acos::input::InputType::Mouse) {
+                // Update internal mouse coordinates
+                m_mouse_x = static_cast<i32>((ev.code >> 16) & 0xFFFF);
+                m_mouse_y = static_cast<i32>(ev.code & 0xFFFF);
+                m_mouse_pressed = (ev.value & 0x01) != 0;
+            }
 
-        if (m_clock_text) {
-            m_clock_text->set_text(time_str);
+            // Dispatch to GUI Toolkit
+            m_ui_context.event_dispatcher().dispatch(ev, m_root_panel);
+            needs_draw = true;
         }
 
-        syscall(acos::sys::SyscallNum::ThreadSleep, 1000, 0, 0, 0, 0);
+        // Repaint the desktop if needed
+        if (needs_draw) {
+            draw(&renderer);
+        }
+
+        // Sleep for 10ms to keep CPU load low
+        syscall(acos::sys::SyscallNum::ThreadSleep, 10, 0, 0, 0, 0);
     }
 }
 
@@ -202,6 +255,13 @@ void DesktopShell::draw(::acos::graphics::Renderer* renderer) {
     renderer->fill_rect(0, 0, renderer->width(), renderer->height(), 0xFF1A1A1A);
     
     m_ui_context.paint(renderer);
+
+    // Render mouse pointer/cursor
+    // Draw a nice mouse cursor at (m_mouse_x, m_mouse_y)
+    i32 mx = m_mouse_x;
+    i32 my = m_mouse_y;
+    renderer->fill_rect(mx, my, 8, 8, 0xFFFFFFFF); // Simple 8x8 white square cursor for maximum reliability and simplicity
+    renderer->draw_rect(mx, my, 8, 8, 0xFF000000); // Black outline
 }
 
 void DesktopShell::launch_terminal() {

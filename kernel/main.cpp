@@ -174,17 +174,11 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
         acos::hal::serial_print("Main: Spawn complete\n");
     };
 
-    // Temporarily disabled other services to simplify debugging of cli.elf
-    // spawn_service("/bin/pcie.elf");
-    // if (desktop_mode) {
-    //     spawn_service("/bin/display.elf");
-    //     spawn_service("/bin/nvme.elf");
-    //     spawn_service("/bin/ps2.elf");
-    //     spawn_service("/bin/xhci.elf");
-    //     spawn_service("/bin/audio.elf");
-    //     spawn_service("/bin/desktop.elf");
-    // }
-    spawn_service("/bin/cli.elf");
+    if (desktop_mode) {
+        spawn_service("/bin/desktop.elf");
+    } else {
+        spawn_service("/bin/cli.elf");
+    }
 
     boot_thread.state = acos::scheduler::ThreadState::Ready;
     acos::scheduler::enqueue_thread(0, &boot_thread);

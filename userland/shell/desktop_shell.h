@@ -49,6 +49,10 @@ private:
 
     // Display server reference for IPC
     acos::display::DisplayServer* m_ds;
+
+    ::acos::i32 m_mouse_x;
+    ::acos::i32 m_mouse_y;
+    bool m_mouse_pressed;
 };
 
 } // namespace acos::shell
