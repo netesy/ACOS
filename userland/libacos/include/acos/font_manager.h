@@ -19,6 +19,7 @@ public:
 
 private:
     static Font m_console_font;
+    static Font m_ui_font;
 };
 
 } // namespace acos::graphics

@@ -1,6 +1,7 @@
 #include <kernel/graphics/font_manager.h>
 #include "font_data.h"
 #include "jetbrains_mono_data.h"
+#include "inter_data.h"
 #include <libs/runtime/include/acos/runtime.h>
 
 namespace acos::graphics {
@@ -24,14 +25,19 @@ bool FontManager::initialize() {
     }
     
     // Load monospace font (JetBrains Mono TTF from embedded binary)
-    // TTF rendering requires stb_truetype or similar - for now store reference
     g_builtin_fonts[1] = Font(acos::Span<const u8>(jetbrains_mono_ttf, jetbrains_mono_ttf_len));
     if (g_builtin_fonts[1].is_valid()) {
         m_mono_font = g_builtin_fonts[1];
     }
     
-    // UI font (Inter TTF) - fallback to mono for now
-    m_ui_font = m_mono_font;
+    // UI font (Inter TTF) from embedded binary
+    g_builtin_fonts[2] = Font(acos::Span<const u8>(inter_ttf, inter_ttf_len));
+    if (g_builtin_fonts[2].is_valid()) {
+        m_ui_font = g_builtin_fonts[2];
+        Font::set_default(&m_ui_font);
+    } else {
+        m_ui_font = m_mono_font.is_valid() ? m_mono_font : m_console_font;
+    }
     
     g_fonts_loaded = true;
     return m_console_font.is_valid();

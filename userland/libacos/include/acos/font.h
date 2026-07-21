@@ -55,6 +55,8 @@ private:
     const u8* m_data;
     [[maybe_unused]] usize m_data_size;
     bool m_is_psf2;
+    bool m_is_ttf;
+    u8 m_rendered_data[256 * 16];
 };
 
 } // namespace acos::graphics
