@@ -138,8 +138,8 @@ Font::Font(const u8* data, usize size)
                 stbtt_GetCodepointBitmapBox(&font_info, c, scale, scale, &x1, &y1, &x2, &y2);
                 int gw = x2 - x1;
                 int gh = y2 - y1;
-                if (gw > 0 && gh > 0) {
-                    u8 glyph_pixels[256] = {0};
+                if (gw > 0 && gh > 0 && (gw * gh <= 1024)) {
+                    u8 glyph_pixels[1024] = {0};
                     stbtt_MakeCodepointBitmap(&font_info, glyph_pixels, gw, gh, gw, scale, scale, c);
 
                     int baseline = scaled_ascent;
