@@ -18,6 +18,25 @@ void EventDispatcher::dispatch(const ::acos::abi::InputEvent& raw, Ref<Widget> r
         Ref<Widget> target = perform_hit_test(root, event.mouse_x, event.mouse_y);
         if (target) {
             event.target = target;
+
+            bool pressed = (raw.value & 0x01) != 0;
+            if (pressed) {
+                // Find top-level window widget under root
+                Ref<Widget> current = target;
+                Ref<Widget> parent = current->parent();
+                while (parent) {
+                    if (parent == root) {
+                        // current is the top-level window widget!
+                        root->remove_child(current);
+                        root->add_child(current);
+                        UIContext::get().focus_manager().set_focus(current);
+                        break;
+                    }
+                    current = parent;
+                    parent = current->parent();
+                }
+            }
+
             route_event(event, target);
         }
     } else {

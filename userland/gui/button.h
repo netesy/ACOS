@@ -11,8 +11,9 @@ public:
     void update(::acos::u64 delta_ms) override;
     void on_event(Event& event) override;
 
-    void set_on_click(void (*callback)(void*)) {
+    void set_on_click(void (*callback)(void*), void* arg = nullptr) {
         m_on_click = callback;
+        m_on_click_arg = arg;
     }
 
     const char* label() const { return m_label; }
@@ -20,7 +21,7 @@ public:
 
     // Internal Fluent API
     Button& label(const char* l) { set_label(l); return *this; }
-    Button& on_click(void (*callback)(void*)) { m_on_click = callback; return *this; }
+    Button& on_click(void (*callback)(void*), void* arg = nullptr) { m_on_click = callback; m_on_click_arg = arg; return *this; }
 
     Ref<RenderObject> create_render_object() override;
     void update_render_object(Ref<RenderObject> render_object) override;
@@ -29,6 +30,7 @@ private:
     const char* m_label;
     bool m_mouse_over;
     void (*m_on_click)(void*) = nullptr;
+    void* m_on_click_arg = nullptr;
 };
 
 } // namespace acos::gui::widgets

@@ -52,7 +52,7 @@ void Button::on_event(Event& event) {
                 m_state = WidgetState::Pressed;
             } else {
                 if (m_state == WidgetState::Pressed && m_on_click) {
-                    m_on_click(nullptr);
+                    m_on_click(m_on_click_arg);
                 }
                 m_state = WidgetState::Hovered;
             }

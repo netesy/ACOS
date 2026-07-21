@@ -268,9 +268,18 @@ void RenderListView::paint(::acos::graphics::Renderer* renderer) {
     if (!renderer) return;
     renderer->blend_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.background_color, 180);
     renderer->draw_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.border_color);
-    (void)m_items;
-    (void)m_count;
-    (void)m_selected;
+
+    for (::acos::usize i = 0; i < m_count; ++i) {
+        if (m_items[i]) {
+            ::acos::i32 item_y = m_rect.y + static_cast<::acos::i32>(i * 20);
+            if (item_y + 20 > m_rect.y + m_rect.h) break;
+
+            if (static_cast<::acos::i32>(i) == m_selected) {
+                renderer->fill_rect(m_rect.x + 2, item_y + 2, m_rect.w - 4, 18, 0xFF4A90E2); // Highlight blue
+            }
+            renderer->draw_text(m_items[i], m_rect.x + 8, item_y + 2, 0xFFFFFFFF);
+        }
+    }
 }
 void RenderListView::perform_layout(BoxConstraints constraints) {
     Size size = constraints.constrain({m_rect.w, m_rect.h});

@@ -41,7 +41,27 @@ void Slider::set_range(float min, float max) {
 }
 
 void Slider::on_event(Event& event) {
-    (void)event;
+    const auto& raw = event.raw;
+    if (raw.type == ::acos::abi::InputType::Mouse) {
+        ::acos::i32 mx = event.mouse_x;
+        ::acos::i32 my = event.mouse_y;
+        bool pressed = (raw.value & 0x01) != 0;
+
+        if (m_rect.contains(mx, my)) {
+            if (pressed) {
+                m_state = WidgetState::Pressed;
+                float pct = (float)(mx - m_rect.x) / (float)m_rect.w;
+                if (pct < 0.0f) pct = 0.0f;
+                if (pct > 1.0f) pct = 1.0f;
+                set_value(m_min + pct * (m_max - m_min));
+            } else {
+                m_state = WidgetState::Hovered;
+            }
+            event.stop_propagation();
+        } else {
+            m_state = WidgetState::Normal;
+        }
+    }
 }
 
 } // namespace acos::gui::widgets

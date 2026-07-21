@@ -113,6 +113,12 @@ void TerminalView::trigger_redraw() {
 void TerminalView::on_event(gui::Event& event) {
     const auto& raw = event.raw;
 
+    if (raw.type == InputType::Mouse) {
+        if (raw.value & 0x01) { // Left click
+            gui::UIContext::get().focus_manager().set_focus(self());
+        }
+    }
+
     if (raw.type == InputType::Keyboard && raw.value == 1) { // Key Pressed
         VirtualKey vk = static_cast<VirtualKey>(raw.code);
         bool shift = (raw.flags & ModifierFlags::Shift) != 0;

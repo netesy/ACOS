@@ -11,10 +11,18 @@ public:
     ListView();
     virtual ~ListView();
 
+    void on_event(Event& event) override;
+
     void add_item(const char* item);
     void clear();
     void set_selected(i32 index) { m_selected_index = index; set_paint_dirty(); }
     i32 get_selected() const { return m_selected_index; }
+    const char* get_item(i32 index) const {
+        if (index >= 0 && index < (i32)m_item_count) {
+            return m_item_storage[index];
+        }
+        return nullptr;
+    }
 
 private:
     char m_item_storage[64][64];

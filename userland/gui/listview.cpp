@@ -15,6 +15,27 @@ ListView::ListView() : m_item_count(0), m_selected_index(-1) {
 
 ListView::~ListView() {}
 
+void ListView::on_event(Event& event) {
+    const auto& raw = event.raw;
+    if (raw.type == ::acos::abi::InputType::Mouse) {
+        ::acos::i32 mx = event.mouse_x;
+        ::acos::i32 my = event.mouse_y;
+        bool pressed = (raw.value & 0x01) != 0;
+
+        if (m_rect.contains(mx, my)) {
+            if (pressed) {
+                ::acos::i32 relative_y = my - m_rect.y;
+                ::acos::i32 clicked_index = relative_y / 20;
+                if (clicked_index >= 0 && clicked_index < (::acos::i32)m_item_count) {
+                    m_selected_index = clicked_index;
+                    set_paint_dirty();
+                }
+            }
+            event.stop_propagation();
+        }
+    }
+}
+
 void ListView::add_item(const char* item) {
     if (m_item_count >= 64 || !item) return;
 
