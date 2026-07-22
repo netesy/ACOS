@@ -1,6 +1,7 @@
 #pragma once
 #include <acos/types.h>
 #include <acos/ipc.h>
+#include <acos/input.h>
 #include "window.h"
 #include "surface_manager.h"
 #include "compositor.h"
@@ -79,6 +80,11 @@ private:
     void handle_request(const acos::ipc::Message& msg);
     void handle_display_msg(const DisplayMsg& cmd, u64 sender_pid);
 
+    // Drains any pending mouse/keyboard events from the kernel input queue
+    // and routes them through m_input_router (and the cursor sprite).
+    // Without this, the compositor never learns the mouse moved at all.
+    void poll_input();
+
     WindowId next_window_id() { return ++m_last_window_id; }
 
     static constexpr usize MAX_WINDOWS = 128;
@@ -92,6 +98,10 @@ private:
 
     // Unified command channel: all clients send DisplayMsg here.
     acos::ipc::Channel m_command_channel;
+
+    // Handle to the kernel-side input queue we poll each tick for mouse
+    // and keyboard events (see poll_input()).
+    u64 m_input_queue;
 
     bool m_running;
 };

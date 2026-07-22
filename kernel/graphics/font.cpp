@@ -121,8 +121,8 @@ Font::Font(const u8* data, usize size)
         m_charsize = 16;
         m_headersize = 0;
 
-        for (int i = 0; i < 256 * 16; i++) {
-            m_rendered_data[i] = 0;
+        for (int i = 0; i < 256 * 8 * 16; i++) {
+            m_glyph_alpha[i] = 0;
         }
 
         stbtt_fontinfo font_info;
@@ -147,16 +147,17 @@ Font::Font(const u8* data, usize size)
                     int start_x = (8 - gw) / 2;
                     if (start_x < 0) start_x = 0;
 
+                    u8* cell = m_glyph_alpha + (c * 8 * 16);
                     for (int gy = 0; gy < gh; gy++) {
                         int py = start_y + gy;
                         if (py < 0 || py >= 16) continue;
                         for (int gx = 0; gx < gw; gx++) {
                             int px = start_x + gx;
                             if (px < 0 || px >= 8) continue;
-                            u8 alpha = glyph_pixels[gy * gw + gx];
-                            if (alpha > 100) {
-                                m_rendered_data[c * 16 + py] |= (1 << (7 - px));
-                            }
+                            // Keep the raw stb_truetype coverage value (0-255)
+                            // instead of thresholding it to on/off. This is
+                            // what makes antialiased edges possible.
+                            cell[py * 8 + px] = glyph_pixels[gy * gw + gx];
                         }
                     }
                 }
@@ -168,12 +169,19 @@ Font::Font(const u8* data, usize size)
 const u8* Font::get_glyph(char c) const {
     if (!m_valid) return nullptr;
     if (m_is_ttf) {
-        u32 index = static_cast<u8>(c);
-        return m_rendered_data + (index * 16);
+        // Legacy hard-edged path: not used for antialiased drawing, kept
+        // only in case a caller still wants a boolean glyph shape.
+        return nullptr;
     }
     if (!m_data) return nullptr;
     u32 index = static_cast<u8>(c);
     return m_data + m_headersize + (index * m_charsize);
+}
+
+const u8* Font::get_glyph_alpha(char c) const {
+    if (!m_valid || !m_is_ttf) return nullptr;
+    u32 index = static_cast<u8>(c);
+    return m_glyph_alpha + (index * 8 * 16);
 }
 
 void Font::measure_char([[maybe_unused]] char c, u32& w, u32& h) const {

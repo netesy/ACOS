@@ -43,8 +43,13 @@ public:
     u32 width() const { return m_width; }
     u32 height() const { return m_height; }
     u32 char_size() const { return m_charsize; }
+    bool is_ttf() const { return m_is_ttf; }
 
     const u8* get_glyph(char c) const;
+
+    // For TrueType fonts only: raw 0-255 stb_truetype coverage values,
+    // one byte per pixel, for antialiased drawing (see Renderer::draw_text).
+    const u8* get_glyph_alpha(char c) const;
 
 private:
     bool m_valid;
@@ -56,7 +61,9 @@ private:
     [[maybe_unused]] usize m_data_size;
     bool m_is_psf2;
     bool m_is_ttf;
-    u8 m_rendered_data[256 * 16];
+    // One 0-255 coverage byte per pixel, per glyph, in an 8x16 cell.
+    // Real grayscale coverage (not thresholded) so text can be antialiased.
+    u8 m_glyph_alpha[256 * 8 * 16];
 };
 
 } // namespace acos::graphics

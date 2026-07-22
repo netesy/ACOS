@@ -7,7 +7,8 @@
 namespace acos::display {
 
 DisplayServer::DisplayServer()
-    : m_window_count(0), m_last_window_id(0), m_compositor(nullptr), m_running(false) {
+    : m_window_count(0), m_last_window_id(0), m_compositor(nullptr),
+      m_input_queue(0), m_running(false) {
     for (usize i = 0; i < MAX_WINDOWS; i++) m_windows[i] = nullptr;
 }
 
@@ -31,7 +32,31 @@ bool DisplayServer::initialize() {
     m_compositor->set_windows(m_windows, 0);
     m_input_router.set_windows(m_windows, 0);
 
+    // Without this, the kernel has nowhere to deliver PS/2 mouse and
+    // keyboard events, so the pointer would never move and windows would
+    // never receive focus/click/key input.
+    m_input_queue = acos::input::create_queue();
+    if (!m_input_queue) {
+        acos::process::log("Display Server: warning - failed to create input queue; "
+                            "mouse and keyboard input will not work\n");
+    }
+
     return true;
+}
+
+void DisplayServer::poll_input() {
+    if (!m_input_queue) return;
+
+    acos::input::InputEvent ev;
+    while (acos::input::pop_event(m_input_queue, ev, false)) {
+        m_input_router.route_event(ev);
+
+        if (ev.type == acos::input::InputType::Mouse && m_compositor) {
+            u32 x = (ev.code >> 16) & 0xFFFF;
+            u32 y = ev.code & 0xFFFF;
+            m_compositor->set_cursor_position(x, y);
+        }
+    }
 }
 
 void DisplayServer::run() {
@@ -48,6 +73,7 @@ void DisplayServer::run_tick() {
     if (m_command_channel.receive(msg, false)) {
         handle_request(msg);
     }
+    poll_input();
     if (m_compositor) {
         m_compositor->compose();
     }
@@ -65,6 +91,8 @@ void DisplayServer::run_loop() {
         while (m_command_channel.receive(msg, false)) {
             handle_request(msg);
         }
+
+        poll_input();
 
         // Compose if there's damage or always-dirty desktop
         if (m_compositor) {

@@ -126,10 +126,28 @@ void Renderer::draw_char(char c, u32 x, u32 y, u32 color, Font::Style style) {
             return;
         }
 
-        const u8* glyph = font->get_glyph(c);
-        if (!glyph) return;
         u32 fw = font->width();
         u32 fh = font->height();
+
+        if (font->is_ttf()) {
+            // Antialiased path: blend each pixel by its real coverage
+            // value instead of an all-or-nothing bitmap dot.
+            const u8* alpha_map = font->get_glyph_alpha(c);
+            if (!alpha_map) return;
+            for (u32 row = 0; row < fh; row++) {
+                for (u32 col = 0; col < fw; col++) {
+                    u8 a = alpha_map[row * fw + col];
+                    if (a == 0) continue;
+                    i32 shear = 0;
+                    if (style == Font::Style::Italic) shear = (fh - row) / 4;
+                    blend_pixel(ox + col + shear, oy + row, color, a);
+                }
+            }
+            return;
+        }
+
+        const u8* glyph = font->get_glyph(c);
+        if (!glyph) return;
         u32 bytes_per_line = (fw + 7) / 8;
 
         for (u32 row = 0; row < fh; row++) {

@@ -1,7 +1,7 @@
 # ACOS Font System
 
 ## Overview
-ACOS uses a multi-font system supporting bitmap fonts for the kernel console and TrueType fonts for the GUI subsystem.
+ACOS uses a multi-font system supporting bitmap fonts for the kernel console and TrueType fonts (via stb_truetype) for the GUI subsystem. TrueType glyphs are rasterized once at load time into a per-pixel alpha coverage buffer and drawn with real alpha blending, so GUI text is antialiased rather than a hard-edged bitmap.
 
 ## Fonts
 
@@ -14,18 +14,18 @@ ACOS uses a multi-font system supporting bitmap fonts for the kernel console and
 - **Download**: [Spleen GitHub](https://github.com/fcambus/spleen)
 
 ### 2. Inter (GUI Primary Font)
-- **Type**: TrueType (.ttf)
+- **Type**: TrueType (.ttf), rasterized via stb_truetype into an antialiased coverage buffer
 - **Use**: Primary UI font for all GUI elements, menus, labels
-- **Size**: Variable (rendered at different sizes for different contexts)
-- **Status**: ⏳ To be integrated via stb_truetype
+- **Size**: Rendered into a fixed 8x16 glyph cell at a 16px pixel-height scale (see Known Limitations)
+- **Status**: ✓ Embedded and wired up (`kernel/graphics/inter_data.h`, `userland/libacos/inter_data.h`) — loaded by both the kernel FontManager and the userland libacos FontManager used by `display.elf`
 - **License**: Open Font License (OFL)
 - **Download**: [Inter GitHub](https://github.com/rsms/inter)
 
 ### 3. JetBrains Mono (GUI Monospace)
-- **Type**: TrueType (.ttf)
+- **Type**: TrueType (.ttf), rasterized via stb_truetype into an antialiased coverage buffer
 - **Use**: Code editors, terminal emulator, monospace UI elements
-- **Size**: Variable (typically 10-14pt)
-- **Status**: ⏳ To be integrated via stb_truetype
+- **Size**: Rendered into a fixed 8x16 glyph cell at a 16px pixel-height scale
+- **Status**: ✓ Embedded and wired up in the kernel FontManager (`kernel/graphics/jetbrains_mono_data.h`, `FontID::UIMonospace`). ⏳ **Not yet wired into the userland `libacos::FontManager`** used by `display.elf` — `UIMonospace` isn't a case there yet, so GUI apps currently fall back to the console (Spleen) font for monospace text. Tracked as a follow-up.
 - **License**: Open Font License (OFL)
 - **Download**: [JetBrains Mono GitHub](https://github.com/JetBrains/JetBrainsMono)
 
@@ -78,23 +78,16 @@ struct PSF2Header {
 };
 ```
 
-## Integration Timeline
+## TrueType Rendering & Antialiasing
 
-### Phase 1 (Current)
-- ✓ PSF2 font loading infrastructure
-- ✓ Spleen 8x16 embedded in kernel
-- ✓ Font Manager API
-- ⏳ Wire up FontManager in graphics initialization
+Both `kernel/graphics/font.{h,cpp}` and `userland/libacos/font.cpp` (the copy actually linked into `display.elf`, the GUI compositor/desktop shell) parse the TTF with `stbtt_InitFont` and rasterize every glyph once, at load time, into a `256 * 8 * 16` byte buffer — one 0-255 coverage byte per pixel (`Font::get_glyph_alpha()`), rather than thresholding coverage into a 1-bit on/off mask.
 
-### Phase 2
-- TrueType font support via stb_truetype
-- Load Inter and JetBrains Mono from filesystem
-- GUI text rendering
+`Renderer::draw_char` (kernel) and `Renderer::draw_text` (userland) check `Font::is_ttf()`; for TrueType fonts they walk that coverage buffer and call `blend_pixel(x, y, color, alpha)` per pixel, alpha-compositing against whatever is already in the framebuffer. Bitmap (PSF) fonts still use the original hard-edged 1bpp path via `get_glyph()`, since there's no coverage data to blend for those.
 
-### Phase 3
-- Font caching and optimization
-- Font fallback chains
-- Localization support
+### Known limitations (Phase 3 candidates)
+- Every glyph is currently rasterized into a fixed 8x16 monospace-style cell regardless of the font's real proportional metrics, so wide/narrow glyphs in a proportional font like Inter get centered/clipped into that cell rather than laid out with correct advance widths. Real subpixel/proportional layout is future work.
+- Only one fixed rendering size (scaled for a 16px pixel-height) is cached per font; there's no support yet for rendering the same font at multiple point sizes.
+- JetBrains Mono isn't wired into the userland FontManager yet (see above).
 
 ## Building and Embedding Fonts
 
@@ -123,10 +116,11 @@ Font font(spleen_data);
 font.draw_string("Hello", 10, 20, 0xFFFFFF);
 ```
 
-### GUI (TrueType - Future)
+### GUI (TrueType, antialiased)
 ```cpp
-// Will use stb_truetype for rendering at runtime
-font.draw_string("Hello", 10, 20, 0xFFFFFF, size=12);
+// Renderer::draw_text / draw_char detect font->is_ttf() automatically and
+// alpha-blend each glyph's coverage buffer via blend_pixel().
+renderer->draw_text("Hello", 10, 20, 0xFFFFFFFF);
 ```
 
 ## Resources

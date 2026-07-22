@@ -374,6 +374,7 @@ run: $(DISK_IMG)
 				-device ahci,id=ahci \
 				-drive file=$(DISK_IMG),format=raw,if=none,id=drive0 \
 				-device ide-hd,drive=drive0,bus=ahci.0 \
+				-usb -device usb-tablet \
 				-vga std \
 				-display $(QEMU_DISPLAY) \
 				-serial stdio; \

@@ -6,11 +6,64 @@
 
 namespace acos::display {
 
+namespace {
+constexpr u32 kCursorW = 12;
+constexpr u32 kCursorH = 19;
+}
+
 Compositor::Compositor(acos::graphics::Framebuffer* fb, SurfaceManager* surface_manager)
     : m_fb(fb), m_surface_manager(surface_manager), m_renderer(fb),
       m_windows(nullptr), m_window_count(0), m_desktop_draw(nullptr),
       m_dirty_x(0), m_dirty_y(0), m_dirty_w(0), m_dirty_h(0),
-      m_has_damage(true), m_always_dirty(false) {}
+      m_has_damage(true), m_always_dirty(false),
+      m_cursor_x(kDefaultCursorX), m_cursor_y(kDefaultCursorY), m_cursor_visible(true) {}
+
+void Compositor::set_cursor_position(u32 x, u32 y) {
+    if (x == m_cursor_x && y == m_cursor_y) return;
+
+    // Damage both the old and new cursor footprint so compose() actually
+    // redraws this frame even if nothing else on screen changed.
+    mark_dirty(m_cursor_x, m_cursor_y, kCursorW, kCursorH);
+    mark_dirty(x, y, kCursorW, kCursorH);
+
+    m_cursor_x = x;
+    m_cursor_y = y;
+}
+
+void Compositor::set_cursor_visible(bool visible) {
+    if (visible == m_cursor_visible) return;
+    m_cursor_visible = visible;
+    mark_dirty(m_cursor_x, m_cursor_y, kCursorW, kCursorH);
+}
+
+// Simple 12x19 arrow-pointer sprite, rasterized scanline-by-scanline.
+// row_widths[i] is how many pixels wide the (left-aligned) filled part of
+// the arrow silhouette is on row i; this approximates the classic OS arrow
+// cursor without needing a bitmap asset.
+void Compositor::draw_cursor() {
+    if (!m_cursor_visible) return;
+
+    static constexpr u32 row_widths[kCursorH] = {
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 6, 5, 5, 2, 2, 0, 0, 0
+    };
+
+    // 1px black outline first (drawn slightly larger/offset), then a white
+    // fill on top, so the pointer stays visible against any background.
+    for (u32 row = 0; row < kCursorH; row++) {
+        u32 w = row_widths[row];
+        if (w == 0) continue;
+        i32 oy = (i32)m_cursor_y + (i32)row - 1;
+        if (oy < 0) continue;
+        u32 ox = (m_cursor_x > 0) ? m_cursor_x - 1 : 0;
+        u32 ow = (m_cursor_x > 0) ? w + 2 : w + 1;
+        m_renderer.fill_rect(ox, (u32)oy, ow, 1, 0xFF000000);
+    }
+    for (u32 row = 0; row < kCursorH; row++) {
+        u32 w = row_widths[row];
+        if (w == 0) continue;
+        m_renderer.fill_rect(m_cursor_x, m_cursor_y + row, w, 1, 0xFFFFFFFF);
+    }
+}
 
 void Compositor::set_windows(Window** windows, usize count) {
     m_windows = windows;
@@ -90,6 +143,8 @@ void Compositor::compose() {
             }
         }
     }
+
+    draw_cursor();
 
     m_has_damage = false;
 }

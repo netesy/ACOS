@@ -251,13 +251,26 @@ void Renderer::draw_text(const char* text, u32 x, u32 y, u32 color) {
             continue;
         }
 
-        const u8* glyph = font->get_glyph(c);
-        if (glyph) {
-            for (u32 gy = 0; gy < font->height(); gy++) {
-                for (u32 gx = 0; gx < font->width(); gx++) {
-                    u32 bit = 1 << (font->width() - 1 - gx);
-                    if (glyph[gy] & bit) {
-                        m_fb->put_pixel(cur_x + gx, y + gy, color);
+        if (font->is_ttf()) {
+            const u8* alpha_map = font->get_glyph_alpha(c);
+            if (alpha_map) {
+                for (u32 gy = 0; gy < font->height(); gy++) {
+                    for (u32 gx = 0; gx < font->width(); gx++) {
+                        u8 a = alpha_map[gy * font->width() + gx];
+                        if (a == 0) continue;
+                        blend_pixel(cur_x + gx, y + gy, color, a);
+                    }
+                }
+            }
+        } else {
+            const u8* glyph = font->get_glyph(c);
+            if (glyph) {
+                for (u32 gy = 0; gy < font->height(); gy++) {
+                    for (u32 gx = 0; gx < font->width(); gx++) {
+                        u32 bit = 1 << (font->width() - 1 - gx);
+                        if (glyph[gy] & bit) {
+                            m_fb->put_pixel(cur_x + gx, y + gy, color);
+                        }
                     }
                 }
             }
