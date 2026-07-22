@@ -155,15 +155,15 @@ void DesktopShell::initialize() {
     root->add_child(desktop);
 
     // ========== BOTTOM DOCK — fixed to bottom center ==========
-    // The dock_container is fixed-position: bottom=8, auto-centered horizontally
+    // The dock_container is fixed-position: bottom=12, auto-centered horizontally
     auto dock_container = Panel()
         .glass(false)
         .radius(16)
-        .background(0xFF1E1E24)  // Gorgeous solid modern dark-purple/gray
-        .border(0xFF4A90E2, 2)  // Vibrant solid blue outline
+        .background(0xFF13131A)  // Solid beautiful dark modern gray background
+        .border(0xFF4A90E2, 2)   // Solid beautiful bright blue border outline
         .padding(8)
-        .preferred_size(480, 56)
-        .fixed(-1, -1, 8, -1);   // bottom=8, left/right=-1 auto-centers horizontally
+        .preferred_size(520, 72) // Enlarged width (520) and height (72) for cleanly spaced, unclipped icons!
+        .fixed(-1, -1, 12, -1);  // Position bottom=12 for floating aesthetic
 
     auto taskbar = UIContext::get().region().alloc<Taskbar>();
     dock_container->add_child(taskbar);

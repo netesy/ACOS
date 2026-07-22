@@ -13,16 +13,17 @@
 namespace acos::shell {
 
 Taskbar::Taskbar() {
-    m_rect = {0, 0, 400, 50};
+    m_rect = {0, 0, 504, 56}; // Fit the expanded inner dock container bounds
     m_clock_str[0] = '\0';
-    set_glass(true);
+    set_glass(false);
+    set_background_color(0); // Transparent inner container so dock background is uniform
 
     auto& region = gui::UIContext::get().region();
 
     auto root_layout = region.alloc<gui::widgets::Row>();
     root_layout->main_axis_alignment(gui::MainAxisAlignment::Center);
     root_layout->cross_axis_alignment(gui::CrossAxisAlignment::Center);
-    root_layout->spacing(20);
+    root_layout->spacing(32); // Beautiful, cleanly spaced icons!
 
     auto create_dock_item = [&](gui::widgets::IconType type, void (*callback)(void*)) {
         auto container = region.alloc<gui::widgets::Panel>();
@@ -36,7 +37,7 @@ Taskbar::Taskbar() {
 
         // Visual indicator (dot) for running app
         auto indicator = region.alloc<gui::widgets::Panel>();
-        indicator->set_rect({22, 42, 4, 4});
+        indicator->set_rect({22, 44, 4, 4}); // Perfectly positioned indicator dot
         indicator->radius(2);
         indicator->set_background_color(0xFFFFFFFF);
         indicator->set_visible(true); // Should be dynamic based on process state
