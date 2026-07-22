@@ -34,7 +34,16 @@ void Icon::on_event(Event& event) {
         ::acos::i32 my = event.mouse_y;
         bool pressed = (raw.value & 0x01) != 0;
 
-        if (m_rect.contains(mx, my)) {
+        // Traverse up the parent tree to compute the absolute global screen-space rectangle
+        Rect global_rect = m_rect;
+        Ref<Widget> p = m_parent;
+        while (p) {
+            global_rect.x += p->rect().x;
+            global_rect.y += p->rect().y;
+            p = p->parent();
+        }
+
+        if (global_rect.contains(mx, my)) {
             if (!pressed && m_state == WidgetState::Pressed) {
                 if (m_on_click) m_on_click(nullptr);
             }
