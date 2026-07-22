@@ -266,18 +266,8 @@ void PS2Controller::handle_keyboard_interrupt() {
 void PS2Controller::handle_mouse_interrupt() {
 #ifdef _KERNEL
     acos::u8 data = inb(PS2_DATA);
-    if (g_mouse_cycle == 0) {
-        if ((data & 8) == 0) {
-            acos::arch::x86_64::LocalApic::eoi();
-            return; // Out of sync, ignore
-        }
-        g_mouse_packet[0] = data;
-        g_mouse_cycle = 1;
-    } else if (g_mouse_cycle == 1) {
-        g_mouse_packet[1] = data;
-        g_mouse_cycle = 2;
-    } else if (g_mouse_cycle == 2) {
-        g_mouse_packet[2] = data;
+    g_mouse_packet[g_mouse_cycle++] = data;
+    if (g_mouse_cycle == 3) {
         g_mouse_cycle = 0;
 
         bool left = (g_mouse_packet[0] & 1) != 0;

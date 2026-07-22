@@ -157,9 +157,10 @@ void DesktopShell::initialize() {
     // ========== BOTTOM DOCK — fixed to bottom center ==========
     // The dock_container is fixed-position: bottom=8, auto-centered horizontally
     auto dock_container = Panel()
-        .glass(true)
-        .radius(12)
-        .background(0xCC131314)
+        .glass(false)
+        .radius(16)
+        .background(0xFF1E1E24)  // Gorgeous solid modern dark-purple/gray
+        .border(0xFF4A90E2, 2)  // Vibrant solid blue outline
         .padding(8)
         .preferred_size(480, 56)
         .fixed(-1, -1, 8, -1);   // bottom=8, left/right=-1 auto-centers horizontally

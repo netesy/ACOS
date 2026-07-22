@@ -93,13 +93,40 @@ void RenderIcon::paint(::acos::graphics::Renderer* renderer) {
     ::acos::u32 color = m_active ? g_current_theme.primary : g_current_theme.text;
 
     switch(m_type) {
-        case IconType::Terminal:
-            renderer->draw_rounded_rect(m_rect.x + 4, m_rect.y + 4, m_rect.w - 8, m_rect.h - 8, 2, color);
-            renderer->draw_text(">", m_rect.x + 8, m_rect.y + 8, color);
+        case IconType::Terminal: {
+            renderer->fill_rounded_rect(m_rect.x + 2, m_rect.y + 2, m_rect.w - 4, m_rect.h - 4, 4, 0xFF1E1E24);
+            renderer->draw_rounded_rect(m_rect.x + 2, m_rect.y + 2, m_rect.w - 4, m_rect.h - 4, 4, 0xFF4A90E2);
+            renderer->draw_text(">_", m_rect.x + 8, m_rect.y + 12, 0xFF00FF66);
             break;
-        case IconType::Files:
-            renderer->fill_rect(m_rect.x + 6, m_rect.y + 10, m_rect.w - 12, m_rect.h - 14, color);
+        }
+        case IconType::Files: {
+            renderer->fill_rounded_rect(m_rect.x + 4, m_rect.y + 8, m_rect.w - 8, m_rect.h - 14, 3, 0xFFF5A623);
+            renderer->fill_rect(m_rect.x + 4, m_rect.y + 4, 16, 6, 0xFFF5A623);
+            renderer->draw_rounded_rect(m_rect.x + 4, m_rect.y + 8, m_rect.w - 8, m_rect.h - 14, 3, 0xFFD0021B);
             break;
+        }
+        case IconType::Monitor: {
+            renderer->fill_rounded_rect(m_rect.x + 2, m_rect.y + 4, m_rect.w - 4, m_rect.h - 14, 4, 0xFF00AAFF);
+            renderer->draw_rounded_rect(m_rect.x + 2, m_rect.y + 4, m_rect.w - 4, m_rect.h - 14, 4, 0xFFFFFFFF);
+            renderer->fill_rect(m_rect.x + (m_rect.w/2) - 3, m_rect.y + m_rect.h - 10, 6, 8, 0xFF888888);
+            renderer->fill_rect(m_rect.x + (m_rect.w/2) - 12, m_rect.y + m_rect.h - 4, 24, 3, 0xFF888888);
+            break;
+        }
+        case IconType::Settings: {
+            renderer->fill_circle(m_rect.x + m_rect.w/2, m_rect.y + m_rect.h/2, 12, 0xFF9B9B9B);
+            renderer->fill_rect(m_rect.x + m_rect.w/2 - 3, m_rect.y + 2, 6, 4, 0xFF9B9B9B);
+            renderer->fill_rect(m_rect.x + m_rect.w/2 - 3, m_rect.y + m_rect.h - 6, 6, 4, 0xFF9B9B9B);
+            renderer->fill_rect(m_rect.x + 2, m_rect.y + m_rect.h/2 - 3, 4, 6, 0xFF9B9B9B);
+            renderer->fill_rect(m_rect.x + m_rect.w - 6, m_rect.y + m_rect.h/2 - 3, 4, 6, 0xFF9B9B9B);
+            renderer->fill_circle(m_rect.x + m_rect.w/2, m_rect.y + m_rect.h/2, 6, 0xFF1E1E24);
+            break;
+        }
+        case IconType::Battery: {
+            renderer->fill_circle(m_rect.x + m_rect.w/2, m_rect.y + m_rect.h/2, 14, 0xFFD0021B);
+            renderer->draw_circle(m_rect.x + m_rect.w/2, m_rect.y + m_rect.h/2, 8, 0xFFFFFFFF);
+            renderer->fill_rect(m_rect.x + m_rect.w/2 - 2, m_rect.y + m_rect.h/2 - 10, 4, 10, 0xFFFFFFFF);
+            break;
+        }
         default:
             renderer->draw_rect(m_rect.x + 10, m_rect.y + 10, m_rect.w - 20, m_rect.h - 20, color);
             break;
