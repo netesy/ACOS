@@ -249,4 +249,42 @@ Process* find_process(u64 process_id) {
     return process_table_find(process_id);
 }
 
+struct SleepEntry {
+    Thread* thread;
+    u64 target_tsc;
+};
+
+static SleepEntry g_sleep_queue[128];
+static usize g_sleep_count = 0;
+static hal::SpinLock g_sleep_lock;
+
+void register_sleep(Thread* thread, u64 ms) {
+    if (!thread) return;
+    hal::ScopedLock lock(g_sleep_lock);
+    if (g_sleep_count < 128) {
+        // 2.5 GHz TSC estimate
+        u64 target_tsc = __builtin_ia32_rdtsc() + ms * 2500000;
+        g_sleep_queue[g_sleep_count++] = { thread, target_tsc };
+    }
+}
+
+void check_sleeping_threads() {
+    hal::ScopedLock lock(g_sleep_lock);
+    u64 current_tsc = __builtin_ia32_rdtsc();
+    for (usize i = 0; i < g_sleep_count; ) {
+        if (current_tsc >= g_sleep_queue[i].target_tsc) {
+            Thread* t = g_sleep_queue[i].thread;
+            g_sleep_queue[i] = g_sleep_queue[--g_sleep_count];
+            wake_thread(t);
+        } else {
+            i++;
+        }
+    }
+}
+
+usize get_sleep_count() {
+    hal::ScopedLock lock(g_sleep_lock);
+    return g_sleep_count;
+}
+
 } // namespace acos::scheduler

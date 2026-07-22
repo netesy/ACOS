@@ -20,6 +20,10 @@ void wake_thread(Thread* thread);
 void block_thread(Thread* thread);
 Thread* current_thread();
 
+void register_sleep(Thread* thread, u64 ms);
+void check_sleeping_threads();
+usize get_sleep_count();
+
 // I/O blocking: track threads waiting on device I/O.
 // The idle loop polls these and wakes threads when data arrives.
 void set_console_blocked(Thread* thread);

@@ -42,6 +42,7 @@ extern "C" void k_handle_mouse() {
 }
 
 static void poll_io() {
+    acos::scheduler::check_sleeping_threads();
     if (acos::hal::serial_received()) {
         char c = acos::hal::serial_read();
         __asm__ volatile("cli");
@@ -212,7 +213,14 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     // Enable CPU interrupts globally after the scheduler starts
     __asm__ volatile("sti");
 
-    while (true) { poll_io(); acos::scheduler::schedule(); __asm__ volatile("hlt"); }
+    while (true) {
+        poll_io();
+        if (acos::scheduler::get_thread_count() == 0 && acos::scheduler::get_sleep_count() == 0) {
+            __asm__ volatile("hlt");
+        } else {
+            acos::scheduler::schedule();
+        }
+    }
 }
 
 extern "C" {

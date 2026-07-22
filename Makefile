@@ -24,6 +24,7 @@ DISK_IMG   = acos.img
 BUILD_DIR  = build
 DIST_DIR   = $(BUILD_DIR)/dist
 QEMU       ?= qemu-system-x86_64
+QEMU_DISPLAY ?= sdl
 QEMU_FIRMWARE ?= $(firstword $(wildcard OVMF.fd /usr/share/ovmf/OVMF.fd /usr/share/qemu/OVMF.fd /usr/share/OVMF/OVMF_CODE.fd /usr/share/OVMF/OVMF_CODE_4M.fd))
 MKFS_VFAT  ?= $(firstword $(shell command -v mkfs.vfat 2>/dev/null) $(wildcard /usr/sbin/mkfs.vfat /sbin/mkfs.vfat))
 MMD        ?= $(shell command -v mmd 2>/dev/null)
@@ -374,7 +375,7 @@ run: $(DISK_IMG)
 				-drive file=$(DISK_IMG),format=raw,if=none,id=drive0 \
 				-device ide-hd,drive=drive0,bus=ahci.0 \
 				-vga std \
-				-display sdl \
+				-display $(QEMU_DISPLAY) \
 				-serial stdio; \
 		else \
 			echo "[DESKTOP] Warning: OVMF firmware not found; cannot launch UEFI VM."; \

@@ -332,6 +332,17 @@ extern "C" u64 syscall_dispatch(u64 num, u64 arg1, u64 arg2, u64 arg3, u64 arg4,
             return current->register_thread(thread, scheduler::ResourceRights::Administer | scheduler::ResourceRights::Transfer | scheduler::ResourceRights::Delegate);
         }
 
+        case SyscallNum::ThreadSleep: {
+            u64 ms = arg1;
+            if (ms > 0) {
+                scheduler::register_sleep(current_thr, ms);
+                scheduler::block_thread(current_thr);
+            } else {
+                scheduler::schedule();
+            }
+            return 0;
+        }
+
         case SyscallNum::ThreadJoin: {
             if (!current) return kErrInvalid;
             scheduler::ResourceHandleEntry* entry = current->get_handle(arg1);

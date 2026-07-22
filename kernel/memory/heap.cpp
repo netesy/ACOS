@@ -26,13 +26,13 @@ void* kmalloc(usize size) {
     *reinterpret_cast<u64*>(addr) = pages;
 
     void* ptr = reinterpret_cast<void*>(addr + 16);
-    acos::hal::serial_print("  Heap: kmalloc size=");
-    acos::hal::serial_print_hex(size);
-    acos::hal::serial_print(" pages=");
-    acos::hal::serial_print_hex(pages);
-    acos::hal::serial_print(" ptr=");
-    acos::hal::serial_print_hex(reinterpret_cast<u64>(ptr));
-    acos::hal::serial_print("\n");
+    // acos::hal::serial_print("  Heap: kmalloc size=");
+    // acos::hal::serial_print_hex(size);
+    // acos::hal::serial_print(" pages=");
+    // acos::hal::serial_print_hex(pages);
+    // acos::hal::serial_print(" ptr=");
+    // acos::hal::serial_print_hex(reinterpret_cast<u64>(ptr));
+    // acos::hal::serial_print("\n");
 
     return ptr;
 }
@@ -42,11 +42,11 @@ void kfree(void* ptr) {
     u64 addr = reinterpret_cast<u64>(ptr) - 16;
     u64 pages = *reinterpret_cast<u64*>(addr);
 
-    acos::hal::serial_print("  Heap: kfree ptr=");
-    acos::hal::serial_print_hex(reinterpret_cast<u64>(ptr));
-    acos::hal::serial_print(" pages=");
-    acos::hal::serial_print_hex(pages);
-    acos::hal::serial_print("\n");
+    // acos::hal::serial_print("  Heap: kfree ptr=");
+    // acos::hal::serial_print_hex(reinterpret_cast<u64>(ptr));
+    // acos::hal::serial_print(" pages=");
+    // acos::hal::serial_print_hex(pages);
+    // acos::hal::serial_print("\n");
 
     for (u64 i = 0; i < pages; ++i) {
         pmm_free(addr + (i * PAGE_SIZE));
