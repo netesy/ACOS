@@ -102,7 +102,7 @@ void DesktopShell::initialize() {
     auto desktop = Panel()
         .background(0)           // transparent — shows console clear color behind
         .flex_grow(1)
-        .padding(0, 0, 0, 32);    // Add left padding to desktop area
+        .padding(0);
     root->add_child(desktop);
 
     // ========== TOP BAR — independent fixed-position overlay at top ==========
@@ -110,7 +110,7 @@ void DesktopShell::initialize() {
         .glass(true)
         .background(gui::g_current_theme.glass_bg)
         .border((gui::g_current_theme.border & 0x00FFFFFF) | (0x55u << 24), 1)
-        .radius(gui::g_current_theme.window_radius)
+        // .radius(gui::g_current_theme.window_radius)
         .elevation(4)
         .padding(0, 24, 0, 24)
         .preferred_size(screen_width, 56)
@@ -155,15 +155,15 @@ void DesktopShell::initialize() {
 
     // Interactive Session Management System UI Buttons
     auto logout_icon = UIContext::get().region().alloc<SystemActionIcon>(widgets::IconType::Logout, SystemAction::Logout);
-    logout_icon->set_rect({0, 0, 20, 20});
+    logout_icon->preferred_size(20, 20);
     top_right->add_child(logout_icon.static_cast_to<gui::Widget>());
 
     auto reboot_icon = UIContext::get().region().alloc<SystemActionIcon>(widgets::IconType::Reboot, SystemAction::Reboot);
-    reboot_icon->set_rect({0, 0, 20, 20});
+    reboot_icon->preferred_size(20, 20);
     top_right->add_child(reboot_icon.static_cast_to<gui::Widget>());
 
     auto shutdown_icon = UIContext::get().region().alloc<SystemActionIcon>(widgets::IconType::Power, SystemAction::Shutdown);
-    shutdown_icon->set_rect({0, 0, 20, 20});
+    shutdown_icon->preferred_size(20, 20);
     top_right->add_child(shutdown_icon.static_cast_to<gui::Widget>());
 
     top_content->add_child(top_right);
@@ -193,9 +193,11 @@ void DesktopShell::initialize() {
     dock_container->add_child(taskbar);
     root->add_child(dock_container);
 
-    // Create the Application Launcher instance
-    m_launcher = UIContext::get().region().alloc<Launcher>();
-    root->add_child(m_launcher);
+    // // Create the Application Launcher instance - managed as overlay, not flex child
+    // m_launcher = UIContext::get().region().alloc<Launcher>();
+    // m_launcher->set_visible(false);  // Initially hidden
+    // m_launcher->fixed(60, -1, -1, 10);  // Fixed position overlay, not participating in flex layout
+    // root->add_child(m_launcher);
 
     m_ui_context.set_root(root);
 }
@@ -232,9 +234,6 @@ void DesktopShell::run_loop() {
 
     // Draw the initial state of the desktop
     draw(&renderer);
-
-    u32 test_timer = 0;
-    u32 test_step = 0;
 
     while (true) {
         bool needs_draw = false;
@@ -274,189 +273,6 @@ void DesktopShell::run_loop() {
             // Dispatch to GUI Toolkit
             m_ui_context.event_dispatcher().dispatch(ev, m_root_panel);
             needs_draw = true;
-        }
-
-        // GUI SELF-TEST LOGIC
-        test_timer++;
-        if (test_step == 0 && test_timer >= 200) { // After 2 seconds, open Terminal
-            acos::process::log("[GUI-TEST] Step 0: Simulating mouse click to open Terminal...\n");
-
-            m_mouse_x = 320; m_mouse_y = 730; m_mouse_pressed = true;
-            acos::input::InputEvent ev_press;
-            ev_press.type = acos::input::InputType::Mouse;
-            ev_press.code = (320 << 16) | 730;
-            ev_press.value = 1; // Pressed
-            ev_press.flags = 0;
-            m_ui_context.event_dispatcher().dispatch(ev_press, m_root_panel);
-
-            m_mouse_pressed = false;
-            acos::input::InputEvent ev_release;
-            ev_release.type = acos::input::InputType::Mouse;
-            ev_release.code = (320 << 16) | 730;
-            ev_release.value = 0; // Released
-            ev_release.flags = 0;
-            m_ui_context.event_dispatcher().dispatch(ev_release, m_root_panel);
-
-            needs_draw = true;
-            test_step = 1;
-            test_timer = 0;
-        }
-        else if (test_step == 1 && test_timer >= 100) { // Verify Terminal opened and focus it
-            acos::process::log("[GUI-TEST] Step 1 PASSED: Terminal window successfully created and verified!\n");
-
-            acos::process::log("[GUI-TEST] Step 1.5: Focusing TerminalView...\n");
-            m_mouse_x = 150; m_mouse_y = 150; m_mouse_pressed = true;
-            acos::input::InputEvent click;
-            click.type = acos::input::InputType::Mouse;
-            click.code = (150 << 16) | 150; // Inside window
-            click.value = 1;
-            click.flags = 0;
-            m_ui_context.event_dispatcher().dispatch(click, m_root_panel);
-
-            test_step = 2;
-            test_timer = 0;
-        }
-        else if (test_step == 2 && test_timer >= 50) { // Type "ls" into focused terminal
-            acos::process::log("[GUI-TEST] Step 2: Simulating typing 'l', 's', 'Enter' in Terminal...\n");
-
-            auto press_key = [&](acos::input::VirtualKey vk) {
-                acos::input::InputEvent kp;
-                kp.type = acos::input::InputType::Keyboard;
-                kp.code = static_cast<u32>(vk);
-                kp.value = 1; // Pressed
-                kp.flags = 0;
-                m_ui_context.event_dispatcher().dispatch(kp, m_root_panel);
-
-                acos::input::InputEvent kr;
-                kr.type = acos::input::InputType::Keyboard;
-                kr.code = static_cast<u32>(vk);
-                kr.value = 0; // Released
-                kr.flags = 0;
-                m_ui_context.event_dispatcher().dispatch(kr, m_root_panel);
-            };
-
-            press_key(acos::input::VirtualKey::L);
-            press_key(acos::input::VirtualKey::S);
-            press_key(acos::input::VirtualKey::Enter);
-
-            needs_draw = true;
-            test_step = 3;
-            test_timer = 0;
-        }
-        else if (test_step == 3 && test_timer >= 100) { // After 1s, open File Manager
-            acos::process::log("[GUI-TEST] Step 3: Simulating mouse click to open File Manager...\n");
-
-            m_mouse_x = 370; m_mouse_y = 730; m_mouse_pressed = true;
-            acos::input::InputEvent ev_press;
-            ev_press.type = acos::input::InputType::Mouse;
-            ev_press.code = (370 << 16) | 730;
-            ev_press.value = 1; // Pressed
-            ev_press.flags = 0;
-            m_ui_context.event_dispatcher().dispatch(ev_press, m_root_panel);
-
-            m_mouse_pressed = false;
-            acos::input::InputEvent ev_release;
-            ev_release.type = acos::input::InputType::Mouse;
-            ev_release.code = (370 << 16) | 730;
-            ev_release.value = 0; // Released
-            ev_release.flags = 0;
-            m_ui_context.event_dispatcher().dispatch(ev_release, m_root_panel);
-
-            needs_draw = true;
-            test_step = 4;
-            test_timer = 0;
-        }
-        else if (test_step == 4 && test_timer >= 100) { // Verify File Manager opened
-            acos::process::log("[GUI-TEST] Step 4 PASSED: File Manager window successfully created and verified!\n");
-            test_step = 5;
-            test_timer = 0;
-        }
-        else if (test_step == 5 && test_timer >= 100) { // Open Settings
-            acos::process::log("[GUI-TEST] Step 5: Simulating mouse click to open Settings...\n");
-
-            m_mouse_x = 470; m_mouse_y = 730; m_mouse_pressed = true;
-            acos::input::InputEvent ev_press;
-            ev_press.type = acos::input::InputType::Mouse;
-            ev_press.code = (470 << 16) | 730;
-            ev_press.value = 1; // Pressed
-            ev_press.flags = 0;
-            m_ui_context.event_dispatcher().dispatch(ev_press, m_root_panel);
-
-            m_mouse_pressed = false;
-            acos::input::InputEvent ev_release;
-            ev_release.type = acos::input::InputType::Mouse;
-            ev_release.code = (470 << 16) | 730;
-            ev_release.value = 0; // Released
-            ev_release.flags = 0;
-            m_ui_context.event_dispatcher().dispatch(ev_release, m_root_panel);
-
-            needs_draw = true;
-            test_step = 6;
-            test_timer = 0;
-        }
-        else if (test_step == 6 && test_timer >= 100) { // Verify Settings opened
-            acos::process::log("[GUI-TEST] Step 6 PASSED: Settings window successfully created and verified!\n");
-            test_step = 7;
-            test_timer = 0;
-        }
-        else if (test_step == 7 && test_timer >= 100) { // Simulate window dragging of Settings window (opens at 100, 100)
-            acos::process::log("[GUI-TEST] Step 7: Simulating Settings window drag from (150,114) to (200,124)...\n");
-
-            m_mouse_x = 150; m_mouse_y = 114; m_mouse_pressed = true;
-            acos::input::InputEvent drag_start;
-            drag_start.type = acos::input::InputType::Mouse;
-            drag_start.code = (150 << 16) | 114;
-            drag_start.value = 1;
-            drag_start.flags = 0;
-            m_ui_context.event_dispatcher().dispatch(drag_start, m_root_panel);
-
-            m_mouse_x = 200; m_mouse_y = 124;
-            acos::input::InputEvent drag_move;
-            drag_move.type = acos::input::InputType::Mouse;
-            drag_move.code = (200 << 16) | 124;
-            drag_move.value = 1;
-            drag_move.flags = 0;
-            m_ui_context.event_dispatcher().dispatch(drag_move, m_root_panel);
-
-            m_mouse_pressed = false;
-            acos::input::InputEvent drag_end;
-            drag_end.type = acos::input::InputType::Mouse;
-            drag_end.code = (200 << 16) | 124;
-            drag_end.value = 0;
-            drag_end.flags = 0;
-            m_ui_context.event_dispatcher().dispatch(drag_end, m_root_panel);
-
-            needs_draw = true;
-            test_step = 8;
-            test_timer = 0;
-        }
-        else if (test_step == 8 && test_timer >= 100) { // Close window
-            acos::process::log("[GUI-TEST] Step 8: Simulating clicking Settings window close button...\n");
-
-            m_mouse_x = 536; m_mouse_y = 124; m_mouse_pressed = true;
-            acos::input::InputEvent close_press;
-            close_press.type = acos::input::InputType::Mouse;
-            close_press.code = (536 << 16) | 124;
-            close_press.value = 1;
-            close_press.flags = 0;
-            m_ui_context.event_dispatcher().dispatch(close_press, m_root_panel);
-
-            m_mouse_pressed = false;
-            acos::input::InputEvent close_release;
-            close_release.type = acos::input::InputType::Mouse;
-            close_release.code = (536 << 16) | 124;
-            close_release.value = 0;
-            close_release.flags = 0;
-            m_ui_context.event_dispatcher().dispatch(close_release, m_root_panel);
-
-            needs_draw = true;
-            test_step = 9;
-            test_timer = 0;
-        }
-        else if (test_step == 9 && test_timer >= 100) {
-            acos::process::log("[GUI-TEST] Step 8.5: Verifying window was successfully closed...\n");
-            acos::process::log("[GUI-TEST] ALL GRAPHICAL DESKTOP END-TO-END TESTS PASSED SUCCESSFULLY!\n");
-            test_step = 10;
         }
 
         // Repaint the desktop if needed
