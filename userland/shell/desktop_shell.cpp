@@ -34,36 +34,22 @@ public:
     void on_event(gui::Event& event) override {
         const auto& raw = event.raw;
         if (raw.type == ::acos::abi::InputType::Mouse) {
-            ::acos::i32 mx = event.mouse_x;
-            ::acos::i32 my = event.mouse_y;
             bool pressed = (raw.value & 0x01) != 0;
 
-            // Traverse up the parent tree to compute the absolute global screen-space rectangle
-            gui::Rect global_rect = m_rect;
-            gui::Ref<gui::Widget> p = m_parent;
-            while (p) {
-                global_rect.x += p->rect().x;
-                global_rect.y += p->rect().y;
-                p = p->parent();
-            }
-
-            if (global_rect.contains(mx, my)) {
-                if (!pressed && m_state == gui::WidgetState::Pressed) {
-                    if (m_action == SystemAction::Shutdown) {
-                        acos::process::log("Shutting down Asade...\n");
-                        acos::process::exit(0);
-                    } else if (m_action == SystemAction::Reboot) {
-                        acos::process::log("Rebooting Asade...\n");
-                        acos::process::exit(0);
-                    } else if (m_action == SystemAction::Logout) {
-                        acos::process::log("Logging out...\n");
-                        acos::process::exit(0);
-                    }
+            // Event dispatcher already performed hit testing, so we only receive events when over this widget
+            if (!pressed && m_state == gui::WidgetState::Pressed) {
+                if (m_action == SystemAction::Shutdown) {
+                    acos::process::log("Shutting down Asade...\n");
+                    acos::process::exit(0);
+                } else if (m_action == SystemAction::Reboot) {
+                    acos::process::log("Rebooting Asade...\n");
+                    acos::process::exit(0);
+                } else if (m_action == SystemAction::Logout) {
+                    acos::process::log("Logging out...\n");
+                    acos::process::exit(0);
                 }
-                m_state = pressed ? gui::WidgetState::Pressed : gui::WidgetState::Hovered;
-            } else {
-                m_state = gui::WidgetState::Normal;
             }
+            m_state = pressed ? gui::WidgetState::Pressed : gui::WidgetState::Hovered;
             set_paint_dirty();
         }
     }
@@ -265,14 +251,26 @@ void DesktopShell::run_loop() {
         while (acos::input::pop_event(queue_handle, ev, false)) {
             if (ev.type == acos::input::InputType::Mouse) {
                 // Update internal mouse coordinates
-                m_mouse_x = static_cast<i32>((ev.code >> 16) & 0xFFFF);
-                m_mouse_y = static_cast<i32>(ev.code & 0xFFFF);
+                i32 new_mouse_x = static_cast<i32>((ev.code >> 16) & 0xFFFF);
+                i32 new_mouse_y = static_cast<i32>(ev.code & 0xFFFF);
+                bool was_pressed = m_mouse_pressed;
                 m_mouse_pressed = (ev.value & 0x01) != 0;
+                
+                // Redraw if mouse position changed or button state changed
+                if (new_mouse_x != m_mouse_x || new_mouse_y != m_mouse_y || was_pressed != m_mouse_pressed) {
+                    m_mouse_x = new_mouse_x;
+                    m_mouse_y = new_mouse_y;
+                    needs_draw = true;
+                }
             }
 
             // Dispatch to GUI Toolkit
             m_ui_context.event_dispatcher().dispatch(ev, m_root_panel);
-            needs_draw = true;
+            
+            // Check if any widget became paint dirty from the event
+            if (m_root_panel && m_root_panel->is_paint_dirty()) {
+                needs_draw = true;
+            }
         }
 
         // Repaint the desktop if needed
@@ -307,11 +305,20 @@ void DesktopShell::draw(::acos::graphics::Renderer* renderer) {
     m_ui_context.paint(renderer);
 
     // Render mouse pointer/cursor
-    // Draw a nice mouse cursor at (m_mouse_x, m_mouse_y)
+    // Draw an arrow cursor at (m_mouse_x, m_mouse_y)
     i32 mx = m_mouse_x;
     i32 my = m_mouse_y;
-    renderer->fill_rect(mx, my, 8, 8, 0xFFFFFFFF); // Simple 8x8 white square cursor for maximum reliability and simplicity
-    renderer->draw_rect(mx, my, 8, 8, 0xFF000000); // Black outline
+    
+    // Draw arrow cursor shape using lines (standard left-pointing arrow)
+    // Outline
+    renderer->draw_line(mx, my, mx + 12, my + 12, 0xFF000000);
+    renderer->draw_line(mx, my, mx, my + 12, 0xFF000000);
+    renderer->draw_line(mx + 12, my + 12, mx, my + 12, 0xFF000000);
+    renderer->draw_line(mx + 2, my + 12, mx + 2, my + 20, 0xFF000000);
+    
+    // Fill with white
+    renderer->fill_rect(mx + 1, my + 1, 10, 10, 0xFFFFFFFF);
+    renderer->fill_rect(mx + 1, my + 13, 2, 7, 0xFFFFFFFF);
 }
 
 void DesktopShell::launch_terminal() {

@@ -48,27 +48,13 @@ void Icon::update_render_object(Ref<RenderObject> render_object) {
 void Icon::on_event(Event& event) {
     const auto& raw = event.raw;
     if (raw.type == ::acos::abi::InputType::Mouse) {
-        ::acos::i32 mx = event.mouse_x;
-        ::acos::i32 my = event.mouse_y;
         bool pressed = (raw.value & 0x01) != 0;
 
-        // Traverse up the parent tree to compute the absolute global screen-space rectangle
-        Rect global_rect = m_rect;
-        Ref<Widget> p = m_parent;
-        while (p) {
-            global_rect.x += p->rect().x;
-            global_rect.y += p->rect().y;
-            p = p->parent();
+        // Event dispatcher already performed hit testing, so we only receive events when over this widget
+        if (!pressed && m_state == WidgetState::Pressed) {
+            if (m_on_click) m_on_click(nullptr);
         }
-
-        if (global_rect.contains(mx, my)) {
-            if (!pressed && m_state == WidgetState::Pressed) {
-                if (m_on_click) m_on_click(nullptr);
-            }
-            m_state = pressed ? WidgetState::Pressed : WidgetState::Hovered;
-        } else {
-            m_state = WidgetState::Normal;
-        }
+        m_state = pressed ? WidgetState::Pressed : WidgetState::Hovered;
         set_paint_dirty();
     }
 }

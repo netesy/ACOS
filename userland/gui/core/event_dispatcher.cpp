@@ -51,11 +51,17 @@ void EventDispatcher::dispatch(const ::acos::abi::InputEvent& raw, Ref<Widget> r
 }
 
 Ref<Widget> EventDispatcher::perform_hit_test(Ref<Widget> root, ::acos::i32 x, ::acos::i32 y) {
-    if (!root || !root->is_visible() || !root->hit_test(x, y)) return Ref<Widget>();
+    if (!root || !root->is_visible()) return Ref<Widget>();
+
+    // Transform global coordinates to local widget coordinates
+    ::acos::i32 local_x = x - root->rect().x;
+    ::acos::i32 local_y = y - root->rect().y;
+
+    if (!root->hit_test(local_x, local_y)) return Ref<Widget>();
 
     const auto& children = root->children();
     for (int i = (int)children.size() - 1; i >= 0; i--) {
-        Ref<Widget> target = perform_hit_test(children[i], x, y);
+        Ref<Widget> target = perform_hit_test(children[i], local_x, local_y);
         if (target) return target;
     }
 

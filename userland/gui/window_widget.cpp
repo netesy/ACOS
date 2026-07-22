@@ -84,28 +84,22 @@ public:
     void on_event(Event& event) override {
         const auto& raw = event.raw;
         if (raw.type == ::acos::abi::InputType::Mouse) {
-            i32 mx = event.mouse_x;
-            i32 my = event.mouse_y;
             bool pressed = (raw.value & 0x01) != 0;
 
-            if (m_rect.contains(mx, my)) {
-                m_hovered = true;
-                if (pressed) {
-                    m_state = WidgetState::Pressed;
-                } else {
-                    if (m_state == WidgetState::Pressed) {
-                        Ref<Widget> win_ref = m_window->self();
-                        Ref<Widget> parent = win_ref->parent();
-                        if (parent) {
-                            parent->remove_child(win_ref);
-                            parent->set_layout_dirty();
-                        }
-                    }
-                    m_state = WidgetState::Hovered;
-                }
+            // Event dispatcher already performed hit testing, so we only receive events when over this widget
+            m_hovered = true;
+            if (pressed) {
+                m_state = WidgetState::Pressed;
             } else {
-                m_hovered = false;
-                m_state = WidgetState::Normal;
+                if (m_state == WidgetState::Pressed) {
+                    Ref<Widget> win_ref = m_window->self();
+                    Ref<Widget> parent = win_ref->parent();
+                    if (parent) {
+                        parent->remove_child(win_ref);
+                        parent->set_layout_dirty();
+                    }
+                }
+                m_state = WidgetState::Hovered;
             }
             set_paint_dirty();
             event.stop_propagation();

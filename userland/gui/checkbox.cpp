@@ -30,24 +30,19 @@ void CheckBox::update_render_object(Ref<RenderObject> render_object) {
 void CheckBox::on_event(Event& event) {
     const auto& raw = event.raw;
     if (raw.type == ::acos::abi::InputType::Mouse) {
-        ::acos::i32 mx = event.mouse_x;
-        ::acos::i32 my = event.mouse_y;
         bool pressed = (raw.value & 0x01) != 0;
 
-        if (m_rect.contains(mx, my)) {
-            if (pressed) {
-                m_state = WidgetState::Pressed;
-            } else {
-                if (m_state == WidgetState::Pressed) {
-                    m_checked = !m_checked;
-                    set_paint_dirty();
-                }
-                m_state = WidgetState::Hovered;
-            }
-            event.stop_propagation();
+        // Event dispatcher already performed hit testing, so we only receive events when over this widget
+        if (pressed) {
+            m_state = WidgetState::Pressed;
         } else {
-            m_state = WidgetState::Normal;
+            if (m_state == WidgetState::Pressed) {
+                m_checked = !m_checked;
+                set_paint_dirty();
+            }
+            m_state = WidgetState::Hovered;
         }
+        event.stop_propagation();
     }
 }
 

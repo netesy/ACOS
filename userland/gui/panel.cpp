@@ -29,18 +29,13 @@ void Panel::update_render_object(Ref<RenderObject> render_object) {
 void Panel::on_event(Event& event) {
     const auto& raw = event.raw;
     if (raw.type == ::acos::abi::InputType::Mouse) {
-        ::acos::i32 mx = event.mouse_x;
-        ::acos::i32 my = event.mouse_y;
         bool pressed = (raw.value & 0x01) != 0;
 
-        if (m_rect.contains(mx, my)) {
-            if (!pressed && m_state == WidgetState::Pressed) {
-                if (m_on_click) m_on_click(nullptr);
-            }
-            m_state = pressed ? WidgetState::Pressed : WidgetState::Hovered;
-        } else {
-            m_state = WidgetState::Normal;
+        // Event dispatcher already performed hit testing, so we only receive events when over this widget
+        if (!pressed && m_state == WidgetState::Pressed) {
+            if (m_on_click) m_on_click(nullptr);
         }
+        m_state = pressed ? WidgetState::Pressed : WidgetState::Hovered;
         // Panels don't usually change look on hover unless specifically styled,
         // but we'll trigger paint dirty just in case.
         set_paint_dirty();
