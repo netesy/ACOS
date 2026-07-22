@@ -49,6 +49,10 @@ Taskbar::Taskbar() {
     root_layout->add_child(create_dock_item(gui::widgets::IconType::Files, [](void*){ DesktopShell::get().launch_file_manager(); }));
     root_layout->add_child(create_dock_item(gui::widgets::IconType::Monitor, [](void*){ DesktopShell::get().toggle_launcher(); }));
     root_layout->add_child(create_dock_item(gui::widgets::IconType::Settings, [](void*){ DesktopShell::get().launch_settings(); }));
+    root_layout->add_child(create_dock_item(gui::widgets::IconType::Battery, [](void*){
+        acos::process::log("Shutting down Asade from Taskbar Power Button...\n");
+        acos::process::exit(0);
+    }));
 
     add_child(root_layout.static_cast_to<gui::Widget>());
 }
