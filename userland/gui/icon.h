@@ -11,7 +11,10 @@ enum class IconType {
     Monitor,
     Speaker,
     Network,
-    Battery
+    Battery,
+    Power,   // shutdown / power-off action
+    Logout,
+    Reboot
 };
 
 class Icon : public Widget {

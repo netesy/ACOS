@@ -130,15 +130,15 @@ void DesktopShell::initialize() {
     top_right->add_child(Icon(widgets::IconType::Battery).preferred_size(20, 20));
 
     // Interactive Session Management System UI Buttons
-    auto logout_icon = UIContext::get().region().alloc<SystemActionIcon>(widgets::IconType::Speaker, SystemAction::Logout);
+    auto logout_icon = UIContext::get().region().alloc<SystemActionIcon>(widgets::IconType::Logout, SystemAction::Logout);
     logout_icon->set_rect({0, 0, 20, 20});
     top_right->add_child(logout_icon.static_cast_to<gui::Widget>());
 
-    auto reboot_icon = UIContext::get().region().alloc<SystemActionIcon>(widgets::IconType::Network, SystemAction::Reboot);
+    auto reboot_icon = UIContext::get().region().alloc<SystemActionIcon>(widgets::IconType::Reboot, SystemAction::Reboot);
     reboot_icon->set_rect({0, 0, 20, 20});
     top_right->add_child(reboot_icon.static_cast_to<gui::Widget>());
 
-    auto shutdown_icon = UIContext::get().region().alloc<SystemActionIcon>(widgets::IconType::Monitor, SystemAction::Shutdown);
+    auto shutdown_icon = UIContext::get().region().alloc<SystemActionIcon>(widgets::IconType::Power, SystemAction::Shutdown);
     shutdown_icon->set_rect({0, 0, 20, 20});
     top_right->add_child(shutdown_icon.static_cast_to<gui::Widget>());
 
@@ -155,15 +155,15 @@ void DesktopShell::initialize() {
     root->add_child(desktop);
 
     // ========== BOTTOM DOCK — fixed to bottom center ==========
-    // The dock_container is fixed-position: bottom=12, auto-centered horizontally
+    // The dock_container is fixed-position: bottom=8, auto-centered horizontally
     auto dock_container = Panel()
-        .glass(false)
-        .radius(16)
-        .background(0xFF13131A)  // Solid beautiful dark modern gray background
-        .border(0xFF4A90E2, 2)   // Solid beautiful bright blue border outline
+        .glass(true)
+        .radius(20)
+        .background(0xAA131314)  // translucent glass tint (real backdrop blur applied at paint time)
+        .border(0x33FFFFFF, 1)   // hairline glass rim instead of a heavy solid outline
         .padding(8)
-        .preferred_size(520, 72) // Enlarged width (520) and height (72) for cleanly spaced, unclipped icons!
-        .fixed(-1, -1, 12, -1);  // Position bottom=12 for floating aesthetic
+        .preferred_size(344, 64) // wide/tall enough for 5x 48px icons + spacing, no clipping
+        .fixed(-1, -1, 12, -1);  // bottom=12, left/right=-1 auto-centers horizontally
 
     auto taskbar = UIContext::get().region().alloc<Taskbar>();
     dock_container->add_child(taskbar);
@@ -456,9 +456,12 @@ void DesktopShell::draw(::acos::graphics::Renderer* renderer) {
         renderer->fill_rect(0, y, renderer->width(), 1, color);
     }
 
-    // Draw stylized geometric abstract wallpaper shapes
-    renderer->fill_circle(1000, 200, 150, 0x11FF00AA); // Semi-transparent abstract pink circle
-    renderer->fill_circle(200, 600, 250, 0x1100AAFF);  // Semi-transparent abstract cyan circle
+    // Draw stylized geometric abstract wallpaper shapes (properly alpha-blended
+    // this time — fill_circle ignores the color's alpha channel and was
+    // painting these fully opaque, which is why they showed up as solid
+    // pink/blue discs instead of soft background accents).
+    renderer->blend_circle(1000, 200, 150, 0xFF00AA, 0x11); // Subtle abstract pink circle
+    renderer->blend_circle(200, 600, 250, 0x00AAFF, 0x11);  // Subtle abstract cyan circle
     
     m_ui_context.paint(renderer);
 

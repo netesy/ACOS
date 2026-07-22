@@ -137,6 +137,106 @@ void Renderer::fill_rounded_rect(u32 x, u32 y, u32 w, u32 h, u32 r, u32 color) {
     fill_circle(x + w - r - 1, y + h - r - 1, r, color);
 }
 
+void Renderer::blend_circle(u32 xc, u32 yc, u32 r, u32 color, u8 alpha) {
+    if (!m_fb) return;
+    for (int y = -(int)r; y <= (int)r; y++) {
+        for (int x = -(int)r; x <= (int)r; x++) {
+            if (x * x + y * y <= (int)(r * r)) {
+                int px = (int)xc + x;
+                int py = (int)yc + y;
+                if (px < 0 || py < 0) continue;
+                blend_pixel((u32)px, (u32)py, color, alpha);
+            }
+        }
+    }
+}
+
+void Renderer::blend_glass_rounded_rect(u32 x, u32 y, u32 w, u32 h, u32 radius, u32 tint, u8 alpha, u32 blur_step) {
+    if (!m_fb || w == 0 || h == 0) return;
+    if (blur_step == 0) blur_step = 1;
+
+    auto in_rounded = [&](int rx, int ry) -> bool {
+        if (rx < 0 || ry < 0 || rx >= (int)w || ry >= (int)h) return false;
+        if (radius == 0) return true;
+        int cx = -1, cy = -1;
+        int rad = (int)radius;
+        if (rx < rad && ry < rad) { cx = rad; cy = rad; }
+        else if (rx >= (int)w - rad && ry < rad) { cx = (int)w - rad - 1; cy = rad; }
+        else if (rx < rad && ry >= (int)h - rad) { cx = rad; cy = (int)h - rad - 1; }
+        else if (rx >= (int)w - rad && ry >= (int)h - rad) { cx = (int)w - rad - 1; cy = (int)h - rad - 1; }
+        else return true;
+        int dx = rx - cx, dy = ry - cy;
+        return (dx * dx + dy * dy) <= (rad * rad);
+    };
+
+    // Sample offsets for a cheap approximate box blur of the existing backdrop.
+    int offs[5][2] = {
+        {0, 0},
+        {-(int)blur_step, 0}, {(int)blur_step, 0},
+        {0, -(int)blur_step}, {0, (int)blur_step}
+    };
+
+    u32 fb_w = m_fb->width();
+    u32 fb_h = m_fb->height();
+
+    for (u32 j = 0; j < h; j++) {
+        for (u32 i = 0; i < w; i++) {
+            if (!in_rounded((int)i, (int)j)) continue;
+
+            int px = (int)(x + i), py = (int)(y + j);
+            u32 sum_r = 0, sum_g = 0, sum_b = 0, cnt = 0;
+            for (auto& o : offs) {
+                int sx = px + o[0], sy = py + o[1];
+                if (sx < 0 || sy < 0 || sx >= (int)fb_w || sy >= (int)fb_h) continue;
+                u32 c = m_fb->get_pixel((u32)sx, (u32)sy);
+                sum_r += (c >> 16) & 0xFF;
+                sum_g += (c >> 8) & 0xFF;
+                sum_b += c & 0xFF;
+                cnt++;
+            }
+            if (cnt == 0) continue;
+
+            u32 br = sum_r / cnt, bg = sum_g / cnt, bb = sum_b / cnt;
+            m_fb->put_pixel((u32)px, (u32)py, 0xFF000000 | (br << 16) | (bg << 8) | bb);
+            blend_pixel((u32)px, (u32)py, tint, alpha);
+        }
+    }
+}
+
+void Renderer::draw_bitmap(u32 x, u32 y, u32 w, u32 h, const unsigned char* rgba, u32 src_w, u32 src_h) {
+    if (!m_fb || !rgba || w == 0 || h == 0 || src_w == 0 || src_h == 0) return;
+
+    for (u32 j = 0; j < h; j++) {
+        u32 sy0 = (j * src_h) / h;
+        u32 sy1 = ((j + 1) * src_h) / h;
+        if (sy1 <= sy0) sy1 = sy0 + 1;
+        if (sy1 > src_h) sy1 = src_h;
+
+        for (u32 i = 0; i < w; i++) {
+            u32 sx0 = (i * src_w) / w;
+            u32 sx1 = ((i + 1) * src_w) / w;
+            if (sx1 <= sx0) sx1 = sx0 + 1;
+            if (sx1 > src_w) sx1 = src_w;
+
+            u32 sum_r = 0, sum_g = 0, sum_b = 0, sum_a = 0, count = 0;
+            for (u32 sy = sy0; sy < sy1; sy++) {
+                for (u32 sx = sx0; sx < sx1; sx++) {
+                    const unsigned char* p = rgba + (sy * src_w + sx) * 4;
+                    sum_r += p[0]; sum_g += p[1]; sum_b += p[2]; sum_a += p[3];
+                    count++;
+                }
+            }
+            if (count == 0) continue;
+
+            u8 a = (u8)(sum_a / count);
+            if (a == 0) continue;
+            u32 r = sum_r / count, g = sum_g / count, b = sum_b / count;
+            u32 color = (r << 16) | (g << 8) | b;
+            blend_pixel(x + i, y + j, color, a);
+        }
+    }
+}
+
 void Renderer::draw_text(const char* text, u32 x, u32 y, u32 color) {
     if (!m_fb) return;
     const Font* font = FontManager::get_ui_font();

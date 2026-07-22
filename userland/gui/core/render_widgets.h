@@ -39,9 +39,11 @@ public:
     void perform_layout(BoxConstraints constraints) override;
     void set_type(IconType type);
     void set_active(bool active);
+    void set_hovered(bool hovered);
 private:
     IconType m_type;
     bool m_active;
+    bool m_hovered;
 };
 
 class RenderCheckBox : public RenderObject {

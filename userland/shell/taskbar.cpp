@@ -13,17 +13,16 @@
 namespace acos::shell {
 
 Taskbar::Taskbar() {
-    m_rect = {0, 0, 504, 56}; // Fit the expanded inner dock container bounds
+    m_rect = {0, 0, 400, 50};
     m_clock_str[0] = '\0';
-    set_glass(false);
-    set_background_color(0); // Transparent inner container so dock background is uniform
+    set_glass(true);
 
     auto& region = gui::UIContext::get().region();
 
     auto root_layout = region.alloc<gui::widgets::Row>();
     root_layout->main_axis_alignment(gui::MainAxisAlignment::Center);
     root_layout->cross_axis_alignment(gui::CrossAxisAlignment::Center);
-    root_layout->spacing(32); // Beautiful, cleanly spaced icons!
+    root_layout->spacing(20);
 
     auto create_dock_item = [&](gui::widgets::IconType type, void (*callback)(void*)) {
         auto container = region.alloc<gui::widgets::Panel>();
@@ -37,7 +36,7 @@ Taskbar::Taskbar() {
 
         // Visual indicator (dot) for running app
         auto indicator = region.alloc<gui::widgets::Panel>();
-        indicator->set_rect({22, 44, 4, 4}); // Perfectly positioned indicator dot
+        indicator->set_rect({22, 42, 4, 4});
         indicator->radius(2);
         indicator->set_background_color(0xFFFFFFFF);
         indicator->set_visible(true); // Should be dynamic based on process state
@@ -50,7 +49,7 @@ Taskbar::Taskbar() {
     root_layout->add_child(create_dock_item(gui::widgets::IconType::Files, [](void*){ DesktopShell::get().launch_file_manager(); }));
     root_layout->add_child(create_dock_item(gui::widgets::IconType::Monitor, [](void*){ DesktopShell::get().toggle_launcher(); }));
     root_layout->add_child(create_dock_item(gui::widgets::IconType::Settings, [](void*){ DesktopShell::get().launch_settings(); }));
-    root_layout->add_child(create_dock_item(gui::widgets::IconType::Battery, [](void*){
+    root_layout->add_child(create_dock_item(gui::widgets::IconType::Power, [](void*){
         acos::process::log("Shutting down Asade from Taskbar Power Button...\n");
         acos::process::exit(0);
     }));

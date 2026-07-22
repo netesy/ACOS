@@ -22,6 +22,17 @@ public:
     void draw_rounded_rect(u32 x, u32 y, u32 w, u32 h, u32 r, u32 color);
     void fill_rounded_rect(u32 x, u32 y, u32 w, u32 h, u32 r, u32 color);
 
+    void blend_circle(u32 xc, u32 yc, u32 r, u32 color, u8 alpha);
+
+    // Frosted-glass panel: box-blurs whatever has already been drawn behind
+    // (x,y,w,h) and then blends `tint` over it at `alpha`, clipped to a
+    // rounded-rect shape of the given corner radius.
+    void blend_glass_rounded_rect(u32 x, u32 y, u32 w, u32 h, u32 radius, u32 tint, u8 alpha, u32 blur_step = 3);
+
+    // Draws an RGBA8888 bitmap (src_w x src_h) scaled into the destination
+    // rect (x,y,w,h), alpha-compositing each pixel onto the framebuffer.
+    void draw_bitmap(u32 x, u32 y, u32 w, u32 h, const unsigned char* rgba, u32 src_w, u32 src_h);
+
     void draw_text(const char* text, u32 x, u32 y, u32 color);
     void measure_text(const char* text, u32& w, u32& h);
 

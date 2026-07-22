@@ -24,6 +24,7 @@ void Icon::update_render_object(Ref<RenderObject> render_object) {
     if (ri) {
         ri->set_type(m_type);
         ri->set_active(m_active);
+        ri->set_hovered(m_state == WidgetState::Hovered || m_state == WidgetState::Pressed);
     }
 }
 
