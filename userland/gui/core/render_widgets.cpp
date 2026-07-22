@@ -223,6 +223,9 @@ void RenderPanel::paint(::acos::graphics::Renderer* renderer) {
     if (m_style.border_width > 0) {
         renderer->draw_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.border_radius, m_style.border_color);
     }
+    for (auto& child : m_children) {
+        if (child) child->paint(renderer);
+    }
 }
 void RenderPanel::perform_layout(BoxConstraints constraints) {
     Size size = constraints.constrain({m_rect.w, m_rect.h});
