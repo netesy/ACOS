@@ -5,6 +5,7 @@
 #include <acos/renderer.h>
 #include <acos/graphics.h>
 #include <acos/input.h>
+#include <acos/font_manager.h>
 #include <userland/gui/theme.h>
 #include <userland/gui/core/context.h>
 #include <userland/gui/widgets/fluent.h>
@@ -80,6 +81,9 @@ DesktopShell::DesktopShell() : m_ds(nullptr), m_mouse_x(400), m_mouse_y(300), m_
 
 void DesktopShell::initialize() {
     using namespace gui;
+
+    // Initialize userland Font Manager
+    acos::graphics::FontManager::initialize();
 
     // ROOT: Full-screen stack — normal flow children + fixed-position overlays
     auto root = Column().spacing(0);
