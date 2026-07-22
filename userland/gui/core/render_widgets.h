@@ -40,10 +40,12 @@ public:
     void set_type(IconType type);
     void set_active(bool active);
     void set_hovered(bool hovered);
+    void set_scale(float scale);
 private:
     IconType m_type;
     bool m_active;
     bool m_hovered;
+    float m_scale;
 };
 
 class RenderCheckBox : public RenderObject {

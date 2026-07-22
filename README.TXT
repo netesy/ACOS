@@ -1,4 +1,4 @@
 ACOS Shell README
 ================
-Welcome to ACOS Adaptive Capability Operating System!
+Welcome to Asade Operating System!
 Keyboard path test is successful.

@@ -92,46 +92,50 @@ void DesktopShell::initialize() {
     // ========== TOP BAR — fixed to top, full width, 48px ==========
     auto top_bar = Panel()
         .glass(true)
-        .background(0xCC0A0A0B)
-        .padding(0, 16, 0, 32)
-        .preferred_height(48)
+        .background(gui::g_current_theme.glass_bg)
+        .border((gui::g_current_theme.border & 0x00FFFFFF) | (0x55u << 24), 1)
+        .radius(gui::g_current_theme.window_radius)
+        .elevation(4)
+        .padding(0, 24, 0, 24)
+        .preferred_height(56)
         .fixed(0, 0, -1, 0);      // top=0, right=0, bottom=unset, left=0
 
     auto top_content = Row()
         .main_axis_alignment(MainAxisAlignment::SpaceBetween)
         .cross_axis_alignment(CrossAxisAlignment::Center)
-        .spacing(20);
+        .spacing(24);
 
     // Left: brand + menu items
     auto top_left = Row()
-        .spacing(24)
+        .spacing(16)
         .cross_axis_alignment(CrossAxisAlignment::Center);
     top_left->add_child(Text("Asade").color(0xFFFFFFFF).font_size(16));
-    top_left->add_child(Text("System").color(0xFFFFFFFF).border(0xFFFFFFFF, 1));
-    top_left->add_child(Text("Network").color(0xFF888888));
-    top_left->add_child(Text("Security").color(0xFF888888));
+    top_left->add_child(Text("System").color(0xFFE5E2E3).border((gui::g_current_theme.border & 0x00FFFFFF) | 0x55000000, 1).padding(8, 16, 8, 16));
+    top_left->add_child(Text("Network").color(0xFFAAAAAA));
+    top_left->add_child(Text("Security").color(0xFFAAAAAA));
     top_content->add_child(top_left);
 
     // Center: search
     auto search = Panel()
-        .radius(20)
+        .radius(24)
         .background(0x22FFFFFF)
-        .padding(4, 12, 4, 12)
-        .preferred_size(280, 28);
-    search->add_child(Text("Search (Ctrl+Space)").color(0xFF888888).font_size(12));
+        .padding(6, 16, 6, 16)
+        .preferred_size(320, 32)
+        .border((gui::g_current_theme.border & 0x00FFFFFF) | 0x44000000, 1);
+    search->add_child(Text("Search (Ctrl+Space)").color(0xFF888888).font_size(13));
     top_content->add_child(search);
 
     // Right: status indicators & Power Menu Icons (Logout, Reboot, Shutdown)
     auto top_right = Row()
-        .spacing(12)
+        .spacing(16)
         .main_axis_alignment(MainAxisAlignment::End)
         .cross_axis_alignment(CrossAxisAlignment::Center);
-    m_ip_text   = Text("127.0.0.1").color(0xFF888888);
+    m_ip_text   = Text("127.0.0.1").color(0xFFAAAAAA);
     m_clock_text = Text("OCT 24, 04:20:01").color(0xFFFFFFFF);
     top_right->add_child(m_ip_text);
     top_right->add_child(m_clock_text);
-    top_right->add_child(Icon(widgets::IconType::Settings).preferred_size(20, 20));
-    top_right->add_child(Icon(widgets::IconType::Battery).preferred_size(20, 20));
+    top_right->add_child(Icon(widgets::IconType::Settings).preferred_size(18, 18));
+    top_right->add_child(Icon(widgets::IconType::Battery).preferred_size(18, 18));
 
     // Interactive Session Management System UI Buttons
     auto logout_icon = UIContext::get().region().alloc<SystemActionIcon>(widgets::IconType::Logout, SystemAction::Logout);
@@ -158,16 +162,17 @@ void DesktopShell::initialize() {
         .padding(0, 0, 0, 32);    // Add left padding to desktop area
     root->add_child(desktop);
 
-    // ========== BOTTOM DOCK — fixed to bottom center ==========
-    // The dock_container is fixed-position: bottom=8, auto-centered horizontally
+    // ========== BOTTOM TASKBAR — fixed to bottom, full width ==========
+    // The taskbar spans the full width of the screen
     auto dock_container = Panel()
         .glass(true)
-        .radius(20)
-        .background(0xAA131314)  // translucent glass tint (real backdrop blur applied at paint time)
-        .border(0x33FFFFFF, 1)   // hairline glass rim instead of a heavy solid outline
-        .padding(8)
-        .preferred_size(344, 64) // wide/tall enough for 5x 48px icons + spacing, no clipping
-        .fixed(-1, -1, 12, -1);  // bottom=12, left/right=-1 auto-centers horizontally
+        .radius(gui::g_current_theme.dock_radius)
+        .background(gui::g_current_theme.glass_bg)
+        .border((gui::g_current_theme.border & 0x00FFFFFF) | (0x66u << 24), 1)
+        .elevation(gui::g_current_theme.dock_elevation)
+        .padding(10, 24, 10, 24)
+        .preferred_height(76)
+        .fixed(-1, 0, 16, 0);  // bottom=16, right=0, left=0 for full width
 
     auto taskbar = UIContext::get().region().alloc<Taskbar>();
     dock_container->add_child(taskbar);
@@ -210,9 +215,6 @@ void DesktopShell::run_loop() {
         return;
     }
 
-    u32 last_clock_tick = 0;
-    u32 second_counter = 0;
-
     // Draw the initial state of the desktop
     draw(&renderer);
 
@@ -223,6 +225,9 @@ void DesktopShell::run_loop() {
         bool needs_draw = false;
 
         // Update clock / telemetry once per second
+        // DISABLED: Full screen redraw on clock update causes flickering
+        // TODO: Implement double buffering or partial redraw support
+        /*
         last_clock_tick++;
         if (last_clock_tick >= 100) { // ~1 second (100 * 10ms)
             last_clock_tick = 0;
@@ -239,6 +244,7 @@ void DesktopShell::run_loop() {
             }
             needs_draw = true;
         }
+        */
 
         // Poll and handle input events
         acos::input::InputEvent ev;

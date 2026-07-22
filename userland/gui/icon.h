@@ -22,6 +22,7 @@ public:
     Icon(IconType type);
     virtual ~Icon();
 
+    void update(::acos::u64 delta_ms) override;
     Ref<RenderObject> create_render_object() override;
     void update_render_object(Ref<RenderObject> render_object) override;
     void on_event(Event& event) override;
@@ -31,11 +32,14 @@ public:
     void set_background_color(::acos::u32 color) { m_style.background_color = color; set_paint_dirty(); }
     void set_size(::acos::i32 size) { m_rect.w = size; m_rect.h = size; set_layout_dirty(); }
     void on_click(void (*callback)(void*)) { m_on_click = callback; }
+    void set_animate_on_hover(bool animate) { m_animate_on_hover = animate; }
 
 private:
     IconType m_type;
     ::acos::u32 m_color;
     bool m_active;
+    bool m_animate_on_hover;
+    float m_scale;
     void (*m_on_click)(void*);
 };
 

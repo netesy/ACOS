@@ -23,9 +23,16 @@ struct Theme {
     u32 info;
     u32 shadow;
     u8 shadow_alpha;
+    u8 glass_alpha;
+    u8 hover_alpha;
+    u8 pressed_alpha;
+    u8 active_alpha;
     u32 window_radius;
     u32 widget_radius;
     u32 border_width;
+    u32 dock_radius;
+    u32 dock_elevation;
+    u32 window_elevation;
 };
 
 extern Theme g_current_theme;

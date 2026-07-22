@@ -29,9 +29,15 @@ RenderButton::RenderButton() : m_label(nullptr), m_pressed(false), m_hovered(fal
 void RenderButton::paint(::acos::graphics::Renderer* renderer) {
     if (!renderer) return;
     ::acos::u32 bg_color = m_style.background_color == 0 ? g_current_theme.widget_bg : m_style.background_color;
-    ::acos::u8 alpha = m_pressed ? 255 : (m_hovered ? 220 : 200);
+    ::acos::u8 alpha = m_pressed ? g_current_theme.pressed_alpha : (m_hovered ? g_current_theme.hover_alpha : g_current_theme.active_alpha);
+    
+    // Add shadow for depth
+    if (m_style.elevation > 0) {
+        renderer->draw_shadow(m_rect.x, m_rect.y + 2, m_rect.w, m_rect.h, m_style.elevation / 2, 80);
+    }
+    
     renderer->fill_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.border_radius, (bg_color & 0x00FFFFFF) | ((::acos::u32)alpha << 24));
-    renderer->draw_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.border_radius, m_style.border_color);
+    renderer->draw_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.border_radius, (g_current_theme.border & 0x00FFFFFF) | 0x88000000);
     if (m_label) {
         ::acos::u32 lw, lh;
         renderer->measure_text(m_label, lw, lh);
@@ -83,23 +89,37 @@ void RenderText::perform_layout(BoxConstraints constraints) {
 }
 void RenderText::set_text(const char* text) { m_text = text; }
 
-RenderIcon::RenderIcon() : m_type(IconType::Terminal), m_active(false), m_hovered(false) {}
+RenderIcon::RenderIcon() : m_type(IconType::Terminal), m_active(false), m_hovered(false), m_scale(1.0f) {}
 void RenderIcon::paint(::acos::graphics::Renderer* renderer) {
     if (!renderer) return;
 
+    // Calculate scaled dimensions
+    ::acos::i32 scaled_w = (::acos::i32)(m_rect.w * m_scale);
+    ::acos::i32 scaled_h = (::acos::i32)(m_rect.h * m_scale);
+    ::acos::i32 offset_x = (m_rect.w - scaled_w) / 2;
+    ::acos::i32 offset_y = (m_rect.h - scaled_h) / 2;
+
     // Optional background chip (hover / active state), drawn behind the bitmap.
     if (m_style.background_color != 0) {
-        renderer->fill_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.border_radius, m_style.background_color);
+        renderer->fill_rounded_rect(m_rect.x + offset_x, m_rect.y + offset_y, scaled_w, scaled_h, m_style.border_radius, m_style.background_color);
     } else if (m_hovered) {
-        renderer->fill_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, 10, g_current_theme.widget_bg_hover);
+        renderer->fill_rounded_rect(m_rect.x + offset_x, m_rect.y + offset_y, scaled_w, scaled_h, m_style.border_radius,
+                                     (g_current_theme.widget_bg_hover & 0x00FFFFFF) |
+                                     ((::acos::u32)g_current_theme.hover_alpha << 24));
+        renderer->draw_rounded_rect(m_rect.x + offset_x, m_rect.y + offset_y, scaled_w, scaled_h, m_style.border_radius,
+                                     (g_current_theme.border & 0x00FFFFFF) | 0x55000000);
     }
     if (m_active) {
-        renderer->fill_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, 10, 0x2200E5FF);
+        renderer->fill_rounded_rect(m_rect.x + offset_x, m_rect.y + offset_y, scaled_w, scaled_h, m_style.border_radius,
+                                     (g_current_theme.primary & 0x00FFFFFF) |
+                                     ((::acos::u32)g_current_theme.active_alpha << 24));
+        renderer->draw_rounded_rect(m_rect.x + offset_x, m_rect.y + offset_y, scaled_w, scaled_h, m_style.border_radius,
+                                     (g_current_theme.primary & 0x00FFFFFF) | 0xAA000000);
     }
 
     // Crisp, pre-rendered flat icon art, alpha-composited and scaled to fit.
     const unsigned char* bitmap = get_icon_bitmap(m_type);
-    renderer->draw_bitmap(m_rect.x, m_rect.y, m_rect.w, m_rect.h, bitmap, ICON_ASSET_SIZE, ICON_ASSET_SIZE);
+    renderer->draw_bitmap(m_rect.x + offset_x, m_rect.y + offset_y, scaled_w, scaled_h, bitmap, ICON_ASSET_SIZE, ICON_ASSET_SIZE);
 }
 void RenderIcon::perform_layout(BoxConstraints constraints) {
     Size size = constraints.constrain({32, 32});
@@ -109,6 +129,7 @@ void RenderIcon::perform_layout(BoxConstraints constraints) {
 void RenderIcon::set_type(IconType type) { m_type = type; }
 void RenderIcon::set_active(bool active) { m_active = active; }
 void RenderIcon::set_hovered(bool hovered) { m_hovered = hovered; }
+void RenderIcon::set_scale(float scale) { m_scale = scale; }
 
 RenderCheckBox::RenderCheckBox() : m_label(nullptr), m_checked(false) {}
 void RenderCheckBox::paint(::acos::graphics::Renderer* renderer) {
@@ -117,9 +138,9 @@ void RenderCheckBox::paint(::acos::graphics::Renderer* renderer) {
     ::acos::u32 by = m_rect.y + (m_rect.h - 16) / 2;
     ::acos::u32 box_size = 16;
     renderer->blend_rect(bx, by, box_size, box_size, m_style.background_color, 150);
-    renderer->draw_rect(bx, by, box_size, box_size, m_style.border_color);
+    renderer->draw_rounded_rect(bx, by, box_size, box_size, 4, m_style.border_color);
     if (m_checked) {
-        renderer->fill_rect(bx + 4, by + 4, box_size - 8, box_size - 8, g_current_theme.primary);
+        renderer->fill_rounded_rect(bx + 4, by + 4, box_size - 8, box_size - 8, 2, g_current_theme.primary);
     }
     if (m_label) {
         renderer->draw_text(m_label, bx + box_size + 8, m_rect.y + (m_rect.h - 16) / 2, m_style.foreground_color);
@@ -139,7 +160,7 @@ void RenderSlider::paint(::acos::graphics::Renderer* renderer) {
     if (!renderer) return;
     ::acos::u32 track_h = 4;
     ::acos::u32 track_y = m_rect.y + (m_rect.h - track_h) / 2;
-    renderer->blend_rect(m_rect.x, track_y, m_rect.w, track_h, m_style.background_color, 150);
+    renderer->fill_rounded_rect(m_rect.x, track_y, m_rect.w, track_h, 2, (m_style.background_color & 0x00FFFFFF) | 0x96000000);
     ::acos::u32 handle_x = m_rect.x + (::acos::u32)((m_value - m_min) / (m_max - m_min) * (m_rect.w - 12));
     renderer->fill_rounded_rect(handle_x, m_rect.y + (m_rect.h - 12) / 2, 12, 12, 6, g_current_theme.primary);
 }
@@ -156,7 +177,10 @@ void RenderSwitch::paint(::acos::graphics::Renderer* renderer) {
     if (!renderer) return;
     ::acos::u32 sw = 40, sh = 20;
     ::acos::u32 sx = m_rect.x, sy = m_rect.y + (m_rect.h - sh) / 2;
+    // Add subtle shadow
+    renderer->draw_shadow(sx, sy + 2, sw, sh, 2, 50);
     renderer->fill_rounded_rect(sx, sy, sw, sh, 10, m_on ? g_current_theme.primary : 0xFF444444);
+    renderer->draw_rounded_rect(sx, sy, sw, sh, 10, (g_current_theme.border & 0x00FFFFFF) | 0x55000000);
     ::acos::u32 tx = m_on ? sx + sw - 18 : sx + 2;
     renderer->fill_circle(tx + 8, sy + 10, 8, 0xFFFFFFFF);
 }
@@ -172,7 +196,7 @@ RenderRadioButton::RenderRadioButton() : m_label(nullptr), m_selected(false) {}
 void RenderRadioButton::paint(::acos::graphics::Renderer* renderer) {
     if (!renderer) return;
     ::acos::u32 radius = 8;
-    renderer->blend_rect(m_rect.x, m_rect.y, radius*2, radius*2, m_style.background_color, 150);
+    renderer->blend_circle(m_rect.x + radius, m_rect.y + radius, radius, m_style.background_color, 150);
     renderer->draw_circle(m_rect.x + radius, m_rect.y + radius, radius, m_style.border_color);
     if (m_selected) {
         renderer->fill_circle(m_rect.x + radius, m_rect.y + radius, radius - 4, g_current_theme.primary);
@@ -192,10 +216,10 @@ void RenderRadioButton::set_selected(bool selected) { m_selected = selected; }
 RenderProgressBar::RenderProgressBar() : m_value(0), m_min(0), m_max(100) {}
 void RenderProgressBar::paint(::acos::graphics::Renderer* renderer) {
     if (!renderer) return;
-    renderer->fill_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, 0xFF333333);
+    renderer->fill_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, 4, 0xFF333333);
     float progress = (m_value - m_min) / (m_max - m_min);
     ::acos::u32 pw = (::acos::u32)(progress * m_rect.w);
-    renderer->fill_rect(m_rect.x, m_rect.y, pw, m_rect.h, g_current_theme.primary);
+    renderer->fill_rounded_rect(m_rect.x, m_rect.y, pw, m_rect.h, 4, g_current_theme.primary);
 }
 void RenderProgressBar::perform_layout(BoxConstraints constraints) {
     Size size = constraints.constrain({200, 8});
@@ -208,16 +232,35 @@ void RenderProgressBar::set_range(float min, float max) { m_min = min; m_max = m
 RenderPanel::RenderPanel() : m_is_glass(false) {}
 void RenderPanel::paint(::acos::graphics::Renderer* renderer) {
     if (!renderer) return;
+
+    // Theme-driven depth: build a soft, layered shadow from the existing theme
+    // shadow color. This keeps elevation consistent across the desktop shell
+    // without introducing a new color palette.
+    if (m_style.elevation > 0) {
+        const ::acos::u32 depth = m_style.elevation > 10 ? 10 : m_style.elevation;
+        for (::acos::u32 i = depth; i > 0; --i) {
+            ::acos::u8 a = (::acos::u8)(g_current_theme.shadow_alpha / (depth + 1));
+            if (a < 4) a = 4;
+            ::acos::u32 expand = i / 2 + 1;
+            renderer->fill_rounded_rect(
+                m_rect.x - (i / 2), m_rect.y + i,
+                m_rect.w + i, m_rect.h + i / 2,
+                m_style.border_radius + expand,
+                (g_current_theme.shadow & 0x00FFFFFF) | ((::acos::u32)a << 24));
+        }
+    }
+
     if (m_is_glass) {
         // Frosted-glass: blur whatever's already drawn behind us (wallpaper,
         // windows, etc.) and tint it, clipped to our rounded-rect shape.
         ::acos::u32 tint = m_style.background_color != 0 ? m_style.background_color : g_current_theme.glass_bg;
         ::acos::u8 alpha = (::acos::u8)((tint >> 24) & 0xFF);
-        if (alpha == 0) alpha = 0x99;
+        if (alpha == 0) alpha = g_current_theme.glass_alpha;
         renderer->blend_glass_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.border_radius, tint, alpha);
         // Subtle top-edge highlight and hairline rim so the glass reads as a
         // distinct surface rather than a flat tinted rectangle.
-        renderer->draw_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.border_radius, 0x33FFFFFF);
+        renderer->draw_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.border_radius,
+                                     (g_current_theme.border & 0x00FFFFFF) | (0x55u << 24));
     } else if (m_style.background_color != 0) {
         renderer->fill_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, m_style.border_radius, m_style.background_color);
     }
@@ -315,7 +358,8 @@ void RenderTextArea::set_cursor(::acos::u32 pos, bool visible) { m_cursor_pos = 
 RenderTextBox::RenderTextBox() : m_text(nullptr), m_placeholder(nullptr), m_cursor(0), m_cursor_visible(false) {}
 void RenderTextBox::paint(::acos::graphics::Renderer* renderer) {
     if (!renderer) return;
-    renderer->fill_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, 0xFF222222);
+    renderer->fill_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, 6, 0xFF222222);
+    renderer->draw_rounded_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, 6, (g_current_theme.border & 0x00FFFFFF) | 0x88000000);
     if (m_text) renderer->draw_text(m_text, m_rect.x + 4, m_rect.y + 4, 0xFFFFFFFF);
     (void)m_placeholder;
     (void)m_cursor;

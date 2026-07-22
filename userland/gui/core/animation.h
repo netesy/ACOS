@@ -12,6 +12,21 @@ public:
     virtual bool is_finished() const = 0;
 };
 
+class ScaleAnimation : public Animation {
+public:
+    ScaleAnimation(float target_scale, ::acos::u64 duration_ms);
+    void tick(::acos::u64 delta_ms) override;
+    bool is_finished() const override;
+    float current_scale() const { return m_current_scale; }
+
+private:
+    float m_start_scale;
+    float m_target_scale;
+    float m_current_scale;
+    ::acos::u64 m_duration_ms;
+    ::acos::u64 m_elapsed_ms;
+};
+
 class AnimationController {
 public:
     void tick(::acos::u64 delta_ms);
