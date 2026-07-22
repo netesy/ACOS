@@ -45,6 +45,8 @@ public:
     u32 char_size() const { return m_charsize; }
     bool is_ttf() const { return m_is_ttf; }
 
+    u32 get_char_width(char c) const;
+
     const u8* get_glyph(char c) const;
 
     // For TrueType fonts only: raw 0-255 stb_truetype coverage values,
@@ -64,6 +66,7 @@ private:
     // One 0-255 coverage byte per pixel, per glyph, in an 8x16 cell.
     // Real grayscale coverage (not thresholded) so text can be antialiased.
     u8* m_glyph_alpha;
+    u8 m_glyph_widths[256];
 };
 
 } // namespace acos::graphics

@@ -47,6 +47,8 @@ public:
     u32 char_size() const { return m_charsize; }
     bool is_ttf() const { return m_is_ttf; }
 
+    u32 get_char_width(char c) const;
+
     void measure_char(char c, u32& w, u32& h) const;
     void measure_string(const char* str, u32& w, u32& h, i32 spacing = 0) const;
 
@@ -80,6 +82,7 @@ private:
     // (not thresholded) so text can be antialiased when drawn.
     // Dynamically allocated to prevent kernel stack overflows (32KiB).
     u8* m_glyph_alpha;
+    u8 m_glyph_widths[256];
 };
 
 } // namespace acos::graphics

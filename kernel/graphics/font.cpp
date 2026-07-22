@@ -87,6 +87,9 @@ Font* Font::s_default_font = nullptr;
 Font::Font(const u8* data, usize size)
     : m_valid(false), m_width(0), m_height(0), m_charsize(0), m_headersize(0), m_data(data), m_data_size(size), m_is_psf2(false), m_is_ttf(false), m_glyph_alpha(nullptr)
 {
+    for (int i = 0; i < 256; i++) {
+        m_glyph_widths[i] = 8;
+    }
     if (!data || size < 4) return;
 
     // Check PSF1 magic: 0x36 0x04
@@ -97,6 +100,9 @@ Font::Font(const u8* data, usize size)
         m_charsize = data[3];
         m_headersize = 4;
         m_valid = true;
+        for (int i = 0; i < 256; i++) {
+            m_glyph_widths[i] = m_width;
+        }
         return;
     }
 
@@ -109,6 +115,9 @@ Font::Font(const u8* data, usize size)
         m_charsize = psf2->charsize;
         m_headersize = psf2->headersize;
         m_valid = true;
+        for (int i = 0; i < 256; i++) {
+            m_glyph_widths[i] = m_width;
+        }
         return;
     }
 
@@ -116,14 +125,18 @@ Font::Font(const u8* data, usize size)
     if ((data[0] == 0x00 && data[1] == 0x01 && data[2] == 0x00 && data[3] == 0x00) ||
         (data[0] == 'O' && data[1] == 'T' && data[2] == 'T' && data[3] == 'O')) {
         m_is_ttf = true;
-        m_width = 8;
+        m_width = 12; // cell width 12 to support proportional widths up to 12px
         m_height = 16;
         m_charsize = 16;
         m_headersize = 0;
 
-        m_glyph_alpha = static_cast<u8*>(acos::memory::kmalloc(256 * 8 * 16));
+        for (int i = 0; i < 256; i++) {
+            m_glyph_widths[i] = 8; // fallback default
+        }
+
+        m_glyph_alpha = static_cast<u8*>(acos::memory::kmalloc(256 * 12 * 16));
         if (m_glyph_alpha) {
-            for (int i = 0; i < 256 * 8 * 16; i++) {
+            for (int i = 0; i < 256 * 12 * 16; i++) {
                 m_glyph_alpha[i] = 0;
             }
 
@@ -140,26 +153,42 @@ Font::Font(const u8* data, usize size)
                     stbtt_GetCodepointBitmapBox(&font_info, c, scale, scale, &x1, &y1, &x2, &y2);
                     int gw = x2 - x1;
                     int gh = y2 - y1;
+
+                    // Parse proportional horizontal advance width
+                    int advance_width, left_side_bearing;
+                    stbtt_GetCodepointHMetrics(&font_info, c, &advance_width, &left_side_bearing);
+                    int char_w = (int)(advance_width * scale + 0.5f);
+                    if (char_w <= 0) {
+                        char_w = gw > 0 ? gw + 2 : 8;
+                    }
+                    if (char_w > 12) char_w = 12;
+                    m_glyph_widths[c] = char_w;
+
                     if (gw > 0 && gh > 0 && (gw * gh <= 1024)) {
                         u8 glyph_pixels[1024] = {0};
                         stbtt_MakeCodepointBitmap(&font_info, glyph_pixels, gw, gh, gw, scale, scale, c);
 
                         int baseline = scaled_ascent;
                         int start_y = baseline + y1;
-                        int start_x = (8 - gw) / 2;
+
+                        // Left-align with exact typographical Left Side Bearing alignment,
+                        // keeping the glyph neatly aligned inside its proportional cell width.
+                        int start_x = (int)(left_side_bearing * scale + 0.5f);
+                        if (start_x < 0) start_x = 0;
+                        if (start_x + gw > 12) start_x = 12 - gw;
                         if (start_x < 0) start_x = 0;
 
-                        u8* cell = m_glyph_alpha + (c * 8 * 16);
+                        u8* cell = m_glyph_alpha + (c * 12 * 16);
                         for (int gy = 0; gy < gh; gy++) {
                             int py = start_y + gy;
                             if (py < 0 || py >= 16) continue;
                             for (int gx = 0; gx < gw; gx++) {
                                 int px = start_x + gx;
-                                if (px < 0 || px >= 8) continue;
+                                if (px < 0 || px >= 12) continue;
                                 // Keep the raw stb_truetype coverage value (0-255)
                                 // instead of thresholding it to on/off. This is
                                 // what makes antialiased edges possible.
-                                cell[py * 8 + px] = glyph_pixels[gy * gw + gx];
+                                cell[py * 12 + px] = glyph_pixels[gy * gw + gx];
                             }
                         }
                     }
@@ -184,7 +213,12 @@ const u8* Font::get_glyph(char c) const {
 const u8* Font::get_glyph_alpha(char c) const {
     if (!m_valid || !m_is_ttf || !m_glyph_alpha) return nullptr;
     u32 index = static_cast<u8>(c);
-    return m_glyph_alpha + (index * 8 * 16);
+    return m_glyph_alpha + (index * m_width * m_height);
+}
+
+u32 Font::get_char_width(char c) const {
+    if (!m_valid) return 8;
+    return m_glyph_widths[static_cast<u8>(c)];
 }
 
 void Font::measure_char([[maybe_unused]] char c, u32& w, u32& h) const {

@@ -275,7 +275,7 @@ void Renderer::draw_text(const char* text, u32 x, u32 y, u32 color) {
                 }
             }
         }
-        cur_x += font->width();
+        cur_x += font->get_char_width(c);
     }
 }
 
@@ -299,7 +299,7 @@ void Renderer::measure_text(const char* text, u32& w, u32& h) {
             h += font->height();
             continue;
         }
-        cur_w += font->width();
+        cur_w += font->get_char_width(c);
     }
     if (cur_w > max_w) max_w = cur_w;
     w = max_w;

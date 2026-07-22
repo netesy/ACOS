@@ -1,11 +1,13 @@
 #include <acos/font_manager.h>
 #include "spleen_font_data.h"
 #include "inter_data.h"
+#include <kernel/graphics/jetbrains_mono_data.h>
 
 namespace acos::graphics {
 
 Font FontManager::m_console_font;
 Font FontManager::m_ui_font;
+Font FontManager::m_mono_font;
 
 bool FontManager::initialize() {
     m_console_font = Font(acos::Span<const u8>(fonts_spleen_8x16_psf, fonts_spleen_8x16_psf_len));
@@ -13,12 +15,19 @@ bool FontManager::initialize() {
     if (!m_ui_font.is_valid()) {
         m_ui_font = m_console_font;
     }
+    m_mono_font = Font(acos::Span<const u8>(jetbrains_mono_ttf, jetbrains_mono_ttf_len));
+    if (!m_mono_font.is_valid()) {
+        m_mono_font = m_console_font;
+    }
     return m_console_font.is_valid();
 }
 
 Font* FontManager::get_font(FontID id) {
     if (id == FontID::UIDefault) {
         return &m_ui_font;
+    }
+    if (id == FontID::UIMonospace) {
+        return &m_mono_font;
     }
     return &m_console_font;
 }

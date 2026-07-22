@@ -182,13 +182,18 @@ void Renderer::draw_text(const char* text, u32 x, u32 y, u32 color, Font::Alignm
             line_end++;
         }
 
-        u32 total_w = line_len * (char_w + spacing);
+        u32 total_w = 0;
+        for (u32 i = 0; i < line_len; i++) {
+            total_w += font ? font->get_char_width(line_start[i]) + spacing : char_w + spacing;
+        }
         u32 start_x = x;
         if (align == Font::Alignment::Center) start_x = x - total_w / 2;
         else if (align == Font::Alignment::Right) start_x = x - total_w;
 
+        u32 cur_x = start_x;
         for (u32 i = 0; i < line_len; i++) {
-            draw_char(line_start[i], start_x + i * (char_w + spacing), cur_y, color, style);
+            draw_char(line_start[i], cur_x, cur_y, color, style);
+            cur_x += font ? font->get_char_width(line_start[i]) + spacing : char_w + spacing;
         }
 
         cur_y += char_h;
