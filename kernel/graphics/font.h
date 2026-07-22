@@ -37,7 +37,7 @@ public:
         Right
     };
 
-    Font() : m_valid(false), m_width(0), m_height(0), m_charsize(0), m_headersize(0), m_data(nullptr), m_data_size(0), m_is_psf2(false) {}
+    Font() : m_valid(false), m_width(0), m_height(0), m_charsize(0), m_headersize(0), m_data(nullptr), m_data_size(0), m_is_psf2(false), m_is_ttf(false), m_glyph_alpha(nullptr) {}
     Font(const u8* data, usize size);
     Font(acos::Span<const u8> data) : Font(data.data(), data.size()) {}
 
@@ -78,7 +78,8 @@ private:
     // One 0-255 coverage byte per pixel, per glyph, in an 8x16 cell
     // (256 glyphs * 8 wide * 16 tall). Kept as real grayscale coverage
     // (not thresholded) so text can be antialiased when drawn.
-    u8 m_glyph_alpha[256 * 8 * 16];
+    // Dynamically allocated to prevent kernel stack overflows (32KiB).
+    u8* m_glyph_alpha;
 };
 
 } // namespace acos::graphics
