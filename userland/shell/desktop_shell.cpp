@@ -425,8 +425,18 @@ void DesktopShell::run_loop() {
 void DesktopShell::draw(::acos::graphics::Renderer* renderer) {
     if (!renderer) return;
     
-    // Clear framebuffer to remove any kernel console output
-    renderer->fill_rect(0, 0, renderer->width(), renderer->height(), 0xFF1A1A1A);
+    // Clear framebuffer by drawing a gorgeous synthetic dusk-indigo wallpaper gradient
+    for (u32 y = 0; y < renderer->height(); y++) {
+        u8 r = static_cast<u8>(26 + (y * 54 / renderer->height()));   // 26 to 80
+        u8 g = static_cast<u8>(26 + (y * 14 / renderer->height()));   // 26 to 40
+        u8 b = static_cast<u8>(58 + (y * 42 / renderer->height()));   // 58 to 100
+        u32 color = (0xFF << 24) | (r << 16) | (g << 8) | b;
+        renderer->fill_rect(0, y, renderer->width(), 1, color);
+    }
+
+    // Draw stylized geometric abstract wallpaper shapes
+    renderer->fill_circle(1000, 200, 150, 0x11FF00AA); // Semi-transparent abstract pink circle
+    renderer->fill_circle(200, 600, 250, 0x1100AAFF);  // Semi-transparent abstract cyan circle
     
     m_ui_context.paint(renderer);
 
