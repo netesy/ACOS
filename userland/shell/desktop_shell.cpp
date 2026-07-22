@@ -85,11 +85,27 @@ void DesktopShell::initialize() {
     // Initialize userland Font Manager
     acos::graphics::FontManager::initialize();
 
+    // Get screen dimensions
+    acos::graphics::FramebufferInfo fb_info;
+    if (!acos::graphics::get_framebuffer_info(&fb_info)) {
+        acos::process::log("Desktop Shell Error: Failed to get framebuffer info\n");
+        return;
+    }
+    i32 screen_width = fb_info.width;
+    i32 screen_height = fb_info.height;
+
     // ROOT: Full-screen stack — normal flow children + fixed-position overlays
     auto root = Column().spacing(0);
     m_root_panel = root;
 
-    // ========== TOP BAR — fixed to top, full width, 48px ==========
+    // ========== DESKTOP AREA — fills remaining space ==========
+    auto desktop = Panel()
+        .background(0)           // transparent — shows console clear color behind
+        .flex_grow(1)
+        .padding(0, 0, 0, 32);    // Add left padding to desktop area
+    root->add_child(desktop);
+
+    // ========== TOP BAR — independent fixed-position overlay at top ==========
     auto top_bar = Panel()
         .glass(true)
         .background(gui::g_current_theme.glass_bg)
@@ -97,7 +113,7 @@ void DesktopShell::initialize() {
         .radius(gui::g_current_theme.window_radius)
         .elevation(4)
         .padding(0, 24, 0, 24)
-        .preferred_height(56)
+        .preferred_size(screen_width, 56)
         .fixed(0, 0, -1, 0);      // top=0, right=0, bottom=unset, left=0
 
     auto top_content = Row()
@@ -155,15 +171,14 @@ void DesktopShell::initialize() {
     top_bar->add_child(top_content);
     root->add_child(top_bar);
 
-    // ========== DESKTOP AREA — fills remaining space ==========
-    auto desktop = Panel()
-        .background(0)           // transparent — shows console clear color behind
-        .flex_grow(1)
-        .padding(0, 0, 0, 32);    // Add left padding to desktop area
-    root->add_child(desktop);
+    // ========== BOTTOM DOCK — independent fixed-position overlay at bottom ==========
+    // Calculate dock dimensions: 5 icons (52px each) + 4 spacing (12px each) + 1 divider (2px) + padding (48px)
+    // Total width = 5*52 + 4*12 + 2 + 48 = 260 + 48 + 2 + 48 = 358px
+    i32 dock_width = 358;
+    i32 dock_height = 76;
+    i32 dock_x = (screen_width - dock_width) / 2;
+    i32 dock_y = screen_height - dock_height - 16;  // 16px margin from bottom
 
-    // ========== BOTTOM TASKBAR — fixed to bottom, full width ==========
-    // The taskbar spans the full width of the screen
     auto dock_container = Panel()
         .glass(true)
         .radius(gui::g_current_theme.dock_radius)
@@ -171,8 +186,8 @@ void DesktopShell::initialize() {
         .border((gui::g_current_theme.border & 0x00FFFFFF) | (0x66u << 24), 1)
         .elevation(gui::g_current_theme.dock_elevation)
         .padding(10, 24, 10, 24)
-        .preferred_height(76)
-        .fixed(-1, 0, 16, 0);  // bottom=16, right=0, left=0 for full width
+        .preferred_size(dock_width, dock_height)
+        .fixed(dock_y, -1, -1, dock_x);  // top=dock_y, right=-1, bottom=-1, left=dock_x
 
     auto taskbar = UIContext::get().region().alloc<Taskbar>();
     dock_container->add_child(taskbar);
