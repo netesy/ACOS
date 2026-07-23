@@ -190,6 +190,42 @@ void DesktopShell::initialize() {
 
 void DesktopShell::run() {}
 
+struct DirtyRect {
+    i32 x, y, w, h;
+    bool empty;
+
+    void reset() {
+        x = y = w = h = 0;
+        empty = true;
+    }
+
+    void add(i32 rx, i32 ry, i32 rw, i32 rh) {
+        if (rw <= 0 || rh <= 0) return;
+        if (empty) {
+            x = rx;
+            y = ry;
+            w = rw;
+            h = rh;
+            empty = false;
+        } else {
+            i32 x1 = x;
+            i32 y1 = y;
+            i32 x2 = x + w;
+            i32 y2 = y + h;
+
+            i32 nx1 = rx < x1 ? rx : x1;
+            i32 ny1 = ry < y1 ? ry : y1;
+            i32 nx2 = rx + rw > x2 ? rx + rw : x2;
+            i32 ny2 = ry + rh > y2 ? ry + rh : y2;
+
+            x = nx1;
+            y = ny1;
+            w = nx2 - nx1;
+            h = ny2 - ny1;
+        }
+    }
+};
+
 // Threaded event loop: runs on the desktop shell thread.
 // Updates the Clock in real-time and yields CPU time gracefully.
 void DesktopShell::run_loop() {
@@ -208,8 +244,15 @@ void DesktopShell::run_loop() {
         return;
     }
 
-    acos::graphics::Framebuffer fb(reinterpret_cast<u64>(fb_ptr), fb_info.size, fb_info.width, fb_info.height, fb_info.pitch, fb_info.bpp);
-    acos::graphics::Renderer renderer(&fb);
+    // Allocate back buffer memory once
+    void* back_buffer = acos::memory::malloc(fb_info.width * fb_info.height * sizeof(u32));
+    if (!back_buffer) {
+        acos::process::log("Desktop Shell Error: Failed to allocate back buffer\n");
+        return;
+    }
+
+    acos::graphics::Framebuffer back_fb(reinterpret_cast<u64>(back_buffer), fb_info.width * fb_info.height * sizeof(u32), fb_info.width, fb_info.height, fb_info.width * sizeof(u32), fb_info.bpp);
+    acos::graphics::Renderer back_renderer(&back_fb);
 
     // 2. Create Input Queue
     u64 queue_handle = acos::input::create_queue();
@@ -218,11 +261,18 @@ void DesktopShell::run_loop() {
         return;
     }
 
-    // Draw the initial state of the desktop
-    draw(&renderer);
+    DirtyRect dirty;
+    dirty.reset();
+
+    // Draw the initial state of the desktop on the back buffer, then copy to front buffer
+    draw(&back_renderer);
+    for (u32 y = 0; y < fb_info.height; y++) {
+        ::memcpy(static_cast<u8*>(fb_ptr) + y * fb_info.pitch, static_cast<u8*>(back_buffer) + y * fb_info.width * sizeof(u32), fb_info.width * sizeof(u32));
+    }
 
     while (true) {
         bool needs_draw = false;
+        dirty.reset();
 
         // Update clock / telemetry once per second
         // DISABLED: Full screen redraw on clock update causes flickering
@@ -258,8 +308,14 @@ void DesktopShell::run_loop() {
                 
                 // Redraw if mouse position changed or button state changed
                 if (new_mouse_x != m_mouse_x || new_mouse_y != m_mouse_y || was_pressed != m_mouse_pressed) {
+                    // Mark old mouse cursor bounds as dirty (16x24 is cursor size)
+                    dirty.add(m_mouse_x - 2, m_mouse_y - 2, 16, 24);
+
                     m_mouse_x = new_mouse_x;
                     m_mouse_y = new_mouse_y;
+
+                    // Mark new mouse cursor bounds as dirty
+                    dirty.add(m_mouse_x - 2, m_mouse_y - 2, 16, 24);
                     needs_draw = true;
                 }
             }
@@ -269,13 +325,34 @@ void DesktopShell::run_loop() {
             
             // Check if any widget became paint dirty from the event
             if (m_root_panel && m_root_panel->is_paint_dirty()) {
+                dirty.add(0, 0, fb_info.width, fb_info.height);
                 needs_draw = true;
             }
         }
 
         // Repaint the desktop if needed
-        if (needs_draw) {
-            draw(&renderer);
+        if (needs_draw && !dirty.empty) {
+            draw(&back_renderer);
+
+            // Clip dirty rectangle to screen bounds
+            i32 dx = dirty.x;
+            i32 dy = dirty.y;
+            i32 dw = dirty.w;
+            i32 dh = dirty.h;
+
+            if (dx < 0) { dw += dx; dx = 0; }
+            if (dy < 0) { dh += dy; dy = 0; }
+            if (dx + dw > (i32)fb_info.width) { dw = (i32)fb_info.width - dx; }
+            if (dy + dh > (i32)fb_info.height) { dh = (i32)fb_info.height - dy; }
+
+            if (dw > 0 && dh > 0) {
+                // Copy only the dirty region scanline-by-scanline to front buffer!
+                for (i32 y = dy; y < dy + dh; y++) {
+                    u8* dest_line = static_cast<u8*>(fb_ptr) + y * fb_info.pitch + dx * sizeof(u32);
+                    u8* src_line = static_cast<u8*>(back_buffer) + y * fb_info.width * sizeof(u32) + dx * sizeof(u32);
+                    ::memcpy(dest_line, src_line, dw * sizeof(u32));
+                }
+            }
         }
 
         // Sleep for 10ms to keep CPU load low

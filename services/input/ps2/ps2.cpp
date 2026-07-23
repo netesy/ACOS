@@ -132,6 +132,7 @@ void PS2Controller::init() {
     write_command(0x20); // Read config
     u8 config = read_data();
     config |= 3; // Enable interrupts for both
+    config &= ~(1 << 5); // Ensure bit 5 (disable second/auxiliary PS/2 port clock) is cleared to enable mouse clock!
     write_command(0x60); // Write config
     write_data(config);
 
@@ -266,6 +267,16 @@ void PS2Controller::handle_keyboard_interrupt() {
 void PS2Controller::handle_mouse_interrupt() {
 #ifdef _KERNEL
     acos::u8 data = inb(PS2_DATA);
+
+    // Packet alignment synchronization check:
+    // The first byte of a PS/2 mouse packet should always have bit 3 (0x08) set.
+    // If we expect the first byte (g_mouse_cycle == 0) and bit 3 is not set, we are out of sync.
+    if (g_mouse_cycle == 0 && (data & 0x08) == 0) {
+        // Discard the byte and keep g_mouse_cycle at 0 to find the next aligned first byte.
+        acos::arch::x86_64::LocalApic::eoi();
+        return;
+    }
+
     g_mouse_packet[g_mouse_cycle++] = data;
     if (g_mouse_cycle == 3) {
         g_mouse_cycle = 0;
