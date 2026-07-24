@@ -85,9 +85,11 @@ The ASADE UEFI bootloader is a pure freestanding 64-bit UEFI application (`acos_
 ## 5. Memory Management
 
 ### Physical Memory Manager (PMM)
-The PMM (`kernel/memory/pmm.cpp`) uses a simple bitmap allocator.
-- **Strengths**: Successfully protects kernel pages (starting at 1MB to `_kernel_end`), protects Page 0 (as a Null pointer guard), and protects the bitmap itself.
-- **Limitation**: `pmm_alloc()` performs a linear search from page 1 to `g_total_pages`. On systems with 32GB+ RAM, this O(N) allocation latency in hotpaths introduces massive lag.
+The PMM (`kernel/memory/pmm.cpp`) implements a highly optimized **constant-time O(1) Free-List Page Frame Allocator** combined with a bitmap for contiguous allocations.
+- **Strengths**:
+  - **O(1) Constant-Time Allocations**: `pmm_alloc` and `pmm_free` operate in O(1) time by popping/pushing from a physical page-frame free list, completely eliminating linear scanning overhead.
+  - **Memory Protection**: Successfully protects kernel pages (starting at 1MB to `_kernel_end`), protects Page 0 (as a Null pointer guard), and protects the bitmap itself.
+  - **Zero Overhead**: Stores the linked list pointers directly inside the unused free page frames, requiring zero additional memory allocation.
 
 ### Virtual Memory Manager (VMM)
 The VMM (`kernel/memory/vmm.cpp`) maps page directories (PML4, PDPT, PD, PT) into a 4-level paging structure.

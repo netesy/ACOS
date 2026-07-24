@@ -13,6 +13,8 @@ static u64 g_total_pages = 0;
 static u64 g_used_pages = 0;
 static u64 g_bitmap_size = 0;
 
+// O(1) Free-List Page Frame Allocator Head Pointer (Physical Address)
+static u64 g_free_list_head = 0;
 
 // Accessors for global functions
 u64 get_total_pages() { return g_total_pages; }
@@ -32,6 +34,19 @@ static inline bool bitmap_test(u64 page) {
 
 static u64 align_up(u64 value, u64 alignment) {
     return (value + alignment - 1) & ~(alignment - 1);
+}
+
+// Rebuild the O(1) free list from the bitmap status
+static void pmm_rebuild_free_list() {
+    g_free_list_head = 0;
+    // Walk from end to start to maintain ascending address order
+    for (u64 i = g_total_pages - 1; i >= 1; --i) {
+        if (!bitmap_test(i)) {
+            u64 addr = i * 4096;
+            *reinterpret_cast<u64*>(addr) = g_free_list_head;
+            g_free_list_head = addr;
+        }
+    }
 }
 
 void pmm_init(BootInfo* bootInfo) {
@@ -103,26 +118,38 @@ void pmm_init(BootInfo* bootInfo) {
     bitmap_set(0);
 
     // Mark kernel image pages as used.
-    // Without this, pmm_alloc can return pages overlapping the running
-    // kernel. Writing to those pages (e.g., thread stack frames) silently
-    // corrupts kernel code/data, causing triple faults and reboots.
     u64 kernel_start = 0x100000; // linker.ld loads kernel at 1 MB
     for (u64 addr = kernel_start; addr < kernel_end_addr; addr += PAGE_SIZE) {
         bitmap_set(addr / PAGE_SIZE);
     }
 
-    acos::hal::serial_print("[PMM] Initialized. Kernel image protected.\n");
+    // Build the initial constant-time O(1) page frame free list
+    pmm_rebuild_free_list();
+
+    acos::hal::serial_print("[PMM] Initialized. Kernel image protected. O(1) Free List enabled.\n");
 }
 
 u64 pmm_alloc() {
     if (!g_bitmap) return 0;
-    for (u64 i = 1; i < g_total_pages; ++i) {
-        if (!bitmap_test(i)) {
-            bitmap_set(i);
-            g_used_pages++;
-            return i * 4096;
+
+    // Allocate from the fast constant-time O(1) free list
+    if (g_free_list_head != 0) {
+        u64 allocated_addr = g_free_list_head;
+        g_free_list_head = *reinterpret_cast<u64*>(allocated_addr);
+
+        u64 page = allocated_addr / 4096;
+        bitmap_set(page);
+        g_used_pages++;
+
+        // Clear the page contents for security and safety
+        for (usize i = 0; i < 4096 / sizeof(u64); i++) {
+            reinterpret_cast<u64*>(allocated_addr)[i] = 0;
         }
+
+        return allocated_addr;
     }
+
+    // Out of memory
     return 0;
 }
 
@@ -147,17 +174,24 @@ u64 pmm_alloc_contiguous(u64 page_count) {
             bitmap_set(start + offset);
         }
         g_used_pages += page_count;
+
+        // Synchronize our O(1) free list
+        pmm_rebuild_free_list();
+
         return start * 4096;
     }
     return 0;
 }
-
 
 void pmm_free(u64 addr) {
     u64 page = addr / 4096;
     if (bitmap_test(page)) {
         bitmap_clear(page);
         g_used_pages--;
+
+        // Push the page back onto the fast constant-time O(1) free list
+        *reinterpret_cast<u64*>(addr) = g_free_list_head;
+        g_free_list_head = addr;
     }
 }
 
