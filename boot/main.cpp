@@ -222,6 +222,17 @@ bool valid_load_segment(const Elf64_Phdr& phdr) {
     return true;
 }
 
+constexpr efi::Guid ACPI_20_TABLE_GUID = {0x8868e271, 0xf4e1, 0x11d2, {0xbc, 0x78, 0x00, 0xc0, 0x4f, 0x38, 0x85, 0xf7}};
+constexpr efi::Guid ACPI_10_TABLE_GUID = {0xeb9d2d30, 0x2d88, 0x11d3, {0x9a, 0x16, 0x00, 0x90, 0x27, 0x3f, 0xc1, 0x4d}};
+
+bool guid_equals(const efi::Guid& g1, const efi::Guid& g2) {
+    if (g1.data1 != g2.data1 || g1.data2 != g2.data2 || g1.data3 != g2.data3) return false;
+    for (int i = 0; i < 8; i++) {
+        if (g1.data4[i] != g2.data4[i]) return false;
+    }
+    return true;
+}
+
 } // namespace
 
 extern "C" efi::Status efi_main(efi::Handle imageHandle, efi::SystemTable* systemTable) {
@@ -328,6 +339,30 @@ extern "C" efi::Status efi_main(efi::Handle imageHandle, efi::SystemTable* syste
         }
     }
 
+    struct EfiConfigurationTable {
+        efi::Guid vendorGuid;
+        void* vendorTable;
+    };
+
+    void* rsdp_addr = nullptr;
+    EfiConfigurationTable* configTable = reinterpret_cast<EfiConfigurationTable*>(systemTable->configurationTable);
+    for (acos::usize i = 0; i < systemTable->numberOfTableEntries; ++i) {
+        if (guid_equals(configTable[i].vendorGuid, ACPI_20_TABLE_GUID)) {
+            rsdp_addr = configTable[i].vendorTable;
+            serial_print("[BOOT] Found ACPI 2.0 RSDP\n");
+            break;
+        }
+    }
+    if (!rsdp_addr) {
+        for (acos::usize i = 0; i < systemTable->numberOfTableEntries; ++i) {
+            if (guid_equals(configTable[i].vendorGuid, ACPI_10_TABLE_GUID)) {
+                rsdp_addr = configTable[i].vendorTable;
+                serial_print("[BOOT] Found ACPI 1.0 RSDP\n");
+                break;
+            }
+        }
+    }
+
     static acos::BootInfo bootInfo;
     static acos::FramebufferInfo fbInfo;
     static acos::MemoryMap memoryMap;
@@ -335,7 +370,7 @@ extern "C" efi::Status efi_main(efi::Handle imageHandle, efi::SystemTable* syste
     bootInfo.memoryMap = nullptr;
     bootInfo.cpuInfo = nullptr;
     bootInfo.framebuffer = nullptr;
-    bootInfo.acpi = nullptr;
+    bootInfo.acpi = reinterpret_cast<acos::AcpiInfo*>(rsdp_addr);
     bootInfo.initrd = nullptr;
     bootInfo.bootTime = 0;
     fbInfo.base = 0;

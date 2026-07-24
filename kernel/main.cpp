@@ -27,6 +27,7 @@
 #include <kernel/hal/gdt.h>
 #include <kernel/arch/x86_64/smp/lapic.h>
 #include <kernel/arch/x86_64/smp/ioapic.h>
+#include <kernel/arch/x86_64/acpi/madt.h>
 #include <services/input/ps2/ps2.h>
 #include <kernel/input/input_manager.h>
 #include <kernel/input/keyboard_manager.h>
@@ -197,9 +198,36 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     boot_thread.state = acos::scheduler::ThreadState::Ready;
     acos::scheduler::enqueue_thread(0, &boot_thread);
 
+    acos::u64 lapic_base = 0xFEE00000;
+    acos::u64 ioapic_base = 0xFEC00000;
+
+    if (bootInfo && bootInfo->acpi) {
+        acos::hal::serial_print("[ACPI] Finding MADT table...\n");
+        void* madt_table = acos::arch::x86_64::MADT::find_table(bootInfo->acpi, "APIC");
+        if (madt_table) {
+            acos::hal::serial_print("[ACPI] Found MADT table. Parsing...\n");
+            acos::arch::x86_64::MADTHeader* madt = (acos::arch::x86_64::MADTHeader*)madt_table;
+            acos::hal::serial_print("[ACPI] Dynamic LAPIC address from MADT: ");
+            acos::hal::serial_print_hex(madt->lapic_addr);
+            acos::hal::serial_print("\n");
+            if (madt->lapic_addr != 0) {
+                lapic_base = madt->lapic_addr;
+            }
+            // Parse for CPUs and other info
+            acos::arch::x86_64::MADT::parse(madt_table);
+        } else {
+            acos::hal::serial_print("[ACPI] Warning: MADT table not found. Using defaults.\n");
+        }
+    } else {
+        acos::hal::serial_print("[ACPI] Warning: No ACPI tables passed from bootloader. Using defaults.\n");
+    }
+
+    // Configure base dynamically
+    acos::arch::x86_64::LocalApic::set_base(lapic_base);
+
     // Initialize LocalApic, IoApic and route keyboard IRQ1 to vector 0x21 on BSP (Apic ID 0)
     acos::arch::x86_64::LocalApic::init();
-    acos::arch::x86_64::IoApic::init(0xFEC00000);
+    acos::arch::x86_64::IoApic::init(ioapic_base);
     acos::arch::x86_64::IoApic::set_irq(1, 0x21, 0);
     acos::arch::x86_64::IoApic::unmask(1);
     acos::arch::x86_64::IoApic::set_irq(12, 0x2C, 0);

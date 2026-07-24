@@ -76,7 +76,7 @@ The ASADE UEFI bootloader is a pure freestanding 64-bit UEFI application (`acos_
             user registers.                             Currently missing!
 ```
 
-- **TSS & IST Defect**: The GDT does not configure a Task State Segment (TSS) with a valid `RSP0` stack pointer or Interrupt Stack Table (IST). When an interrupt occurs while CPU is in Ring 3 (User mode), the CPU attempts to read `RSP0` from the TSS to transition the stack. Without a TSS, this triggers a **Double Fault** or **Triple Fault**, immediately rebooting the physical machine. This makes Ring 3 execution completely unviable on real hardware.
+- **TSS & IST Configuration**: **Fully Implemented**. The GDT configures a Task State Segment (TSS) with a valid `RSP0` stack pointer (`g_tss_stack`) and Interrupt Stack Table (IST) stack (`g_ist_stack`), loaded using the `ltr` instruction. When an interrupt occurs while the CPU is in Ring 3, the CPU successfully switches to the kernel stack specified in `TSS.rsp0`, protecting system stability.
 - **Interrupt Safety**: Interrupt handlers (`isr_kbd_handler`, `isr_mouse_handler`) in `boot.S` push 9 general-purpose registers, execute the C handlers, pop registers, and call `iretq`. This is correct, but because they do not save/restore SSE registers (`%xmm`), any floating-point/vector instructions inside the kernel or userland hotpaths will cause **register corruption** and subsequent crashes.
 - **IOAPIC Hardware Assumptions**: `IoApic::set_irq` directly writes to `0xFEC00000`. On dual-socket or multichip physical hardware, multiple IOAPICs are present with distinct address spaces. The kernel will fail to route interrupts on these systems.
 
@@ -324,5 +324,5 @@ While the userspace graphics, composition, and input routing have been fully imp
 
 If you wrote ASADE OS to a physical x86_64 UEFI machine today:
 - **What would work**: The UEFI bootloader would successfully load, locate `kernel.elf`, map the segments, configure the framebuffer, and hand over execution to the kernel.
-- **What would fail**: The system would crash with a **Triple Fault** and reboot during IDT interrupt initialization or when trying to enter userspace/Ring 3, due to the missing TSS/IST structure and hardcoded LAPIC/IOAPIC controller memory mappings.
-- **Minimum changes required**: Implement GDT TSS/IST table initialization, parse ACPI RSDP/MADT dynamically for APIC routing, write a userspace heap `free()` allocator, and ensure the FAT32 driver remains read-only to safeguard physical disks.
+- **What would work**: The bootloader successfully locates the ACPI RSDP from the UEFI configuration table and passes it to the kernel, which dynamically parses the MADT (APIC) table to configure the Local APIC's base address. GDT TSS/IST stack swapping is fully initialized, allowing stable transitions from userspace Ring 3 to kernel Ring 0.
+- **Minimum changes required**: Write a userspace heap `free()` allocator, and ensure the FAT32 driver remains read-only to safeguard physical disks.

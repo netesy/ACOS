@@ -11,6 +11,7 @@ public:
     static void send_ipi(u32 apic_id, u8 vector);
     static void timer_start(u32 count);
     static void timer_stop();
+    static void set_base(u64 base);
 
 private:
     static void write(u32 reg, u32 val);

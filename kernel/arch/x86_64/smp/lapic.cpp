@@ -17,6 +17,10 @@ void LocalApic::init() {
     write(0xF0, read(0xF0) | 0x1FF);
 }
 
+void LocalApic::set_base(u64 base) {
+    g_base = base;
+}
+
 u32 LocalApic::get_id() {
     return read(0x20) >> 24;
 }
