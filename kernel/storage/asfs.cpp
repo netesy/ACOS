@@ -30,7 +30,26 @@ public:
     void initialize(BlockDevice* device, const ASFSInode& inode) {
         m_device = device;
         m_size = inode.size;
-        memcpy(m_extents, inode.extents, sizeof(m_extents));
+
+        u64 device_total_blocks = device->capacity() / 512;
+
+        // Copy and validate extents to ensure hardware bounds safety
+        for (int e = 0; e < 6; e++) {
+            u64 start = inode.extents[e].start_block;
+            u32 count = inode.extents[e].block_count;
+
+            // Invariant: extent_start > 0 and extent_start + count <= device_total_blocks
+            u64 end_block;
+            if (count > 0 && start > 0 &&
+                !__builtin_add_overflow(start, count, &end_block) &&
+                end_block <= device_total_blocks) {
+                m_extents[e] = inode.extents[e];
+            } else {
+                // Ensure malformed extents are discarded/ignored safely
+                m_extents[e].start_block = 0;
+                m_extents[e].block_count = 0;
+            }
+        }
     }
 
     i32 read(u64 offset, usize size, void* buffer) override {
@@ -61,6 +80,10 @@ public:
             }
 
             if (!resolved) break; // Reached end of described extents
+
+            // Hardware bounds safety check
+            u64 total_blocks = m_device->capacity() / 512;
+            if (physical_block >= total_blocks) return copied > 0 ? (i32)copied : -1;
 
             if (m_device->read_block(physical_block, block_buf) != 0) {
                 return copied > 0 ? (i32)copied : -1;
@@ -99,7 +122,22 @@ public:
 
     void initialize(BlockDevice* device, const ASFSInode& inode) {
         m_device = device;
-        memcpy(m_extents, inode.extents, sizeof(m_extents));
+        u64 device_total_blocks = device->capacity() / 512;
+
+        for (int e = 0; e < 6; e++) {
+            u64 start = inode.extents[e].start_block;
+            u32 count = inode.extents[e].block_count;
+
+            u64 end_block;
+            if (count > 0 && start > 0 &&
+                !__builtin_add_overflow(start, count, &end_block) &&
+                end_block <= device_total_blocks) {
+                m_extents[e] = inode.extents[e];
+            } else {
+                m_extents[e].start_block = 0;
+                m_extents[e].block_count = 0;
+            }
+        }
     }
 
     i32 read(u64, usize, void*) override { return -1; }
@@ -120,6 +158,9 @@ public:
             for (u32 b = 0; b < m_extents[e].block_count; b++) {
                 u64 physical_block = m_extents[e].start_block + b;
 
+                u64 total_blocks = m_device->capacity() / 512;
+                if (physical_block >= total_blocks) return (i32)count;
+
                 if (m_device->read_block(physical_block, block_buf) != 0) {
                     return (i32)count;
                 }
@@ -134,8 +175,11 @@ public:
                         continue;
                     }
 
-                    memcpy(entries[count].name, dir_entries[i].name, dir_entries[i].name_len);
-                    entries[count].name[dir_entries[i].name_len] = '\0';
+                    // Copy entry safely with null termination guard
+                    usize n_len = dir_entries[i].name_len;
+                    if (n_len > 57) n_len = 57;
+                    memcpy(entries[count].name, dir_entries[i].name, n_len);
+                    entries[count].name[n_len] = '\0';
                     entries[count].type = (dir_entries[i].type == 2) ? vfs::NodeType::Directory : vfs::NodeType::File;
                     entries[count].size = 0;
                     entries[count].inode_number = dir_entries[i].inode_number;
@@ -194,8 +238,9 @@ vfs::Node* ASFSFileSystem::open(const char* path) {
     const char* p = path;
     while (*p == '/') p++;
 
-    // Root directory inode block address
+    u64 total_blocks = m_device->capacity() / 512;
     u64 root_inode_block = m_sb.root_inode;
+    if (root_inode_block == 0 || root_inode_block >= total_blocks) return nullptr;
 
     u8 block_buf[512];
     if (m_device->read_block(root_inode_block, block_buf) != 0) {
@@ -212,6 +257,9 @@ vfs::Node* ASFSFileSystem::open(const char* path) {
 }
 
 vfs::Node* ASFSFileSystem::open_internal(u64 inode_block, const char* path) {
+    u64 total_blocks = m_device->capacity() / 512;
+    if (inode_block == 0 || inode_block >= total_blocks) return nullptr;
+
     u8 inode_buf[512];
     if (m_device->read_block(inode_block, inode_buf) != 0) return nullptr;
 
@@ -243,6 +291,7 @@ vfs::Node* ASFSFileSystem::open_internal(u64 inode_block, const char* path) {
 
         for (u32 b = 0; b < inode.extents[e].block_count; b++) {
             u64 physical_block = inode.extents[e].start_block + b;
+            if (physical_block >= total_blocks) return nullptr;
 
             if (m_device->read_block(physical_block, dir_block_buf) != 0) return nullptr;
 
@@ -251,16 +300,21 @@ vfs::Node* ASFSFileSystem::open_internal(u64 inode_block, const char* path) {
                 if (entries[i].inode_number == 0) continue;
 
                 char entry_name[64];
-                memcpy(entry_name, entries[i].name, entries[i].name_len);
-                entry_name[entries[i].name_len] = '\0';
+                usize n_len = entries[i].name_len;
+                if (n_len > 57) n_len = 57;
+                memcpy(entry_name, entries[i].name, n_len);
+                entry_name[n_len] = '\0';
 
                 if (strcmp_nocase(entry_name, component) == 0) {
                     if (*remaining != '\0') {
                         return open_internal(entries[i].inode_number, remaining);
                     }
 
+                    u64 target_inode_block = entries[i].inode_number;
+                    if (target_inode_block >= total_blocks) return nullptr;
+
                     u8 target_inode_buf[512];
-                    if (m_device->read_block(entries[i].inode_number, target_inode_buf) != 0) return nullptr;
+                    if (m_device->read_block(target_inode_block, target_inode_buf) != 0) return nullptr;
                     ASFSInode target_inode;
                     memcpy(&target_inode, target_inode_buf, sizeof(ASFSInode));
 
@@ -311,6 +365,21 @@ bool ASFSFileSystem::probe(void* device, const char* target) {
         hal::serial_print("ASFS: Redundant superblock is valid!\n");
     }
 
+    // Additional critical metadata validation for ASFS Probing to prevent mounting corrupted partition
+    if (sb->version != 1) {
+        hal::serial_print("ASFS Probe Error: Unsupported version!\n");
+        return false;
+    }
+    if (sb->block_size != 512 && sb->block_size != 4096) {
+        hal::serial_print("ASFS Probe Error: Unsupported block size!\n");
+        return false;
+    }
+    u64 total_blocks = block_device->capacity() / 512;
+    if (sb->root_inode == 0 || sb->root_inode >= total_blocks) {
+        hal::serial_print("ASFS Probe Error: Out of bounds root inode block!\n");
+        return false;
+    }
+
     ASFSFileSystem* fs = nullptr;
     for (int i = 0; i < 4; i++) {
         if (!g_asfs_used[i]) {
@@ -347,6 +416,11 @@ bool ASFSFileSystem::mount(const char* target [[maybe_unused]]) {
     }
 
     if (m_sb.version != 1) return false;
+
+    // Validate properties
+    if (m_sb.block_size != 512 && m_sb.block_size != 4096) return false;
+    u64 total_blocks = m_device->capacity() / 512;
+    if (m_sb.root_inode == 0 || m_sb.root_inode >= total_blocks) return false;
 
     return true;
 }

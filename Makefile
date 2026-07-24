@@ -279,28 +279,8 @@ $(CLI_SHELL_BIN): $(BUILD_DIR)/userland/libacos/crt0.o $(CLI_SHELL_OBJS) $(LIBAC
 # ----------------------------------------------------
 
 $(DISK_IMG): dist
-	@echo "[IMG] Creating FAT32 disk image..."
-	dd if=/dev/zero of=$(DISK_IMG) bs=1M count=64
-	@if [ -n "$(MKFS_VFAT)" ]; then \
-		$(MKFS_VFAT) -F 32 $(DISK_IMG); \
-	else \
-		echo "[IMG] Warning: mkfs.vfat not found; leaving unformatted raw image."; \
-	fi
-	@if [ -n "$(MMD)" ] && [ -n "$(MCOPY)" ] && [ -n "$(MKFS_VFAT)" ]; then \
-		$(MMD) -i $(DISK_IMG) ::/EFI; \
-		$(MMD) -i $(DISK_IMG) ::/EFI/BOOT; \
-		$(MCOPY) -i $(DISK_IMG) $(DIST_DIR)/EFI/BOOT/BOOTX64.EFI ::/EFI/BOOT/BOOTX64.EFI; \
-		$(MCOPY) -i $(DISK_IMG) $(DIST_DIR)/kernel.elf ::/kernel.elf; \
-		$(MCOPY) -i $(DISK_IMG) README.TXT ::/README.TXT; \
-		echo "fs0:\\EFI\\BOOT\\BOOTX64.EFI" > startup.nsh; \
-		$(MCOPY) -i $(DISK_IMG) startup.nsh ::/startup.nsh; \
-		$(MMD) -i $(DISK_IMG) ::/bin; \
-		for bin in $(SERVICES_BINS); do \
-			$(MCOPY) -v -i $(DISK_IMG) $$bin ::/bin/$$(basename $$bin); \
-		done \
-	else \
-		echo "[IMG] Warning: mtools and mkfs.vfat are required to populate the FAT32 image."; \
-	fi
+	@echo "[IMG] Building GPT partitioned FAT32/ASFS disk image..."
+	python3 tools/build_disk.py
 	@echo "[IMG] Done."
 
 # ----------------------------------------------------

@@ -2,68 +2,110 @@
 
 ---
 
-## 1. Current Storage Architecture
-Currently, ASADE OS boots from an EFI System Partition formatted in FAT32. The bootloader loads the `kernel.elf` executable, which initializes the ACOS kernel. On boot, the kernel:
-1. Enumerates the PCI bus to find SATA/AHCI storage controllers.
-2. Registers block devices corresponding to physical ports.
-3. Performs basic partition discovery (supporting MBR partition tables).
-4. Probes and mounts partition block devices using the virtual filesystem (VFS) layer.
-5. The VFS layer abstracts storage using a custom `FileSystem` interface, and is currently registered with a FAT32 filesystem implementation.
-6. The FAT32 filesystem parses the 8.3 filename layout and returns read-only directory and file `Node` instances.
-7. Processes in userspace open files, which returns file descriptors mapping to kernel-allocated `vfs::File` objects.
+## 1. Actual Storage Component Mapping & Data Flow
+The ASADE storage stack is decoupled into clear layers to isolate hardware dependencies from filesystem policies and VFS abstractions. The components and their source locations are mapped below:
 
-### Current Architectural Limitations
-* **Coupling & Risk**: Writes in FAT32 are unsafe, incomplete, and lack transactional guarantees. Direct modifications on real physical hardware can result in complete FAT chain or directory tree corruption.
-* **Lack of Isolation**: FAT32 contains no concept of owner UID, security groups, application-level isolation, or capability boundaries. Any process can read or modify any file on a mounted FAT32 volume.
-* **No Immutability**: Critical system utilities in `/bin` can be directly overwritten by standard applications, lacking split system/data immutability.
+### Component Map
+1. **Bootloader (`boot/main.cpp`)**:
+   - Freestanding EFI 64-bit application that uses UEFI `SimpleFileSystem` protocols to load the kernel binary from the FAT32 EFI System Partition.
+2. **EFI (`boot/efi.h`, `boot/main.cpp`)**:
+   - Provides low-level interfaces for GOP framebuffers, memory maps, and file reading prior to kernel handover.
+3. **Kernel (`kernel/main.cpp`)**:
+   - Configures CPU architectural registers, physical/virtual memory, heaps, scheduler, interrupts, and initiates driver discovery.
+4. **PCI (`kernel/hal/pci.cpp`)**:
+   - Enumerates physical hardware configurations to discover the storage controller.
+5. **AHCI / SATA (`kernel/storage/ahci.cpp`, `kernel/storage/ahci.h`)**:
+   - Manages physical Host Bus Adapter (HBA) SATA ports to issue raw command lists to storage disks.
+6. **BlockDevice (`kernel/storage/block_device.h`)**:
+   - Pure abstract interface for block-level synchronous read, write, and flush requests.
+7. **RAMDisk (`kernel/storage/ramdisk.cpp`, `kernel/storage/ramdisk.h`)**:
+   - RAM-backed BlockDevice subclass serving as a deterministic testing backend.
+8. **PartitionManager (`kernel/storage/partition.cpp`, `kernel/storage/partition.h`)**:
+   - Parses GUID Partition Tables (GPT) and fallback Master Boot Records (MBR) on a physical BlockDevice to yield virtual sub-BlockDevice partitions.
+9. **VFS (`kernel/vfs/vfs.cpp`, `kernel/vfs/vfs.h`)**:
+   - Exposes path resolution, handles descriptors, and mounts/probes filesystem instances.
+10. **FAT32 (`kernel/storage/fat32.cpp`, `kernel/storage/fat32.h`)**:
+    - Parses 8.3 fat directories and cluster chains to expose boot-time assets and recovery files.
+11. **ASFS (`kernel/storage/asfs.cpp`, `kernel/storage/asfs.h`)**:
+    - Native, robust extent-based transactional filesystem providing metadata records and system/data security bounds.
+12. **ELF Loader (`kernel/loader/elf_loader.cpp`, `kernel/loader/process_loader.cpp`)**:
+    - Resolves executable formats from the VFS to create scheduling threads.
+
+### Boot-Time Data Flow
+
+```
++──────────────────────────────────────────────────────────────+
+│                      UEFI / GPT Disk Image                   │
++──────────────────────────────────────────────────────────────+
+                                │
+                                ▼
++──────────────────────────────────────────────────────────────+
+│                    boot/main.efi (FAT32 Boot)                │
++──────────────────────────────────────────────────────────────+
+                                │  loads kernel.elf from Partition 1
+                                ▼
++──────────────────────────────────────────────────────────────+
+│                        kernel.elf Entry                      │
++──────────────────────────────────────────────────────────────+
+                                │  PCI discovery
+                                ▼
++──────────────────────────────────────────────────────────────+
+│                   AHCI / SATA Storage Disk                   │
++──────────────────────────────────────────────────────────────+
+                                │  enumerates partition table
+                                ▼
++──────────────────────────────────────────────────────────────+
+│                   PartitionManager GPT / MBR                 │
++──────────────────────────────────────────────────────────────+
+         │                                       │
+         ▼ (FAT32 ESP, Type ESP GUID / 0xEF)     ▼ (ASFS Partition, Type ASFS GUID / 0xAC)
++───────────────────────────────────+   +───────────────────────────────────+
+│       Partition 1 BlockDevice     │   │       Partition 2 BlockDevice     │
++───────────────────────────────────+   +───────────────────────────────────+
+                 │                                       │
+                 ▼                                       ▼
++───────────────────────────────────+   +───────────────────────────────────+
+│          FAT32 FS Probe           │   │           ASFS FS Probe           │
++───────────────────────────────────+   +───────────────────────────────────+
+                 │                                       │
+                 ▼ mount at /                            ▼ mount at /system
++───────────────────────────────────────────────────────────────────────────+
+│                        Unified VFS Mount Registry                         │
++───────────────────────────────────────────────────────────────────────────+
+                                │
+                                ▼
++───────────────────────────────────────────────────────────────────────────+
+│                 VFS Resolve "/system/bin/cli.elf"                         │
++───────────────────────────────────────────────────────────────────────────+
+                                │
+                                ▼
++───────────────────────────────────────────────────────────────────────────+
+│                  ProcessLoader / ELF Loader spawn Ring 3                  │
++───────────────────────────────────────────────────────────────────────────+
+```
 
 ---
 
-## 2. Proposed ASFS Architecture
-The native ASADE File System (ASFS) introduces a modern, secure, and crash-resilient storage design, structured as:
+## 2. Partition Type Identifiers & Identifiers Specifications
+To facilitate stable dynamic mapping of system and data spaces across multiple ports, controllers, or storage types, PartitionManager uses explicit identifiers to discover volumes:
 
-```
-                         ASADE Applications
-                                │
-                         ASADE File API
-                                │
-                      Capability Authorization
-                                │
-                               VFS
-                                │
-                    ┌───────────┴───────────┐
-                    │                       │
-              Protected Namespaces     Writable Namespaces
-                    │                       │
-            /system /vendor             /data /apps
-                    │                       │
-                    └───────────┬───────────┘
-                                │
-                           ASFS VFS
-                                │
-                      Transaction Manager
-                                │
-                     Metadata / Extent Trees
-                                │
-                       Block Allocation
-                                │
-                         Block Device API
-                         /       |       \
-                      AHCI      NVMe      USB
-                         \       |       /
-                              Storage
-```
+### GUID Partition Table (GPT) Identifiers
+* **EFI System Partition (ESP) GUID**:
+  - `C12A7328-F81F-11D2-BA4B-00A0C93EC93B`
+  - Raw Little-Endian Bytes: `28 73 2A C1 1F F8 D2 11 BA 4B 00 A0 C9 3E C9 3B`
+* **ASFS System Partition GUID**:
+  - `A5A54153-4653-4F53-A5A5-A5A5A5A5A5A5` (equivalent to: `A5A54153-4653-4F53-A5A5-A5A5A5A5A5A5`)
+  - Raw Little-Endian Bytes: `53 41 A5 A5 53 46 53 4F A5 A5 A5 A5 A5 A5 A5 A5`
 
-### Key Principles of ASFS
-* **Capability Separation**: Capabilities sit strictly above ASFS (at VFS / System Call boundary). ASFS provides the low-level security metadata (UIDs, GIDs, permissions, capability-mapping blocks) which the higher capability authorization layer queries and enforces.
-* **Separation of Concerns**: Fully decoupled from physical storage drivers. Functions on top of any `BlockDevice` interface.
-* **System/Data Separation**: The `/system` path is mounted read-only during normal operation, ensuring the OS base components are protected. Writable storage is designated under `/data`.
-* **Application Sandboxing**: Paths under `/data/apps/<app-id>` are sandbox-protected. Processes only receive capabilities to access their own designated sandboxed folders.
-* **Transactional Integrity**: Employs a Copy-on-Write (CoW) metadata mechanism and transactional commit sequence to prevent metadata corruption during crashes or power losses.
+### Master Boot Record (MBR) Partition Type Codes
+* **EFI / FAT32 Partition Code**:
+  - `0xEF` (EFI System Partition), fallback `0x0C` / `0x0E` / `0x0B`
+* **ASFS Partition Code**:
+  - `0xAC` (ASFS Custom)
 
 ---
 
-## 3. On-Disk Format Specification (v1 - Extent Based)
+## 3. On-Disk Format Specification (v1.5 - Extent Based)
 An ASFS partition block layout is structured as follows:
 
 ### Sector 0: Superblock
@@ -123,55 +165,9 @@ A directory data block contains a sequential array of directory records:
 
 ---
 
-## 4. VFS Integration Plan
-ASFS mounts seamlessly to the existing ACOS VFS framework:
-1. Create `ASFSFileSystem` implementing `vfs::FileSystem`.
-2. Define `ASFSFileNode` and `ASFSDirNode` implementing `vfs::Node`.
-3. Read the superblock on mount, validating magic numbers, checksums, and version tags. Also validate the redundant copy if needed.
-4. Open directories and files via inode lookup, resolving the components of a path recursively.
-5. Coordinate with `FileSystemManager` to probe partition block devices and register ASFS.
-
----
-
-## 5. Capability & Sandbox Integration Plan
-1. Integration with the ACOS `ResourceHandleTable`: Every open ASFS resource is assigned a kernel `File` capability.
-2. Secure Path Resolution: Path resolutions verify that a process can only access `/data/apps/<app-id>` matching its own application ID.
-3. Access Control checks POSIX-like owner rights, but maps directly to security domain policies defined in the capability manager.
-
----
-
-## 6. Boot & Partition Layout
-A standard ASADE storage layout on real hardware consists of:
-* **Partition 1 (FAT32)**: EFI System Partition containing `\EFI\BOOT\BOOTX64.EFI`, `kernel.elf`, and configuration files.
-* **Partition 2 (ASFS)**: The native ASADE system and user data storage.
-  * `/system`: Read-Only operating system binaries (`/bin`, `/lib`, `/drivers`).
-  * `/data`: Writable private and user applications data.
-
----
-
-## 7. Migration Plan
-* **Milestone 1**: Read-only core. RAM block device, ASFS image layout, mounting and path traversal / nested file reading validation.
-* **Milestone 2**: Inode and directory hierarchy writable support.
-* **Milestone 3**: B-Tree metadata trees, extent trees, and allocator integration.
-* **Milestone 4**: Transaction committing, atomic Commits, Copy-On-Write metadata, and Crash Recovery validation.
-
----
-
-## 8. Test Strategy
-* **Format & Mount Validation**: Test boot loader and kernel mounting consistency on startup.
-* **Read Integrity**: Verify that nested paths (e.g., `/asfs/system/bin/cli.elf`) are resolved and read correctly.
-* **Path Separation**: Ensure read-only restrictions are strictly enforced.
-
----
-
-## 9. Risk Assessment
-* **Data Loss Risk**: Low. FAT32 boot mechanism remains untouched; ASFS is developed isolatedly.
-* **Memory Limits**: The design must avoid heavy runtime overheads given ACOS's freestanding kernel requirements.
-
----
-
-## 10. Implementation Plan (Milestone 1)
-1. Write ASFS specifications and specifications report.
-2. Implement superblock validation, file system structures, and file/directory node reading logic.
-3. Integrate with the VFS framework.
-4. Spawn a mock RAM-Backed Block Device and format it dynamically with an ASFS partition containing basic files to verify Milestone 1.
+## 4. Hardware boundary check invariants
+Every block fetch strictly verifies physical and partition boundaries to prevent underflows, overflows, or out-of-bounds corruption:
+1. `block_id + block_count` does not overflow standard integer calculations.
+2. `block_id + block_count <= partition_total_blocks`.
+3. Every extent read satisfies `extent_start >= filesystem_data_start` and `extent_start + extent_length <= filesystem_total_blocks`.
+4. System mounts reject filesystems with block sizes that are not positive powers of two, or roots pointing outside partition spaces.

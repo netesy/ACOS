@@ -134,7 +134,7 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     acos::storage::ASFSFormatter::format_ramdisk(&asfs_ram_disk);
 
     acos::storage::StorageManager::register_device(0x300, &asfs_ram_disk);
-    acos::storage::FileSystemManager::probe_and_mount(&asfs_ram_disk, "/system");
+    acos::storage::FileSystemManager::probe_and_mount(&asfs_ram_disk, "/asfs_ram");
 
     acos::hal::PCIDevice ahci_dev = acos::hal::PCI::find_device(0x01, 0x06);
     if (ahci_dev.vendor_id == 0xFFFF) ahci_dev = acos::hal::PCI::find_device(0x01, 0x01);
@@ -171,8 +171,41 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
         acos::hal::serial_print("Failed to read root directory\n");
     }
 
-    // Testing ASFS Integration & Mount (Milestone 1)
-    acos::hal::serial_print("Testing ASFS /system RAM-Disk Mount...\n");
+    // Testing ASFS Integration & Mount on RAM BlockDevice
+    acos::hal::serial_print("Testing ASFS /asfs_ram RAM-Disk Mount...\n");
+    acos::vfs::DirectoryEntry asfs_ram_entries[16];
+    int asfs_ram_count = acos::vfs::VFS::read_dir("/asfs_ram", asfs_ram_entries, 16);
+    if (asfs_ram_count >= 0) {
+        acos::hal::serial_print("ASFS /asfs_ram directory contents:\n");
+        for (int i = 0; i < asfs_ram_count; i++) {
+            acos::hal::serial_print("  ");
+            acos::hal::serial_print(asfs_ram_entries[i].name);
+            acos::hal::serial_print("\n");
+        }
+
+        // Test directory traversal and nested file reading on RAM block device
+        acos::hal::serial_print("Reading '/asfs_ram/system/bin/cli.elf' contents...\n");
+        acos::i32 asfs_ram_fd = acos::vfs::VFS::open("/asfs_ram/system/bin/cli.elf", 0);
+        if (asfs_ram_fd >= 0) {
+            char file_content[64];
+            memset(file_content, 0, 64);
+            acos::i32 bytes_read = acos::vfs::VFS::read(asfs_ram_fd, file_content, 63);
+            if (bytes_read >= 0) {
+                acos::hal::serial_print("File content: ");
+                acos::hal::serial_print(file_content);
+            } else {
+                acos::hal::serial_print("Failed to read file from RAM ASFS!\n");
+            }
+            acos::vfs::VFS::close(asfs_ram_fd);
+        } else {
+            acos::hal::serial_print("Failed to open '/asfs_ram/system/bin/cli.elf'!\n");
+        }
+    } else {
+        acos::hal::serial_print("Failed to read ASFS /asfs_ram directory\n");
+    }
+
+    // Testing ASFS Integration & Mount on QEMU BlockDevice (SATA/AHCI Partition 2)
+    acos::hal::serial_print("Testing ASFS /system QEMU Disk Mount...\n");
     acos::vfs::DirectoryEntry asfs_entries[16];
     int asfs_count = acos::vfs::VFS::read_dir("/system", asfs_entries, 16);
     if (asfs_count >= 0) {
@@ -183,7 +216,7 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
             acos::hal::serial_print("\n");
         }
 
-        // Test directory traversal and nested file reading
+        // Test directory traversal and nested file reading on QEMU BlockDevice
         acos::hal::serial_print("Reading '/system/bin/cli.elf' contents...\n");
         acos::i32 asfs_fd = acos::vfs::VFS::open("/system/bin/cli.elf", 0);
         if (asfs_fd >= 0) {
@@ -194,7 +227,7 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
                 acos::hal::serial_print("File content: ");
                 acos::hal::serial_print(file_content);
             } else {
-                acos::hal::serial_print("Failed to read file from ASFS!\n");
+                acos::hal::serial_print("Failed to read file from AHCI ASFS!\n");
             }
             acos::vfs::VFS::close(asfs_fd);
         } else {
@@ -238,9 +271,21 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     };
 
     if (desktop_mode) {
-        spawn_service("/bin/desktop.elf");
+        acos::i32 fd = acos::vfs::VFS::open("/system/bin/desktop.elf", 0);
+        if (fd >= 0) {
+            acos::vfs::VFS::close(fd);
+            spawn_service("/system/bin/desktop.elf");
+        } else {
+            spawn_service("/bin/desktop.elf");
+        }
     } else {
-        spawn_service("/bin/cli.elf");
+        acos::i32 fd = acos::vfs::VFS::open("/system/bin/cli.elf", 0);
+        if (fd >= 0) {
+            acos::vfs::VFS::close(fd);
+            spawn_service("/system/bin/cli.elf");
+        } else {
+            spawn_service("/bin/cli.elf");
+        }
     }
 
     boot_thread.state = acos::scheduler::ThreadState::Ready;
