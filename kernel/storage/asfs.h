@@ -66,6 +66,7 @@ public:
 
     BlockDevice* device() const { return m_device; }
     const ASFSSuperblock& superblock() const { return m_sb; }
+    bool is_read_only() const { return m_read_only; }
 
     // Allocator Helpers
     u64 allocate_blocks(u32 count);
@@ -83,6 +84,7 @@ private:
 
     BlockDevice* m_device;
     ASFSSuperblock m_sb;
+    bool m_read_only;
 };
 
 // Helper function to check protection bounds

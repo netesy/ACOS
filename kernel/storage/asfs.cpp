@@ -45,6 +45,7 @@ public:
                 end_block <= device_total_blocks) {
                 m_extents[e] = inode.extents[e];
             } else {
+                // Ensure malformed extents are discarded/ignored safely
                 m_extents[e].start_block = 0;
                 m_extents[e].block_count = 0;
             }
@@ -100,9 +101,27 @@ public:
 
     i32 write(u64 offset, usize size, const void* buffer) override {
         if (!m_fs || !m_fs->device() || !buffer) return -1;
+        if (m_fs->is_read_only()) return -1;
 
         u64 device_total_blocks = m_fs->device()->capacity() / 512;
         u64 end_byte = offset + size;
+
+        // Gap filling to support sparse files / seeks beyond EOF safely
+        if (offset > m_size) {
+            u64 gap_offset = m_size;
+            u64 gap_size = offset - m_size;
+            u8 zero_buf[512] = {0};
+            while (gap_size > 0) {
+                usize chunk = gap_size > 512 ? 512 : (usize)gap_size;
+                i32 written_gap = write(gap_offset, chunk, zero_buf);
+                if (written_gap <= 0 || written_gap != (i32)chunk) {
+                    return -1;
+                }
+                gap_offset += chunk;
+                gap_size -= chunk;
+            }
+        }
+
         u8 block_buf[512];
         const u8* in = (const u8*)buffer;
         usize written = 0;
@@ -127,7 +146,7 @@ public:
             }
 
             if (!resolved) {
-                // Dynamically allocate a new physical block!
+                // Dynamically allocate a new physical block
                 u64 new_block = m_fs->allocate_blocks(1);
                 if (new_block == 0) {
                     return written > 0 ? (i32)written : -1; // Out of space
@@ -206,6 +225,9 @@ public:
             memcpy(inode.extents, m_extents, sizeof(m_extents));
             m_fs->device()->write_block(m_inode_block, &inode);
         }
+
+        // Call device flush to guarantee physical persistence
+        m_fs->device()->flush();
 
         return (i32)written;
     }
@@ -351,7 +373,7 @@ bool is_path_protected(const char* path) {
     return false;
 }
 
-ASFSFileSystem::ASFSFileSystem(BlockDevice* device) : m_device(device) {
+ASFSFileSystem::ASFSFileSystem(BlockDevice* device) : m_device(device), m_read_only(false) {
     memset(&m_sb, 0, sizeof(m_sb));
 }
 
@@ -362,8 +384,8 @@ vfs::Node* ASFSFileSystem::open(const char* path, u64 flags) {
 
     if (flags & 0x40) { // O_CREAT
         // Prevent creation inside read-only namespaces
-        if (is_path_protected(path)) {
-            hal::serial_print("ASFS Error: Block creation on protected partition!\n");
+        if (m_read_only) {
+            hal::serial_print("ASFS Error: Create rejected on read-only mounted filesystem!\n");
             return nullptr;
         }
 
@@ -519,7 +541,10 @@ bool ASFSFileSystem::create_file(const char* path, u64 mode) {
 
 bool ASFSFileSystem::mkdir(const char* path) {
     if (!path || path[0] == '\0') return false;
-    if (is_path_protected(path)) return false;
+    if (m_read_only) {
+        hal::serial_print("ASFS Error: mkdir rejected on read-only mounted filesystem!\n");
+        return false;
+    }
 
     char parent_path[512];
     char dir_name[64];
@@ -599,7 +624,10 @@ bool ASFSFileSystem::mkdir(const char* path) {
 
 bool ASFSFileSystem::unlink(const char* path) {
     if (!path || path[0] == '\0') return false;
-    if (is_path_protected(path)) return false;
+    if (m_read_only) {
+        hal::serial_print("ASFS Error: unlink rejected on read-only mounted filesystem!\n");
+        return false;
+    }
 
     char parent_path[512];
     char file_name[64];
@@ -659,7 +687,10 @@ bool ASFSFileSystem::unlink(const char* path) {
 
 bool ASFSFileSystem::rmdir(const char* path) {
     if (!path || path[0] == '\0') return false;
-    if (is_path_protected(path)) return false;
+    if (m_read_only) {
+        hal::serial_print("ASFS Error: rmdir rejected on read-only mounted filesystem!\n");
+        return false;
+    }
 
     char parent_path[512];
     char dir_name[64];
@@ -880,8 +911,12 @@ u64 ASFSFileSystem::allocate_blocks(u32 count) {
     u64 blocks_found = 0;
     u64 starting_block = 0;
 
-    // Scan the 16 bitmap blocks starting at free_space_root
-    for (u64 bm_offset = 0; bm_offset < 16; bm_offset++) {
+    // Dynamically calculate bitmap blocks count based on partition size!
+    u32 bitmap_blocks = (total_blocks + 4095) / 4096;
+    if (bitmap_blocks > 128) bitmap_blocks = 128; // Sanity limit
+
+    // Scan the bitmap blocks starting at free_space_root
+    for (u64 bm_offset = 0; bm_offset < bitmap_blocks; bm_offset++) {
         u64 bm_block = m_sb.free_space_root + bm_offset;
         if (m_device->read_block(bm_block, bitmap_buf) != 0) return 0;
 
@@ -890,6 +925,9 @@ u64 ASFSFileSystem::allocate_blocks(u32 count) {
             for (int bit_idx = 0; bit_idx < 8; bit_idx++) {
                 u64 block_num = (bm_offset * 512 + byte_idx) * 8 + bit_idx;
                 if (block_num >= total_blocks) break;
+
+                // Safety: Skip first 100 blocks to protect the Superblock, Root Inode, directories, and bitmap entries!
+                if (block_num < 100) continue;
 
                 bool allocated = (b & (1 << bit_idx)) != 0;
                 if (!allocated) {
@@ -931,6 +969,9 @@ void ASFSFileSystem::deallocate_blocks(u64 start_block, u32 count) {
 
     u8 bitmap_buf[512];
     for (u64 block_num = start_block; block_num < start_block + count; block_num++) {
+        // Safety: Prevent deallocating superblock, root inode, directories, or bitmap blocks!
+        if (block_num < 100) continue;
+
         u64 chunk_bm_offset = (block_num / 8) / 512;
         u32 chunk_byte_idx = (block_num / 8) % 512;
         u32 chunk_bit_idx = block_num % 8;
@@ -1043,6 +1084,8 @@ bool ASFSFileSystem::mount(const char* target [[maybe_unused]]) {
     if (m_sb.block_size != 512 && m_sb.block_size != 4096) return false;
     u64 total_blocks = m_device->capacity() / 512;
     if (m_sb.root_inode == 0 || m_sb.root_inode >= total_blocks) return false;
+
+    m_read_only = is_path_protected(target);
 
     return true;
 }

@@ -96,6 +96,9 @@ To facilitate stable dynamic mapping of system and data spaces across multiple p
 * **ASFS System Partition GUID**:
   - `A5A54153-4653-4F53-A5A5-A5A5A5A5A5A5` (equivalent to: `A5A54153-4653-4F53-A5A5-A5A5A5A5A5A5`)
   - Raw Little-Endian Bytes: `53 41 A5 A5 53 46 53 4F A5 A5 A5 A5 A5 A5 A5 A5`
+* **ASFS Writable Data Partition GUID**:
+  - `DADA4153-4653-4F53-DADA-DADADADADADA` (equivalent to: `DADA4153-4653-4F53-DADA-DADADADADADA`)
+  - Raw Little-Endian Bytes: `53 41 DA DA 53 46 53 4F DA DA DA DA DA DA DA DA`
 
 ### Master Boot Record (MBR) Partition Type Codes
 * **EFI / FAT32 Partition Code**:
@@ -105,7 +108,7 @@ To facilitate stable dynamic mapping of system and data spaces across multiple p
 
 ---
 
-## 3. On-Disk Format Specification (v2.0 - Writable Core)
+## 3. On-Disk Format Specification (v2.5 - Hardened Writable Core)
 An ASFS partition block layout is structured as follows:
 
 ### Sector 0: Superblock
@@ -179,3 +182,9 @@ Every block fetch strictly verifies physical and partition boundaries to prevent
 3. Every extent read satisfies `extent_start >= filesystem_data_start` and `extent_start + extent_length <= filesystem_total_blocks`.
 4. System mounts reject filesystems with block sizes that are not positive powers of two, or roots pointing outside partition spaces.
 5. All disk writes enforce that we never write to block 0 (superblock), block 1 (root directory), or any block outside our designated partition scope.
+
+---
+
+## 5. Persistence & BlockDevice Flush semantics
+* **Flush Strategy**: When blocks are modified, they are flushed immediately via `BlockDevice::write_blocks` and `BlockDevice::flush` interface contracts.
+* **Gap Filling**: Writes beyond the current end-of-file (EOF) boundary are sequentialized and safely zero-filled to prevent metadata layout corruption and ensure clean physical block sequences on storage devices.
