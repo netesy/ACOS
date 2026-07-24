@@ -12,5 +12,6 @@ using VirtualKey = abi::VirtualKey;
 u64 create_queue();
 bool pop_event(u64 queue_handle, InputEvent& event, bool block);
 u64 open_device(InputType type);
+void set_focused_process(u64 pid);
 
 } // namespace acos::input

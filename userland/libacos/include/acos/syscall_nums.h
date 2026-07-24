@@ -84,6 +84,7 @@ enum class SyscallNum : u64 {
     InputQueueCreate = 710,
     InputQueuePop = 711,
     InputDeviceOpen = 712,
+    InputFocusSet = 713,
 
     // Service Discovery (500-599)
     ResourceLocate = 500,

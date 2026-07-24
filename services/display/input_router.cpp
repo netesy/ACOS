@@ -25,6 +25,9 @@ void InputRouter::set_focus(Window* window) {
     m_focused_window = window;
     if (m_focused_window) {
         m_focused_window->set_focused(true);
+        acos::input::set_focused_process(m_focused_window->owner_pid());
+    } else {
+        acos::input::set_focused_process(0);
     }
 }
 

@@ -17,4 +17,8 @@ u64 open_device(InputType type) {
     return syscall(sys::SyscallNum::InputDeviceOpen, static_cast<u64>(type), 0, 0, 0, 0);
 }
 
+void set_focused_process(u64 pid) {
+    syscall(sys::SyscallNum::InputFocusSet, pid, 0, 0, 0, 0);
+}
+
 } // namespace acos::input
