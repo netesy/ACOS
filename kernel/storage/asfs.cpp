@@ -987,8 +987,31 @@ void ASFSFileSystem::deallocate_blocks(u64 start_block, u32 count) {
     flush_superblock();
 }
 
+static u32 calculate_crc32(const void* data, usize size) {
+    const u8* bytes = (const u8*)data;
+    u32 crc = 0xFFFFFFFF;
+    for (usize i = 0; i < size; i++) {
+        crc ^= bytes[i];
+        for (int j = 0; j < 8; j++) {
+            if (crc & 1) {
+                crc = (crc >> 1) ^ 0xEDB88320;
+            } else {
+                crc >>= 1;
+            }
+        }
+    }
+    return ~crc;
+}
+
+static u32 calculate_sb_checksum(const ASFSSuperblock* sb) {
+    ASFSSuperblock temp = *sb;
+    temp.checksum = 0;
+    return calculate_crc32(&temp, sizeof(ASFSSuperblock));
+}
+
 void ASFSFileSystem::flush_superblock() {
     if (!m_device) return;
+    m_sb.checksum = calculate_sb_checksum(&m_sb);
     m_device->write_block(0, &m_sb);
     u64 last_block = m_device->capacity() / 512 - 1;
     m_device->write_block(last_block, &m_sb);
@@ -1007,11 +1030,22 @@ bool ASFSFileSystem::probe(void* device, const char* target) {
         return false;
     }
 
+    bool primary_ok = true;
     ASFSSuperblock* sb = (ASFSSuperblock*)sector;
-    if (sb->magic != 0x415346535F4F535FULL) { // "ASFS_OS_"
+    if (sb->magic != 0x415346535F4F535FULL) {
+        primary_ok = false;
+    } else {
+        u32 computed = calculate_sb_checksum(sb);
+        if (computed != sb->checksum) {
+            hal::serial_print("ASFS: Primary superblock checksum corrupt!\n");
+            primary_ok = false;
+        }
+    }
+
+    if (!primary_ok) {
         // Try redundant superblock at block capacity() / 512 - 1
         u64 last_block = block_device->capacity() / 512 - 1;
-        hal::serial_print("ASFS: Main superblock invalid. Checking redundant superblock at block: ");
+        hal::serial_print("ASFS: Main superblock invalid/corrupt. Checking redundant superblock at block: ");
         hal::serial_print_hex(last_block);
         hal::serial_print("\n");
 
@@ -1025,7 +1059,13 @@ bool ASFSFileSystem::probe(void* device, const char* target) {
             hal::serial_print("ASFS: invalid redundant magic number!\n");
             return false;
         }
-        hal::serial_print("ASFS: Redundant superblock is valid!\n");
+
+        u32 computed = calculate_sb_checksum(sb);
+        if (computed != sb->checksum) {
+            hal::serial_print("ASFS: Redundant superblock checksum corrupt!\n");
+            return false;
+        }
+        hal::serial_print("ASFS: Redundant superblock is valid and checksum matches!\n");
     }
 
     // Additional critical metadata validation
@@ -1070,12 +1110,25 @@ bool ASFSFileSystem::mount(const char* target [[maybe_unused]]) {
     if (m_device->read_block(0, sector) != 0) return false;
     memcpy(&m_sb, sector, sizeof(ASFSSuperblock));
 
+    bool primary_ok = true;
     if (m_sb.magic != 0x415346535F4F535FULL) {
+        primary_ok = false;
+    } else {
+        u32 computed = calculate_sb_checksum(&m_sb);
+        if (computed != m_sb.checksum) {
+            primary_ok = false;
+        }
+    }
+
+    if (!primary_ok) {
         // Fallback to redundant superblock
         u64 last_block = m_device->capacity() / 512 - 1;
         if (m_device->read_block(last_block, sector) != 0) return false;
         memcpy(&m_sb, sector, sizeof(ASFSSuperblock));
         if (m_sb.magic != 0x415346535F4F535FULL) return false;
+
+        u32 computed = calculate_sb_checksum(&m_sb);
+        if (computed != m_sb.checksum) return false;
     }
 
     if (m_sb.version != 1) return false;
