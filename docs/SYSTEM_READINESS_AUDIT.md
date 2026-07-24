@@ -96,7 +96,7 @@ The VMM (`kernel/memory/vmm.cpp`) maps page directories (PML4, PDPT, PD, PT) int
 
 ### Kernel & Userspace Heaps
 - **Kernel Heap (`kernel/memory/heap.cpp`)**: A bump-pointer allocator with basic headers. No merge-free coalescing is present. Extremely vulnerable to **memory fragmentation** and OOM conditions during long-uptime operations.
-- **Userspace Heap (`userland/libacos/memory.cpp`)**: A simple static 32MB bump allocator (`g_user_heap`). `free()` is a complete **no-op (stub)**! This means userspace applications cannot reclaim any deallocated memory, leading to guaranteed **memory starvation** and process termination on typical workloads.
+- **Userspace Heap (`userland/libacos/memory.cpp`)**: **Fully Implemented**. Replaced the simple bump-pointer stub with a high-performance first-fit free-list allocator featuring dynamic block splitting on allocation and linear merging/coalescing of adjacent free blocks during `free()`. This completely solves userspace memory leaks and prevents memory starvation.
 
 ---
 
@@ -324,5 +324,5 @@ While the userspace graphics, composition, and input routing have been fully imp
 
 If you wrote ASADE OS to a physical x86_64 UEFI machine today:
 - **What would work**: The UEFI bootloader would successfully load, locate `kernel.elf`, map the segments, configure the framebuffer, and hand over execution to the kernel.
-- **What would work**: The bootloader successfully locates the ACPI RSDP from the UEFI configuration table and passes it to the kernel, which dynamically parses the MADT (APIC) table to configure the Local APIC's base address. GDT TSS/IST stack swapping is fully initialized, allowing stable transitions from userspace Ring 3 to kernel Ring 0.
-- **Minimum changes required**: Write a userspace heap `free()` allocator, and ensure the FAT32 driver remains read-only to safeguard physical disks.
+- **What would work**: The bootloader successfully locates the ACPI RSDP from the UEFI configuration table and passes it to the kernel, which dynamically parses the MADT (APIC) table to configure the Local APIC's base address. GDT TSS/IST stack swapping is fully initialized, allowing stable transitions from userspace Ring 3 to kernel Ring 0. Userspace memory allocations are managed by a robust free-list allocator with block-merging coalescing.
+- **Minimum changes required**: Ensure the FAT32 driver remains read-only to safeguard physical disks.
