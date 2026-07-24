@@ -13,6 +13,9 @@
 #include <kernel/storage/storage_manager.h>
 #include <kernel/storage/filesystem_manager.h>
 #include <kernel/storage/fat32.h>
+#include <kernel/storage/asfs.h>
+#include <kernel/storage/asfs_formatter.h>
+#include <kernel/storage/ramdisk.h>
 #include <kernel/storage/ahci.h>
 #include <kernel/storage/partition.h>
 #include <kernel/hal/pci.h>
@@ -121,6 +124,18 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     acos::storage::StorageManager::init();
     static acos::storage::FAT32FileSystem fat32_proto(nullptr);
     acos::storage::FileSystemManager::register_filesystem("fat32", &fat32_proto);
+
+    // Register ASFS and mount RAM-disk for ASFS Milestone 1
+    static acos::storage::ASFSFileSystem asfs_proto(nullptr);
+    acos::storage::FileSystemManager::register_filesystem("asfs", &asfs_proto);
+
+    static acos::u8 asfs_ram_buffer[65536]; // 64KB mock RAM partition for ASFS
+    static acos::storage::RamDisk asfs_ram_disk(asfs_ram_buffer, 65536);
+    acos::storage::ASFSFormatter::format_ramdisk(&asfs_ram_disk);
+
+    acos::storage::StorageManager::register_device(0x300, &asfs_ram_disk);
+    acos::storage::FileSystemManager::probe_and_mount(&asfs_ram_disk, "/system");
+
     acos::hal::PCIDevice ahci_dev = acos::hal::PCI::find_device(0x01, 0x06);
     if (ahci_dev.vendor_id == 0xFFFF) ahci_dev = acos::hal::PCI::find_device(0x01, 0x01);
     if (ahci_dev.vendor_id != 0xFFFF) {
@@ -154,6 +169,39 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
         }
     } else {
         acos::hal::serial_print("Failed to read root directory\n");
+    }
+
+    // Testing ASFS Integration & Mount (Milestone 1)
+    acos::hal::serial_print("Testing ASFS /system RAM-Disk Mount...\n");
+    acos::vfs::DirectoryEntry asfs_entries[16];
+    int asfs_count = acos::vfs::VFS::read_dir("/system", asfs_entries, 16);
+    if (asfs_count >= 0) {
+        acos::hal::serial_print("ASFS /system directory contents:\n");
+        for (int i = 0; i < asfs_count; i++) {
+            acos::hal::serial_print("  ");
+            acos::hal::serial_print(asfs_entries[i].name);
+            acos::hal::serial_print("\n");
+        }
+
+        // Test directory traversal and nested file reading
+        acos::hal::serial_print("Reading '/system/bin/cli.elf' contents...\n");
+        acos::i32 asfs_fd = acos::vfs::VFS::open("/system/bin/cli.elf", 0);
+        if (asfs_fd >= 0) {
+            char file_content[64];
+            memset(file_content, 0, 64);
+            acos::i32 bytes_read = acos::vfs::VFS::read(asfs_fd, file_content, 63);
+            if (bytes_read >= 0) {
+                acos::hal::serial_print("File content: ");
+                acos::hal::serial_print(file_content);
+            } else {
+                acos::hal::serial_print("Failed to read file from ASFS!\n");
+            }
+            acos::vfs::VFS::close(asfs_fd);
+        } else {
+            acos::hal::serial_print("Failed to open '/system/bin/cli.elf'!\n");
+        }
+    } else {
+        acos::hal::serial_print("Failed to read ASFS /system directory\n");
     }
 
     auto spawn_service = [](const char* path) {

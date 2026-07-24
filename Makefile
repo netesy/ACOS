@@ -57,6 +57,7 @@ KERNEL_SRCS = \
 	$(STORAGE_DIR)/partition.cpp \
 	$(STORAGE_DIR)/filesystem_manager.cpp \
 	$(STORAGE_DIR)/fat32.cpp \
+	$(STORAGE_DIR)/asfs.cpp \
 	$(STORAGE_DIR)/ramdisk.cpp \
 	$(STORAGE_DIR)/storage_manager.cpp \
 	$(LOADER_DIR)/process_loader.cpp \
