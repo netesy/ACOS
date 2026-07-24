@@ -552,6 +552,25 @@ extern "C" u64 syscall_dispatch(u64 num, u64 arg1, u64 arg2, u64 arg3, u64 arg4,
             return static_cast<u64>(vfs::VFS::read_dir(path, entries, max_entries));
         }
 
+        case SyscallNum::FileMkdir: {
+            const char* path = reinterpret_cast<const char*>(arg1);
+            u64 mode = arg2;
+            if (!current) return static_cast<u64>(-1);
+            return static_cast<u64>(vfs::VFS::mkdir(path, mode));
+        }
+
+        case SyscallNum::FileUnlink: {
+            const char* path = reinterpret_cast<const char*>(arg1);
+            if (!current) return static_cast<u64>(-1);
+            return static_cast<u64>(vfs::VFS::unlink(path));
+        }
+
+        case SyscallNum::FileRmdir: {
+            const char* path = reinterpret_cast<const char*>(arg1);
+            if (!current) return static_cast<u64>(-1);
+            return static_cast<u64>(vfs::VFS::rmdir(path));
+        }
+
         case SyscallNum::FileDup: {
             if (!current) return kErrInvalid;
             return static_cast<u64>(vfs::VFS::dup2(arg1, arg2));

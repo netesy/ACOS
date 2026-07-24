@@ -19,14 +19,14 @@ public:
         sb->version = 1;
         sb->block_size = 512;
         sb->total_blocks = disk->capacity() / 512;
-        sb->free_blocks = sb->total_blocks - 100; // Mock free blocks count
+        sb->free_blocks = sb->total_blocks - 100;
         sb->root_inode = 1; // Root directory inode is in Block 1
         sb->transaction_id = 1;
         memset(sb->uuid, 0xAB, 16);
         sb->inode_tree_root = 0;   // Reserved
         sb->extent_tree_root = 0;  // Reserved
-        sb->free_space_root = 0;   // Reserved
-        sb->feature_flags = 0;     // Initial features
+        sb->free_space_root = 20;  // Writable Free Space Bitmap starts at Block 20!
+        sb->feature_flags = 0;
         sb->checksum = 0x12345678;
 
         if (disk->write_block(0, block_buf) != 0) return false;
@@ -50,136 +50,99 @@ public:
         if (disk->write_block(1, block_buf) != 0) return false;
 
         // 3. Root Directory entries block (Block 2)
-        // Let's configure directory layout:
-        // - system (Directory, Inode in Block 3)
-        // - data (Directory, Inode in Block 5)
+        // Configure writable structure:
+        // - apps (Directory, Inode in Block 3)
+        // - users (Directory, Inode in Block 5)
+        // - shared (Directory, Inode in Block 7)
         memset(block_buf, 0, 512);
         ASFSDirectoryEntry* root_entries = (ASFSDirectoryEntry*)block_buf;
 
-        // "system" entry
+        // "apps" entry
         root_entries[0].inode_number = 3;
-        root_entries[0].type = 2; // Directory
-        root_entries[0].name_len = 6;
-        memcpy(root_entries[0].name, "system", 6);
+        root_entries[0].type = 2;
+        root_entries[0].name_len = 4;
+        memcpy(root_entries[0].name, "apps", 4);
 
-        // "data" entry
+        // "users" entry
         root_entries[1].inode_number = 5;
-        root_entries[1].type = 2; // Directory
-        root_entries[1].name_len = 4;
-        memcpy(root_entries[1].name, "data", 4);
+        root_entries[1].type = 2;
+        root_entries[1].name_len = 5;
+        memcpy(root_entries[1].name, "users", 5);
+
+        // "shared" entry
+        root_entries[2].inode_number = 7;
+        root_entries[2].type = 2;
+        root_entries[2].name_len = 6;
+        memcpy(root_entries[2].name, "shared", 6);
 
         if (disk->write_block(2, block_buf) != 0) return false;
 
-        // 4. system Inode (Block 3)
+        // 4. apps Inode (Block 3)
         memset(block_buf, 0, 512);
-        ASFSInode* system_inode = (ASFSInode*)block_buf;
-        system_inode->inode_number = 3;
-        system_inode->type = 2; // Directory
-        system_inode->size = 512;
-        system_inode->permissions = 0755;
-        system_inode->extents[0].start_block = 4; // Directory entry contents in Block 4
-        system_inode->extents[0].block_count = 1;
+        ASFSInode* apps_inode = (ASFSInode*)block_buf;
+        apps_inode->inode_number = 3;
+        apps_inode->type = 2;
+        apps_inode->size = 512;
+        apps_inode->permissions = 0755;
+        apps_inode->extents[0].start_block = 4;
+        apps_inode->extents[0].block_count = 1;
 
         if (disk->write_block(3, block_buf) != 0) return false;
 
-        // 5. system entries block (Block 4)
-        // Let's configure "system" entries:
-        // - bin (Directory, Inode in Block 9)
+        // 5. apps entries (Block 4) - empty
         memset(block_buf, 0, 512);
-        ASFSDirectoryEntry* system_entries = (ASFSDirectoryEntry*)block_buf;
-
-        system_entries[0].inode_number = 9;
-        system_entries[0].type = 2; // Directory
-        system_entries[0].name_len = 3;
-        memcpy(system_entries[0].name, "bin", 3);
-
         if (disk->write_block(4, block_buf) != 0) return false;
 
-        // 6. data Inode (Block 5)
+        // 6. users Inode (Block 5)
         memset(block_buf, 0, 512);
-        ASFSInode* data_inode = (ASFSInode*)block_buf;
-        data_inode->inode_number = 5;
-        data_inode->type = 2; // Directory
-        data_inode->size = 512;
-        data_inode->permissions = 0755;
-        data_inode->extents[0].start_block = 6; // Directory entry contents in Block 6
-        data_inode->extents[0].block_count = 1;
+        ASFSInode* users_inode = (ASFSInode*)block_buf;
+        users_inode->inode_number = 5;
+        users_inode->type = 2;
+        users_inode->size = 512;
+        users_inode->permissions = 0755;
+        users_inode->extents[0].start_block = 6;
+        users_inode->extents[0].block_count = 1;
 
         if (disk->write_block(5, block_buf) != 0) return false;
 
-        // 7. data entries block (Block 6)
-        // Let's configure "data" entries:
-        // - apps (Directory, Inode in Block 11)
+        // 7. users entries (Block 6) - empty
         memset(block_buf, 0, 512);
-        ASFSDirectoryEntry* data_entries = (ASFSDirectoryEntry*)block_buf;
-
-        data_entries[0].inode_number = 11;
-        data_entries[0].type = 2; // Directory
-        data_entries[0].name_len = 4;
-        memcpy(data_entries[0].name, "apps", 4);
-
         if (disk->write_block(6, block_buf) != 0) return false;
 
-        // 8. system/bin Inode (Block 9)
+        // 8. shared Inode (Block 7)
         memset(block_buf, 0, 512);
-        ASFSInode* bin_inode = (ASFSInode*)block_buf;
-        bin_inode->inode_number = 9;
-        bin_inode->type = 2; // Directory
-        bin_inode->size = 512;
-        bin_inode->permissions = 0755;
-        bin_inode->extents[0].start_block = 10; // Directory entries block 10
-        bin_inode->extents[0].block_count = 1;
+        ASFSInode* shared_inode = (ASFSInode*)block_buf;
+        shared_inode->inode_number = 7;
+        shared_inode->type = 2;
+        shared_inode->size = 512;
+        shared_inode->permissions = 0755;
+        shared_inode->extents[0].start_block = 8;
+        shared_inode->extents[0].block_count = 1;
 
-        if (disk->write_block(9, block_buf) != 0) return false;
+        if (disk->write_block(7, block_buf) != 0) return false;
 
-        // 9. system/bin entries block (Block 10)
-        // Let's add "cli.elf" as a nested file inside "/system/bin/cli.elf":
-        // - cli.elf (File, Inode in Block 13)
+        // 9. shared entries (Block 8) - empty
         memset(block_buf, 0, 512);
-        ASFSDirectoryEntry* bin_entries = (ASFSDirectoryEntry*)block_buf;
+        if (disk->write_block(8, block_buf) != 0) return false;
 
-        bin_entries[0].inode_number = 13;
-        bin_entries[0].type = 1; // File
-        bin_entries[0].name_len = 7;
-        memcpy(bin_entries[0].name, "cli.elf", 7);
-
-        if (disk->write_block(10, block_buf) != 0) return false;
-
-        // 10. data/apps Inode (Block 11)
+        // 10. Write Free-space Bitmap (Blocks 20 to 35)
         memset(block_buf, 0, 512);
-        ASFSInode* apps_inode = (ASFSInode*)block_buf;
-        apps_inode->inode_number = 11;
-        apps_inode->type = 2; // Directory
-        apps_inode->size = 512;
-        apps_inode->permissions = 0755;
-        apps_inode->extents[0].start_block = 12; // Directory entries block 12
-        apps_inode->extents[0].block_count = 1;
+        // Mark blocks 0 to 35 as allocated (bits set to 1)
+        // In block 20 (first bitmap block), bytes 0 to 4 have bits set
+        block_buf[0] = 0xFF; // blocks 0-7
+        block_buf[1] = 0xFF; // blocks 8-15
+        block_buf[2] = 0xFF; // blocks 16-23
+        block_buf[3] = 0xFF; // blocks 24-31
+        block_buf[4] = 0x0F; // blocks 32-35 (0b00001111)
 
-        if (disk->write_block(11, block_buf) != 0) return false;
+        // Write bitmap block 20
+        if (disk->write_block(20, block_buf) != 0) return false;
 
-        // 11. data/apps entries block (Block 12) - empty for now
+        // Reset buffer and write remaining empty bitmap blocks 21 to 35
         memset(block_buf, 0, 512);
-        if (disk->write_block(12, block_buf) != 0) return false;
-
-        // 12. system/bin/cli.elf Inode (Block 13)
-        memset(block_buf, 0, 512);
-        ASFSInode* cli_inode = (ASFSInode*)block_buf;
-        cli_inode->inode_number = 13;
-        cli_inode->type = 1; // File
-        cli_inode->size = 35; // Correct ELF headers mock size
-        cli_inode->permissions = 0755;
-        cli_inode->extents[0].start_block = 14; // File contents reside in Block 14
-        cli_inode->extents[0].block_count = 1;
-
-        if (disk->write_block(13, block_buf) != 0) return false;
-
-        // 13. system/bin/cli.elf content data block (Block 14)
-        // Store standard ELF executable format magic string (\x7fELF)
-        memset(block_buf, 0, 512);
-        const char* elf_mock = "\x7f" "ELF64_MOCK_EXECUTABLE_ASFS_STABLE\n";
-        memcpy(block_buf, elf_mock, 35);
-
-        if (disk->write_block(14, block_buf) != 0) return false;
+        for (u64 b = 21; b < 36; b++) {
+            if (disk->write_block(b, block_buf) != 0) return false;
+        }
 
         return true;
     }

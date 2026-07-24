@@ -171,41 +171,57 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
         acos::hal::serial_print("Failed to read root directory\n");
     }
 
-    // Testing ASFS Integration & Mount on RAM BlockDevice
-    acos::hal::serial_print("Testing ASFS /asfs_ram RAM-Disk Mount...\n");
+    // Testing ASFS Writable Core on RAM BlockDevice (mounted at /asfs_ram)
+    acos::hal::serial_print("\n--- ASFS Writable RAM-Disk Test Suite ---\n");
     acos::vfs::DirectoryEntry asfs_ram_entries[16];
     int asfs_ram_count = acos::vfs::VFS::read_dir("/asfs_ram", asfs_ram_entries, 16);
     if (asfs_ram_count >= 0) {
-        acos::hal::serial_print("ASFS /asfs_ram directory contents:\n");
+        acos::hal::serial_print("RAM Disk root contents:\n");
         for (int i = 0; i < asfs_ram_count; i++) {
             acos::hal::serial_print("  ");
             acos::hal::serial_print(asfs_ram_entries[i].name);
             acos::hal::serial_print("\n");
         }
 
-        // Test directory traversal and nested file reading on RAM block device
-        acos::hal::serial_print("Reading '/asfs_ram/system/bin/cli.elf' contents...\n");
-        acos::i32 asfs_ram_fd = acos::vfs::VFS::open("/asfs_ram/system/bin/cli.elf", 0);
-        if (asfs_ram_fd >= 0) {
-            char file_content[64];
-            memset(file_content, 0, 64);
-            acos::i32 bytes_read = acos::vfs::VFS::read(asfs_ram_fd, file_content, 63);
-            if (bytes_read >= 0) {
-                acos::hal::serial_print("File content: ");
-                acos::hal::serial_print(file_content);
-            } else {
-                acos::hal::serial_print("Failed to read file from RAM ASFS!\n");
-            }
-            acos::vfs::VFS::close(asfs_ram_fd);
+        // RAM-Disk Writable operations: create nested folder and files
+        acos::hal::serial_print("Creating directory /asfs_ram/apps/test_app\n");
+        if (acos::vfs::VFS::mkdir("/asfs_ram/apps/test_app", 0755) == 0) {
+            acos::hal::serial_print("[SUCCESS] Created RAM-disk directory /asfs_ram/apps/test_app!\n");
         } else {
-            acos::hal::serial_print("Failed to open '/asfs_ram/system/bin/cli.elf'!\n");
+            acos::hal::serial_print("[FAIL] Failed to create RAM directory!\n");
         }
+
+        acos::hal::serial_print("Creating and writing /asfs_ram/apps/test_app/output.txt\n");
+        acos::i32 ram_fd = acos::vfs::VFS::open("/asfs_ram/apps/test_app/output.txt", 65); // O_CREAT | O_WRONLY
+        if (ram_fd >= 0) {
+            const char* ram_msg = "ASADE RAM disk write test success!\n";
+            acos::vfs::VFS::write(ram_fd, ram_msg, strlen(ram_msg));
+            acos::vfs::VFS::close(ram_fd);
+
+            // Read back
+            ram_fd = acos::vfs::VFS::open("/asfs_ram/apps/test_app/output.txt", 0);
+            if (ram_fd >= 0) {
+                char ram_buf[64];
+                memset(ram_buf, 0, 64);
+                acos::vfs::VFS::read(ram_fd, ram_buf, 63);
+                acos::hal::serial_print("RAM Read Content: ");
+                acos::hal::serial_print(ram_buf);
+                acos::vfs::VFS::close(ram_fd);
+            }
+        } else {
+            acos::hal::serial_print("[FAIL] Failed to write file to RAM ASFS!\n");
+        }
+
+        // Test File & Dir deletion on RAM disk
+        acos::vfs::VFS::unlink("/asfs_ram/apps/test_app/output.txt");
+        acos::vfs::VFS::rmdir("/asfs_ram/apps/test_app");
+        acos::hal::serial_print("RAM Disk writable test cleanup complete.\n");
     } else {
-        acos::hal::serial_print("Failed to read ASFS /asfs_ram directory\n");
+        acos::hal::serial_print("Failed to access /asfs_ram directory\n");
     }
 
-    // Testing ASFS Integration & Mount on QEMU BlockDevice (SATA/AHCI Partition 2)
-    acos::hal::serial_print("Testing ASFS /system QEMU Disk Mount...\n");
+    // Testing ASFS Integration & Mount on QEMU BlockDevice (SATA/AHCI Partition 2 /system)
+    acos::hal::serial_print("\n--- ASFS /system Read-Only Mount Verification ---\n");
     acos::vfs::DirectoryEntry asfs_entries[16];
     int asfs_count = acos::vfs::VFS::read_dir("/system", asfs_entries, 16);
     if (asfs_count >= 0) {
@@ -216,7 +232,6 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
             acos::hal::serial_print("\n");
         }
 
-        // Test directory traversal and nested file reading on QEMU BlockDevice
         acos::hal::serial_print("Reading '/system/bin/cli.elf' contents...\n");
         acos::i32 asfs_fd = acos::vfs::VFS::open("/system/bin/cli.elf", 0);
         if (asfs_fd >= 0) {
@@ -233,9 +248,67 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
         } else {
             acos::hal::serial_print("Failed to open '/system/bin/cli.elf'!\n");
         }
+
+        // Write protection test on /system (should fail!)
+        acos::hal::serial_print("Attempting to write to read-only mounted /system filesystem...\n");
+        if (acos::vfs::VFS::mkdir("/system/fail_dir", 0755) != 0) {
+            acos::hal::serial_print("[SUCCESS] Properly blocked writing to read-only mounted system filesystem!\n");
+        } else {
+            acos::hal::serial_print("[FAIL] Wrote directory to read-only mounted system filesystem!\n");
+        }
     } else {
         acos::hal::serial_print("Failed to read ASFS /system directory\n");
     }
+
+    // Testing Writable ASFS on Partition 3 (mounted at /data)
+    acos::hal::serial_print("\n--- ASFS Writable Disk-backed /data Mount Verification ---\n");
+    acos::vfs::DirectoryEntry data_entries[16];
+    int data_count = acos::vfs::VFS::read_dir("/data", data_entries, 16);
+    if (data_count >= 0) {
+        acos::hal::serial_print("ASFS /data directory contents:\n");
+        for (int i = 0; i < data_count; i++) {
+            acos::hal::serial_print("  ");
+            acos::hal::serial_print(data_entries[i].name);
+            acos::hal::serial_print("\n");
+        }
+
+        // Test 1: Create nested directory
+        acos::hal::serial_print("[TEST 1] Create directory /data/test_dir\n");
+        if (acos::vfs::VFS::mkdir("/data/test_dir", 0755) == 0) {
+            acos::hal::serial_print("[SUCCESS] Created directory /data/test_dir!\n");
+        } else {
+            acos::hal::serial_print("[FAIL] Failed to create /data/test_dir!\n");
+        }
+
+        // Test 2: Create file inside /data/test_dir/persist.txt
+        acos::hal::serial_print("[TEST 2] Create /data/test_dir/persist.txt\n");
+        acos::i32 p_fd = acos::vfs::VFS::open("/data/test_dir/persist.txt", 65); // O_CREAT | O_WRONLY
+        if (p_fd >= 0) {
+            const char* msg = "ASADE OS Milestone 2 persistence works across hard disk reboots!\n";
+            acos::vfs::VFS::write(p_fd, msg, strlen(msg));
+            acos::vfs::VFS::close(p_fd);
+            acos::hal::serial_print("[SUCCESS] Wrote persistence message to file!\n");
+        } else {
+            acos::hal::serial_print("[FAIL] Failed to create file in /data!\n");
+        }
+
+        // Test 3: Read back file
+        acos::hal::serial_print("[TEST 3] Read back and verify file contents\n");
+        acos::i32 r_p_fd = acos::vfs::VFS::open("/data/test_dir/persist.txt", 0);
+        if (r_p_fd >= 0) {
+            char p_buf[128];
+            memset(p_buf, 0, 128);
+            acos::vfs::VFS::read(r_p_fd, p_buf, 127);
+            acos::hal::serial_print("Verified Persistence Content: ");
+            acos::hal::serial_print(p_buf);
+            acos::vfs::VFS::close(r_p_fd);
+        } else {
+            acos::hal::serial_print("[FAIL] Failed to read back persistence file!\n");
+        }
+    } else {
+        acos::hal::serial_print("ASFS Writable /data is currently unmounted or unavailable.\n");
+    }
+    acos::hal::serial_print("\n--- ASFS Verification Completed ---\n\n");
 
     auto spawn_service = [](const char* path) {
         acos::hal::serial_print("Main: Spawning "); acos::hal::serial_print(path); acos::hal::serial_print("\n");

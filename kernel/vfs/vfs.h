@@ -35,8 +35,14 @@ class FileSystem {
 public:
     virtual ~FileSystem() = default;
     virtual Node* open(const char* path) = 0;
+    virtual Node* open(const char* path, u64 flags) { (void)flags; return open(path); }
     virtual bool mount(const char* target) = 0;
     virtual bool probe(void* device, const char* target) { (void)device; (void)target; return false; }
+
+    // Writable FileSystem extensions for Milestone 2
+    virtual bool mkdir(const char* path) { (void)path; return false; }
+    virtual bool unlink(const char* path) { (void)path; return false; }
+    virtual bool rmdir(const char* path) { (void)path; return false; }
 };
 
 class File;
@@ -54,6 +60,10 @@ public:
     // Directory operations
     static i32 read_dir(const char* path, DirectoryEntry* entries, usize max_entries);
     static NodeType get_node_type(const char* path);
+
+    static i32 mkdir(const char* path, u64 mode);
+    static i32 unlink(const char* path);
+    static i32 rmdir(const char* path);
 };
 
 } // namespace acos::vfs

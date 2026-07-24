@@ -31,7 +31,7 @@ i32 VFS::open(const char* path, u64 flags [[maybe_unused]]) {
     acos::hal::serial_print(relative_path);
     acos::hal::serial_print("\n");
 
-    Node* node = mp->fs->open(relative_path);
+    Node* node = mp->fs->open(relative_path, flags);
     if (!node) {
         acos::hal::serial_print("  VFS: fs->open failed\n");
         return -1;
@@ -133,6 +133,48 @@ NodeType VFS::get_node_type(const char* path) {
     Node* node = mp->fs->open(relative_path);
     if (!node) return NodeType::File;
     return node->type();
+}
+
+i32 VFS::mkdir(const char* path, u64 mode [[maybe_unused]]) {
+    if (!path || path[0] == '\0') return -1;
+    MountPoint* mp = MountRegistry::find_mount(path);
+    if (!mp || !mp->fs) return -1;
+
+    const char* relative_path = path;
+    usize mlen = strlen(mp->path);
+    if (mlen > 1) {
+        relative_path += mlen;
+        if (*relative_path == '/') relative_path++;
+    }
+    return mp->fs->mkdir(relative_path) ? 0 : -1;
+}
+
+i32 VFS::unlink(const char* path) {
+    if (!path || path[0] == '\0') return -1;
+    MountPoint* mp = MountRegistry::find_mount(path);
+    if (!mp || !mp->fs) return -1;
+
+    const char* relative_path = path;
+    usize mlen = strlen(mp->path);
+    if (mlen > 1) {
+        relative_path += mlen;
+        if (*relative_path == '/') relative_path++;
+    }
+    return mp->fs->unlink(relative_path) ? 0 : -1;
+}
+
+i32 VFS::rmdir(const char* path) {
+    if (!path || path[0] == '\0') return -1;
+    MountPoint* mp = MountRegistry::find_mount(path);
+    if (!mp || !mp->fs) return -1;
+
+    const char* relative_path = path;
+    usize mlen = strlen(mp->path);
+    if (mlen > 1) {
+        relative_path += mlen;
+        if (*relative_path == '/') relative_path++;
+    }
+    return mp->fs->rmdir(relative_path) ? 0 : -1;
 }
 
 } // namespace acos::vfs

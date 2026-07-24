@@ -249,12 +249,45 @@ def create_asfs_image():
         1,                  # root_inode
         1,                  # transaction_id
         b"\xab" * 16,       # uuid
-        0, 0, 0,            # reserved roots
+        0, 0, 20,           # reserved roots (free_space_root = 20)
         0,                  # feature_flags
         0x12345678          # checksum
     )
     asfs_data[0:512] = sb
     asfs_data[63454 * 512 : 63455 * 512] = sb # Redundant copy at last block
+
+    # 2. Build and populate the initial Writable Free-Space Bitmap (Blocks 20 to 35)
+    bitmap = bytearray(16 * 512)
+    def mark_allocated(block_num):
+        byte_idx = block_num // 8
+        bit_idx = block_num % 8
+        bitmap[byte_idx] |= (1 << bit_idx)
+
+    # Superblock, Root Inode, and structural blocks 0 to 19
+    for b in range(20):
+        mark_allocated(b)
+
+    # Free Space Bitmap blocks 20 to 35
+    for b in range(20, 36):
+        mark_allocated(b)
+
+    # Inode blocks (15 and 17)
+    mark_allocated(15)
+    mark_allocated(17)
+
+    # cli.elf data blocks
+    for b in range(100, 100 + cli_blocks):
+        mark_allocated(b)
+
+    # desktop.elf data blocks
+    for b in range(100 + cli_blocks, 100 + cli_blocks + desktop_blocks):
+        mark_allocated(b)
+
+    # Redundant superblock block
+    mark_allocated(63454)
+
+    # Copy free-space bitmap blocks directly into our data block allocation
+    asfs_data[20 * 512 : 36 * 512] = bitmap
 
     # Inode layout pack string: <IIQIII (inode_number, type, size, owner_uid, group_gid, permissions) -> followed by flags (I), extents (6 * QQI), indirect_block (Q)
     def pack_inode(inode_number, type_code, size, permissions, extents):

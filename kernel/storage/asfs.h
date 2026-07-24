@@ -23,7 +23,7 @@ struct ASFSSuperblock {
     u8 uuid[16];            // Partition UUID
     u64 inode_tree_root;    // Reserved block address for future Inode B-Tree root
     u64 extent_tree_root;   // Reserved block address for future Extents B-Tree root
-    u64 free_space_root;    // Reserved block address for future Free Space B-Tree root
+    u64 free_space_root;    // Physical block number of Free Space Bitmap (starts at block 20)
     u32 feature_flags;      // Feature configurations mask
     u32 checksum;           // CRC32/Fletcher superblock checksum
 };
@@ -54,18 +54,38 @@ public:
     ASFSFileSystem() : m_device(nullptr) {}
     ASFSFileSystem(BlockDevice* device);
 
-    vfs::Node* open(const char* path) override;
+    vfs::Node* open(const char* path) override { return open(path, 0); }
+    vfs::Node* open(const char* path, u64 flags) override;
     bool mount(const char* target) override;
     bool probe(void* device, const char* target) override;
+
+    // Writable FS extensions
+    bool mkdir(const char* path) override;
+    bool unlink(const char* path) override;
+    bool rmdir(const char* path) override;
 
     BlockDevice* device() const { return m_device; }
     const ASFSSuperblock& superblock() const { return m_sb; }
 
+    // Allocator Helpers
+    u64 allocate_blocks(u32 count);
+    void deallocate_blocks(u64 start_block, u32 count);
+    void flush_superblock();
+
 private:
-    vfs::Node* open_internal(u64 inode_block, const char* path);
+    vfs::Node* open_internal(u64 inode_block, const char* path, u64 flags);
+    bool create_file(const char* path, u64 mode);
+
+    // Metadata Helpers
+    u64 find_inode_block(u64 inode_block, const char* path);
+    bool insert_dir_entry(u64 dir_inode_block, const char* name, u8 type, u64 target_inode_block);
+    bool remove_dir_entry(u64 dir_inode_block, const char* name);
 
     BlockDevice* m_device;
     ASFSSuperblock m_sb;
 };
+
+// Helper function to check protection bounds
+bool is_path_protected(const char* path);
 
 } // namespace acos::storage

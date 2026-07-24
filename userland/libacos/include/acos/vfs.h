@@ -16,6 +16,9 @@ i32 read_dir(const char* path, DirectoryEntry* entries, usize count);
 NodeType get_node_type(const char* path);
 i32 pipe(i32 fds[2]);
 i32 dup2(i32 old_fd, i32 new_fd);
+i32 mkdir(const char* path, u32 mode = 0755);
+i32 unlink(const char* path);
+i32 rmdir(const char* path);
 
 class File {
 public:

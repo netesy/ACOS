@@ -40,6 +40,18 @@ i32 dup2(i32 old_fd, i32 new_fd) {
     return (i32)syscall(sys::SyscallNum::FileDup, (u64)old_fd, (u64)new_fd);
 }
 
+i32 mkdir(const char* path, u32 mode) {
+    return (i32)syscall(sys::SyscallNum::FileMkdir, (u64)path, (u64)mode);
+}
+
+i32 unlink(const char* path) {
+    return (i32)syscall(sys::SyscallNum::FileUnlink, (u64)path);
+}
+
+i32 rmdir(const char* path) {
+    return (i32)syscall(sys::SyscallNum::FileRmdir, (u64)path);
+}
+
 // File wrapper implementation
 File::File(const char* path, u32 flags) {
     m_fd = open(path, flags);

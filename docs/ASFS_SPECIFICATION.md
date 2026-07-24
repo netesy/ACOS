@@ -105,7 +105,7 @@ To facilitate stable dynamic mapping of system and data spaces across multiple p
 
 ---
 
-## 3. On-Disk Format Specification (v1.5 - Extent Based)
+## 3. On-Disk Format Specification (v2.0 - Writable Core)
 An ASFS partition block layout is structured as follows:
 
 ### Sector 0: Superblock
@@ -123,11 +123,18 @@ The superblock occupies the first sector (Block 0) of the ASFS partition:
 | 0x30 | `u8[16]` | `uuid` | Unique filesystem UUID |
 | 0x40 | `u64` | `inode_tree_root` | Reserved block number for future Inode metadata B-tree |
 | 0x48 | `u64` | `extent_tree_root`| Reserved block number for future Extents metadata B-tree |
-| 0x50 | `u64` | `free_space_root` | Reserved block number for future Free Space metadata B-tree |
+| 0x50 | `u64` | `free_space_root` | Physical block number of the Free Space bitmap (starts at block `20` by default) |
 | 0x58 | `u32` | `feature_flags`   | Filesystem feature flags |
 | 0x5C | `u32` | `checksum` | CRC32 or Fletcher checksum of the superblock |
 
 *To provide resilience, a redundant copy of the superblock is stored at the end of the partition.*
+
+### ASFS Free-Space Bitmap
+* **Location**: Starts at the block address specified by `free_space_root` (typically block `20`).
+* **Format**: Consequent byte array where each bit maps to exactly one physical sector block:
+  - `1` = allocated
+  - `0` = free
+* **Bounds**: Covers the complete range of partition sectors up to `total_blocks`. High-performance bitwise instructions are used to allocate contiguous segments.
 
 ### ASFS Extent Format
 An extent defines a contiguous range of physical blocks:
@@ -143,7 +150,7 @@ An inode represents a file or directory entry, allocating a whole block:
 
 | Offset | Type | Field | Description |
 | :--- | :--- | :--- | :--- |
-| 0x00 | `u32` | `inode_number` | Unique inode index |
+| 0x00 | `u32` | `inode_number` | Unique inode index (corresponds exactly to its physical block number on disk) |
 | 0x04 | `u32` | `type` | Node type (`1` File, `2` Directory, `3` Symlink) |
 | 0x08 | `u64` | `size` | Size of the resource in bytes |
 | 0x10 | `u32` | `owner_uid` | Owner User ID |
@@ -158,7 +165,7 @@ A directory data block contains a sequential array of directory records:
 
 | Offset | Type | Field | Description |
 | :--- | :--- | :--- | :--- |
-| 0x00 | `u32` | `inode_number` | Target Inode pointer |
+| 0x00 | `u32` | `inode_number` | Target Inode pointer (corresponds to its physical block address) |
 | 0x04 | `u8` | `type` | Node type (`1` File, `2` Directory) |
 | 0x05 | `u8` | `name_len` | Length of the filename |
 | 0x06 | `char[58]` | `name` | Null-terminated filename characters |
@@ -171,3 +178,4 @@ Every block fetch strictly verifies physical and partition boundaries to prevent
 2. `block_id + block_count <= partition_total_blocks`.
 3. Every extent read satisfies `extent_start >= filesystem_data_start` and `extent_start + extent_length <= filesystem_total_blocks`.
 4. System mounts reject filesystems with block sizes that are not positive powers of two, or roots pointing outside partition spaces.
+5. All disk writes enforce that we never write to block 0 (superblock), block 1 (root directory), or any block outside our designated partition scope.

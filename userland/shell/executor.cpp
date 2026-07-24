@@ -391,23 +391,32 @@ i32 ShellExecutor::builtin_echo(int argc, char** argv, i32 fd) {
     return 0;
 }
 
-i32 ShellExecutor::builtin_mkdir(int argc, char** argv [[maybe_unused]], i32 fd, const char* cwd [[maybe_unused]]) {
+i32 ShellExecutor::builtin_mkdir(int argc, char** argv, i32 fd, const char* cwd) {
     if (argc < 2) {
         print_error(fd, "mkdir", "Missing operand");
         return 1;
     }
-    // Creation not fully supported on read-only FAT32, output graceful error message
-    print_error(fd, "mkdir", "Operation not supported on read-only system partition");
-    return 1;
+    char target[1024];
+    resolve_path(cwd, argv[1], target);
+    if (vfs::mkdir(target, 0755) != 0) {
+        print_error(fd, "mkdir", "Failed to create directory (Access Denied or Directory Exists)");
+        return 1;
+    }
+    return 0;
 }
 
-i32 ShellExecutor::builtin_rmdir(int argc, char** argv [[maybe_unused]], i32 fd, const char* cwd [[maybe_unused]]) {
+i32 ShellExecutor::builtin_rmdir(int argc, char** argv, i32 fd, const char* cwd) {
     if (argc < 2) {
         print_error(fd, "rmdir", "Missing operand");
         return 1;
     }
-    print_error(fd, "rmdir", "Operation not supported on read-only system partition");
-    return 1;
+    char target[1024];
+    resolve_path(cwd, argv[1], target);
+    if (vfs::rmdir(target) != 0) {
+        print_error(fd, "rmdir", "Failed to remove directory (Directory Not Empty or Access Denied)");
+        return 1;
+    }
+    return 0;
 }
 
 i32 ShellExecutor::builtin_touch(int argc, char** argv, i32 fd, const char* cwd) {
@@ -417,22 +426,27 @@ i32 ShellExecutor::builtin_touch(int argc, char** argv, i32 fd, const char* cwd)
     }
     char target[1024];
     resolve_path(cwd, argv[1], target);
-    i32 file_fd = vfs::open(target, 0); // Try opening
+    i32 file_fd = vfs::open(target, 65); // O_CREAT | O_WRONLY = 0x40 | 1 = 65
     if (file_fd >= 0) {
         vfs::close(file_fd);
         return 0;
     }
-    print_error(fd, "touch", "Operation not supported (Read-only FAT32)");
+    print_error(fd, "touch", "Failed to touch/create file");
     return 1;
 }
 
-i32 ShellExecutor::builtin_rm(int argc, char** argv [[maybe_unused]], i32 fd, const char* cwd [[maybe_unused]]) {
+i32 ShellExecutor::builtin_rm(int argc, char** argv, i32 fd, const char* cwd) {
     if (argc < 2) {
         print_error(fd, "rm", "Missing file operand");
         return 1;
     }
-    print_error(fd, "rm", "Operation not supported on read-only filesystem");
-    return 1;
+    char target[1024];
+    resolve_path(cwd, argv[1], target);
+    if (vfs::unlink(target) != 0) {
+        print_error(fd, "rm", "Failed to remove file");
+        return 1;
+    }
+    return 0;
 }
 
 i32 ShellExecutor::builtin_cp(int argc, char** argv, i32 fd, const char* cwd) {

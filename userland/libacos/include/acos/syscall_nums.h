@@ -44,6 +44,9 @@ enum class SyscallNum : u64 {
     FileWrite = 303,
     FileSeek = 304,
     FileReadDir = 305,
+    FileMkdir = 306,
+    FileUnlink = 307,
+    FileRmdir = 308,
     PipeCreate = 310,
     FileDup = 311,
 

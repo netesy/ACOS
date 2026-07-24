@@ -26,6 +26,12 @@ const u8 ASFS_GUID[16] = {
     0xA5, 0xA5, 0xA5, 0xA5, 0xA5, 0xA5, 0xA5, 0xA5
 };
 
+// Custom ASFS Data Partition GUID: 53 41 DA DA 53 46 53 4F DA DA DA DA DA DA DA DA
+const u8 ASFS_DATA_GUID[16] = {
+    0x53, 0x41, 0xDA, 0xDA, 0x53, 0x46, 0x53, 0x4F,
+    0xDA, 0xDA, 0xDA, 0xDA, 0xDA, 0xDA, 0xDA, 0xDA
+};
+
 } // namespace
 
 Partition::Partition(BlockDevice* parent, u64 start_lba, u64 sector_count)
@@ -109,6 +115,11 @@ void PartitionManager::enumerate(BlockDevice* device) {
                                 hal::serial_print_hex(start);
                                 hal::serial_print("\n");
                                 FileSystemManager::probe_and_mount(part, "/system");
+                            } else if (guid_equal(entry->type_guid, ASFS_DATA_GUID)) {
+                                hal::serial_print("PartitionManager: Found GPT ASFS Data Partition at LBA: ");
+                                hal::serial_print_hex(start);
+                                hal::serial_print("\n");
+                                FileSystemManager::probe_and_mount(part, "/data");
                             } else {
                                 // Default fallback probe and mount
                                 FileSystemManager::probe_and_mount(part, "/");
