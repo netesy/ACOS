@@ -2,6 +2,7 @@
 #include <kernel/storage/storage_manager.h>
 #include <kernel/storage/filesystem_manager.h>
 #include <kernel/hal/serial.h>
+#include <acos/runtime.h>
 
 namespace acos::storage {
 
@@ -52,7 +53,8 @@ void Partition::flush() { m_parent->flush(); }
 void PartitionManager::enumerate(BlockDevice* device) {
     if (!device) return;
 
-    u8 sector_buf[512];
+    alignas(4096) u8 sector_buf[512];
+    memset(sector_buf, 0, 512);
 
     // 1. Try to read GPT Header at LBA 1 first
     if (device->read_block(1, sector_buf) == 0) {
@@ -73,7 +75,8 @@ void PartitionManager::enumerate(BlockDevice* device) {
             // Avoid division by zero and sanity limits
             if (entry_size > 0 && entry_count > 0 && entry_count <= 256) {
                 u32 entries_per_sector = 512 / entry_size;
-                u8 entries_sector_buf[512];
+                alignas(4096) u8 entries_sector_buf[512];
+                memset(entries_sector_buf, 0, 512);
                 u32 entries_parsed = 0;
 
                 for (u64 current_sector = entries_lba; entries_parsed < entry_count; current_sector++) {
@@ -138,7 +141,11 @@ void PartitionManager::enumerate(BlockDevice* device) {
     // Always probe the device itself first
     FileSystemManager::probe_and_mount(device, "/");
 
-    if (sector_buf[510] == 0x55 && sector_buf[511] == 0xAA) {
+    // Check if it is a raw FAT32 filesystem to avoid parsing boot code as garbage partitions
+    bool is_raw_fat32 = (sector_buf[66] == 0x29 &&
+                         sector_buf[82] == 'F' && sector_buf[83] == 'A' && sector_buf[84] == 'T');
+
+    if (!is_raw_fat32 && sector_buf[510] == 0x55 && sector_buf[511] == 0xAA) {
         hal::serial_print("PartitionManager: MBR Signature Matched. Enumerating partitions...\n");
         for (int i = 0; i < 4; i++) {
             u8* entry = sector_buf + 446 + (i * 16);

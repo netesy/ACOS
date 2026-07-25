@@ -1,6 +1,7 @@
 #include <kernel/graphics/graphics_manager.h>
 #include <kernel/graphics/font_manager.h>
 #include <libs/runtime/include/acos/runtime.h>
+#include <kernel/hal/serial.h>
 
 namespace acos::graphics {
 
@@ -78,7 +79,10 @@ void GraphicsManager::init(FramebufferInfo* boot_framebuffer) {
         g_displays[i] = nullptr;
     }
 
+    acos::hal::serial_print("GraphicsManager::init - start\n");
+
     if (!valid_boot_framebuffer(boot_framebuffer)) {
+        acos::hal::serial_print("GraphicsManager::init - invalid boot framebuffer\n");
         boot_display()->attach(nullptr);
         g_boot_framebuffer = nullptr;
         return;
@@ -94,7 +98,9 @@ void GraphicsManager::init(FramebufferInfo* boot_framebuffer) {
     boot_display()->attach(g_boot_framebuffer);
     register_display(boot_display());
 
+    acos::hal::serial_print("GraphicsManager::init - calling FontManager::initialize\n");
     FontManager::initialize();
+    acos::hal::serial_print("GraphicsManager::init - end\n");
 }
 
 } // namespace acos::graphics

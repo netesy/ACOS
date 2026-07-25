@@ -263,7 +263,8 @@ bool FAT32FileSystem::probe(void* device, const char* target) {
     hal::serial_print("FAT32: probe called\n");
     if (!device) return false;
     BlockDevice* block_device = (BlockDevice*)device;
-    u8 sector[512];
+    alignas(4096) u8 sector[512];
+    memset(sector, 0, 512);
     hal::serial_print("FAT32: reading block 0...\n");
     if (block_device->read_block(0, sector) != 0) {
         hal::serial_print("FAT32: read block 0 failed!\n");

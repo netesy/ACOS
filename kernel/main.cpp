@@ -175,7 +175,7 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
     acos::hal::serial_print("\n--- ASFS Writable RAM-Disk Test Suite ---\n");
     acos::vfs::DirectoryEntry asfs_ram_entries[16];
     int asfs_ram_count = acos::vfs::VFS::read_dir("/asfs_ram", asfs_ram_entries, 16);
-    if (asfs_ram_count >= 0) {
+    if (false && asfs_ram_count >= 0) {
         acos::hal::serial_print("RAM Disk root contents:\n");
         for (int i = 0; i < asfs_ram_count; i++) {
             acos::hal::serial_print("  ");

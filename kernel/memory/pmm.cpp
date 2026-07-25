@@ -69,6 +69,26 @@ void pmm_init(BootInfo* bootInfo) {
     g_bitmap_size = (g_total_pages / 64) + 1;
     u64 bitmap_bytes = g_bitmap_size * sizeof(u64);
 
+    acos::hal::serial_print("PMM: total_pages=");
+    acos::hal::serial_print_hex(g_total_pages);
+    acos::hal::serial_print(" max_addr=");
+    acos::hal::serial_print_hex(max_addr);
+    acos::hal::serial_print("\n");
+
+    // Print all memory regions
+    for (u64 i = 0; i < bootInfo->memoryMap->count; ++i) {
+        auto& region = bootInfo->memoryMap->regions[i];
+        acos::hal::serial_print("PMM: Region ");
+        acos::hal::serial_print_hex(i);
+        acos::hal::serial_print(" base=");
+        acos::hal::serial_print_hex(region.base);
+        acos::hal::serial_print(" len=");
+        acos::hal::serial_print_hex(region.length);
+        acos::hal::serial_print(" type=");
+        acos::hal::serial_print_hex(static_cast<u64>(region.type));
+        acos::hal::serial_print("\n");
+    }
+
     // Place bitmap right after the kernel image, page-aligned
     u64 kernel_end_addr = align_up(reinterpret_cast<u64>(_kernel_end), PAGE_SIZE);
     u64 bitmap_start = kernel_end_addr;
@@ -96,16 +116,45 @@ void pmm_init(BootInfo* bootInfo) {
     // Mark all pages as used, then clear available regions
     for (u64 i = 0; i < g_bitmap_size; ++i) g_bitmap[i] = 0xFFFFFFFFFFFFFFFF;
 
+    acos::hal::serial_print("PMM: step 1 bitmap[503]=");
+    acos::hal::serial_print_hex(g_bitmap[503]);
+    acos::hal::serial_print("\n");
+
     for (u64 i = 0; i < bootInfo->memoryMap->count; ++i) {
         auto& region = bootInfo->memoryMap->regions[i];
         if (region.type == MemoryRegionType::Available) {
             u64 start_page = region.base / PAGE_SIZE;
             u64 end_page = (region.base + region.length) / PAGE_SIZE;
+            if (start_page >= g_total_pages) continue;
+            if (end_page > g_total_pages) end_page = g_total_pages;
             for (u64 page = start_page; page < end_page; ++page) {
                 bitmap_clear(page);
             }
         }
     }
+
+    acos::hal::serial_print("PMM: step 2 bitmap[503]=");
+    acos::hal::serial_print_hex(g_bitmap[503]);
+    acos::hal::serial_print("\n");
+
+    // Force all reserved/non-available regions to be marked as used,
+    // overriding any overlaps from other regions.
+    for (u64 i = 0; i < bootInfo->memoryMap->count; ++i) {
+        auto& region = bootInfo->memoryMap->regions[i];
+        if (region.type != MemoryRegionType::Available) {
+            u64 start_page = region.base / PAGE_SIZE;
+            u64 end_page = (region.base + region.length) / PAGE_SIZE;
+            if (start_page >= g_total_pages) continue;
+            if (end_page > g_total_pages) end_page = g_total_pages;
+            for (u64 page = start_page; page < end_page; ++page) {
+                bitmap_set(page);
+            }
+        }
+    }
+
+    acos::hal::serial_print("PMM: step 3 bitmap[503]=");
+    acos::hal::serial_print_hex(g_bitmap[503]);
+    acos::hal::serial_print("\n");
 
     // Mark bitmap's own pages as used
     u64 bitmap_start_page = bitmap_start / PAGE_SIZE;
@@ -122,6 +171,10 @@ void pmm_init(BootInfo* bootInfo) {
     for (u64 addr = kernel_start; addr < kernel_end_addr; addr += PAGE_SIZE) {
         bitmap_set(addr / PAGE_SIZE);
     }
+
+    acos::hal::serial_print("PMM: page 32255 test before rebuild=");
+    acos::hal::serial_print_hex(bitmap_test(32255));
+    acos::hal::serial_print("\n");
 
     // Build the initial constant-time O(1) page frame free list
     pmm_rebuild_free_list();
@@ -180,6 +233,9 @@ u64 pmm_alloc_contiguous(u64 page_count) {
 
         return start * 4096;
     }
+    acos::hal::serial_print("PMM: pmm_alloc_contiguous FAILED for pages=");
+    acos::hal::serial_print_hex(page_count);
+    acos::hal::serial_print("\n");
     return 0;
 }
 

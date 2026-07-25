@@ -366,7 +366,7 @@ extern "C" efi::Status efi_main(efi::Handle imageHandle, efi::SystemTable* syste
     static acos::BootInfo bootInfo;
     static acos::FramebufferInfo fbInfo;
     static acos::MemoryMap memoryMap;
-    static acos::MemoryRegion memoryRegions[64];
+    static acos::MemoryRegion memoryRegions[256];
     bootInfo.memoryMap = nullptr;
     bootInfo.cpuInfo = nullptr;
     bootInfo.framebuffer = nullptr;
@@ -399,33 +399,41 @@ extern "C" efi::Status efi_main(efi::Handle imageHandle, efi::SystemTable* syste
         return fail(systemTable, u"invalid memory map descriptor size", status);
     }
 
-    mapSize += 2 * descSize;
+    mapSize += 4 * descSize;
     status = systemTable->bootServices->allocatePool(efi::MemoryType::LoaderData, mapSize, (void**)&map);
     if (status != EFI_SUCCESS || !map) {
         return fail(systemTable, u"cannot allocate memory map", status);
     }
 
-    status = systemTable->bootServices->getMemoryMap(&mapSize, map, &mapKey, &descSize, &descVer);
-    if (status != EFI_SUCCESS) {
-        return fail(systemTable, u"cannot read memory map", status);
-    }
-
-    status = systemTable->bootServices->exitBootServices(imageHandle, mapKey);
-    if (status != EFI_SUCCESS) {
+    // Robust ExitBootServices tight loop to handle mapKey invalidation due to background events
+    bool exited = false;
+    for (int retry = 0; retry < 10; ++retry) {
         status = systemTable->bootServices->getMemoryMap(&mapSize, map, &mapKey, &descSize, &descVer);
         if (status == EFI_SUCCESS) {
             status = systemTable->bootServices->exitBootServices(imageHandle, mapKey);
+            if (status == EFI_SUCCESS) {
+                exited = true;
+                break;
+            }
+        } else if (status == 0x8000000000000005ULL) { // BUFFER_TOO_SMALL
+            systemTable->bootServices->freePool(map);
+            mapSize += 4 * descSize;
+            status = systemTable->bootServices->allocatePool(efi::MemoryType::LoaderData, mapSize, (void**)&map);
+            if (status != EFI_SUCCESS || !map) {
+                return fail(systemTable, u"cannot reallocate memory map", status);
+            }
         }
-        if (status != EFI_SUCCESS) {
-            return fail(systemTable, u"ExitBootServices failed", status);
-        }
+    }
+
+    if (!exited) {
+        return fail(systemTable, u"ExitBootServices failed", status);
     }
 
     // Convert UEFI memory map to ACOS format
     {
         acos::usize regionCount = 0;
         const acos::usize descCount = mapSize / descSize;
-        for (acos::usize i = 0; i < descCount && regionCount < 64; ++i) {
+        for (acos::usize i = 0; i < descCount && regionCount < 256; ++i) {
             auto* desc = reinterpret_cast<efi::MemoryDescriptor*>(
                 reinterpret_cast<acos::u8*>(map) + i * descSize);
             if (desc->numberOfPages == 0) continue;
@@ -433,10 +441,6 @@ extern "C" efi::Status efi_main(efi::Handle imageHandle, efi::SystemTable* syste
             acos::MemoryRegionType type;
             switch (desc->type) {
                 case 7:  // ConventionalMemory
-                case 3:  // BootServicesCode
-                case 4:  // BootServicesData
-                case 2:  // LoaderData
-                case 1:  // LoaderCode
                     type = acos::MemoryRegionType::Available;
                     break;
                 case 9:  // ACPIReclaimMemory
@@ -450,17 +454,10 @@ extern "C" efi::Status efi_main(efi::Handle imageHandle, efi::SystemTable* syste
                     break;
             }
 
-            // Merge contiguous regions of the same type
-            if (regionCount > 0 &&
-                memoryRegions[regionCount - 1].type == type &&
-                memoryRegions[regionCount - 1].base + memoryRegions[regionCount - 1].length == desc->physicalStart) {
-                memoryRegions[regionCount - 1].length += desc->numberOfPages * 4096;
-            } else {
-                memoryRegions[regionCount].base = desc->physicalStart;
-                memoryRegions[regionCount].length = desc->numberOfPages * 4096;
-                memoryRegions[regionCount].type = type;
-                regionCount++;
-            }
+            memoryRegions[regionCount].base = desc->physicalStart;
+            memoryRegions[regionCount].length = desc->numberOfPages * 4096;
+            memoryRegions[regionCount].type = type;
+            regionCount++;
         }
         memoryMap.regions = memoryRegions;
         memoryMap.count = regionCount;

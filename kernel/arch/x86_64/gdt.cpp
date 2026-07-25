@@ -1,5 +1,6 @@
 #include <kernel/hal/gdt.h>
 #include <kernel/smp/cpu.h>
+#include <kernel/hal/serial.h>
 
 namespace acos::hal {
 
@@ -46,6 +47,20 @@ void gdt_init_cpu(u32 cpu_index) {
     cpu->gdt_ptr.base = reinterpret_cast<u64>(&cpu->gdt);
 
     __asm__ volatile("lgdt %0" : : "m"(cpu->gdt_ptr));
+    __asm__ volatile(
+        "mov $0x10, %%ax\n"
+        "mov %%ax, %%ds\n"
+        "mov %%ax, %%es\n"
+        "mov %%ax, %%ss\n"
+        "mov %%ax, %%fs\n"
+        "mov %%ax, %%gs\n"
+        "pushq $0x08\n"
+        "leaq 1f(%%rip), %%rax\n"
+        "pushq %%rax\n"
+        "lretq\n"
+        "1:\n"
+        : : : "rax", "memory"
+    );
     __asm__ volatile("ltr %%ax" : : "a"(static_cast<u16>(0x28)));
 }
 
