@@ -133,7 +133,16 @@ LIBACOS_SRCS = \
 	userland/libacos/font.cpp \
 	userland/libacos/font_manager.cpp \
 	userland/libacos/string.cpp \
-	userland/libacos/input.cpp
+	userland/libacos/input.cpp \
+	userland/libdl/dlopen.cpp \
+	userland/libdl/dlclose.cpp \
+	userland/libdl/dlsym.cpp \
+	userland/libdl/dlerror.cpp \
+	userland/loader/library_manager.cpp \
+	userland/loader/symbol_resolver.cpp \
+	userland/loader/relocation.cpp \
+	userland/loader/loader_cache.cpp \
+	userland/loader/rtld.cpp
 
 GUI_SRCS = $(wildcard userland/gui/*.cpp) $(wildcard userland/gui/core/*.cpp)
 
@@ -310,6 +319,14 @@ $(BUILD_DIR)/userland/libacos/%.o: userland/libacos/%.cpp
 $(BUILD_DIR)/userland/libacos/%.o: userland/libacos/%.S
 	@mkdir -p $(@D)
 	$(AS) $(KERNEL_ASFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/userland/libdl/%.o: userland/libdl/%.cpp
+	@mkdir -p $(@D)
+	$(CXX) $(USER_CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/userland/loader/%.o: userland/loader/%.cpp
+	@mkdir -p $(@D)
+	$(CXX) $(USER_CFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/services/%.o: services/%.cpp
 	@mkdir -p $(@D)
