@@ -11,6 +11,8 @@ enum class SyscallNum : u64 {
     ProcessCreate = 4,
     ProcessStart = 5,
     ProcessTerminate = 6,
+    Fork = 7,
+    WaitPid = 8,
     ThreadCreate = 10,
     ThreadSleep = 11,
     ThreadJoin = 12,

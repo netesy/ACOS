@@ -13,6 +13,8 @@ public:
     bool unmap(u64 virt);
     bool protect(u64 virt, u64 flags);
     u64 translate(u64 virt);
+    AddressSpace* clone();
+    u64* get_pte_ptr(u64 virt);
 
     u64 pml4_phys() const { return m_pml4_phys; }
 

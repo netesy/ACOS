@@ -5,6 +5,10 @@
 #include <acos/boot_info.h>
 #include <kernel/hal/pci.h>
 #include <kernel/arch/x86_64/acpi/madt.h>
+#include <acos/runtime.h>
+#include <kernel/scheduler/scheduler.h>
+#include <kernel/scheduler/process.h>
+#include <kernel/memory/address_space.h>
 
 extern "C" {
     extern char _text_start[];
@@ -266,6 +270,53 @@ void vmm_init(BootInfo* bootInfo) {
 
     acos::hal::serial_print("[VMM] CR3 loaded\n");
     __asm__ volatile("mov %0, %%cr3" : : "r"(g_kernel_pml4));
+}
+
+bool vmm_handle_cow(u64 fault_addr) {
+    u64 page_virt = fault_addr & ~0xFFFULL;
+
+    auto* current_thr = scheduler::current_thread();
+    if (!current_thr || !current_thr->parent) return false;
+    auto* as = current_thr->parent->address_space;
+    if (!as) return false;
+
+    u64* pte = as->get_pte_ptr(page_virt);
+    if (!pte || !(*pte & 1)) return false;
+
+    // Check COW bit (bit 9)
+    if (!(*pte & (1ULL << 9))) return false;
+
+    u64 old_phys = *pte & ~0xFFFULL & ~0xFFF0000000000000ULL;
+    u64 page_index = old_phys / 4096;
+
+    u16 ref_count = pmm_get_ref_count(page_index);
+
+    if (ref_count == 1) {
+        // Sole owner: remove COW bit and make writable
+        *pte &= ~(1ULL << 9);
+        *pte |= 2;
+        __asm__ volatile("invlpg (%0)" : : "r"(page_virt) : "memory");
+        return true;
+    } else if (ref_count > 1) {
+        // Shared: allocate new page and copy contents
+        u64 new_phys = pmm_alloc();
+        if (!new_phys) return false;
+
+        memcpy(reinterpret_cast<void*>(new_phys), reinterpret_cast<void*>(old_phys), 4096);
+
+        u64 flags = *pte & 0xFFFULL;
+        flags &= ~(1ULL << 9);
+        flags |= 2;
+
+        *pte = new_phys | flags;
+
+        pmm_dec_ref_count(page_index);
+
+        __asm__ volatile("invlpg (%0)" : : "r"(page_virt) : "memory");
+        return true;
+    }
+
+    return false;
 }
 
 } // namespace acos::memory

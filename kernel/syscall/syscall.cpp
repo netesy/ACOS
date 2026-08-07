@@ -19,6 +19,20 @@
 #include <kernel/input/input_queue.h>
 #include <kernel/input/input_device.h>
 
+extern "C" [[noreturn]] void child_fork_return(acos::u64 regs_ptr);
+
+extern "C" void* child_fork_stub_func(void* arg) {
+    (void)arg;
+    auto* thr = acos::scheduler::current_thread();
+
+    // 1. Load child's CR3
+    __asm__ volatile("mov %0, %%cr3" : : "r"(thr->parent->address_space->pml4_phys()));
+
+    // 2. Return to user space at the exact saved instruction
+    acos::u64 regs_ptr = thr->stack_top - 120;
+    child_fork_return(regs_ptr);
+}
+
 namespace acos::sys {
 
 namespace {
@@ -319,6 +333,112 @@ extern "C" u64 syscall_dispatch(u64 num, u64 arg1, u64 arg2, u64 arg3, u64 arg4,
             scheduler::Process* process = current->get_process(arg1);
             if (!process) return kErrInvalid;
             (void)process;
+            return 0;
+        }
+
+        case SyscallNum::Fork: {
+            if (!current || !current_thr) return kErrInvalid;
+
+            // 1. Clone parent address space with Copy-on-Write (COW)
+            auto* child_as = current->address_space->clone();
+            if (!child_as) return kErrNoMemory;
+
+            // 2. Create child process
+            scheduler::Process* child_proc = scheduler::Process::create();
+            if (!child_proc) {
+                child_as->~AddressSpace();
+                memory::kfree(child_as);
+                return kErrNoMemory;
+            }
+
+            // Free the default AddressSpace created in Process::create()
+            child_proc->address_space->~AddressSpace();
+            memory::kfree(child_proc->address_space);
+            child_proc->address_space = child_as;
+
+            // 3. Inherit parent file descriptors
+            for (int i = 0; i < 32; i++) {
+                if (current->files[i]) {
+                    child_proc->files[i] = current->files[i];
+                }
+            }
+
+            // 4. Create child primary thread
+            scheduler::Thread* child_thr = (scheduler::Thread*)memory::kmalloc(sizeof(scheduler::Thread));
+            if (!child_thr) {
+                child_proc->~Process();
+                memory::kfree(child_proc);
+                return kErrNoMemory;
+            }
+
+            // Copy parent thread structure exactly
+            *child_thr = *current_thr;
+
+            // Allocate a new kernel stack for the child thread
+            u64* child_kstack = (u64*)memory::kmalloc(16384);
+            if (!child_kstack) {
+                memory::kfree(child_thr);
+                child_proc->~Process();
+                memory::kfree(child_proc);
+                return kErrNoMemory;
+            }
+
+            // Copy parent's kernel stack to child's kernel stack
+            u64 parent_kstack_base = current_thr->stack_top - 16384;
+            memcpy(child_kstack, reinterpret_cast<void*>(parent_kstack_base), 16384);
+
+            // Initialize stack pointer for child to run the stub
+            // The structure is setup exactly like create_thread
+            child_thr->stack_top = (u64)child_kstack + 16384;
+            child_thr->stack_pointer = child_thr->stack_top;
+            child_thr->stack_pointer &= ~0xFULL;
+
+            // 1. ABI Alignment Padding (8 bytes)
+            child_thr->stack_pointer -= sizeof(u64);
+            *(u64*)child_thr->stack_pointer = 0;
+
+            // 2. Entry point (popped by ret when context_switch finishes)
+            child_thr->stack_pointer -= sizeof(u64);
+            *(u64*)child_thr->stack_pointer = (u64)child_fork_stub_func;
+
+            // 3. Callee-saved registers (rbp, rbx, r12, r13, r14, r15)
+            for (int i = 0; i < 6; i++) {
+                child_thr->stack_pointer -= sizeof(u64);
+                *(u64*)child_thr->stack_pointer = 0;
+            }
+
+            // Assign thread and process parameters
+            static u64 next_fork_thread_id = 10000;
+            child_thr->id = next_fork_thread_id++;
+            child_thr->parent = child_proc;
+            child_proc->primary_thread = child_thr;
+
+            // Register child process inside parent process handles
+            u64 child_handle = current->register_process(child_proc, scheduler::ResourceRights::Administer | scheduler::ResourceRights::Transfer | scheduler::ResourceRights::Delegate);
+            (void)child_handle;
+
+            // Register child thread inside parent process handles
+            u64 child_thread_handle = current->register_thread(child_thr, scheduler::ResourceRights::Administer | scheduler::ResourceRights::Transfer | scheduler::ResourceRights::Delegate);
+            (void)child_thread_handle;
+
+            // Wake the child thread
+            scheduler::wake_thread(child_thr);
+
+            // Return child PID to parent
+            return child_proc->id;
+        }
+
+        case SyscallNum::WaitPid: {
+            if (!current) return kErrInvalid;
+            u64 pid = arg1;
+            scheduler::Process* target = scheduler::process_table_find(pid);
+            if (!target) return kErrInvalid;
+
+            if (target->primary_thread) {
+                while (target->primary_thread->state != scheduler::ThreadState::Terminated) {
+                    scheduler::schedule();
+                }
+            }
             return 0;
         }
 

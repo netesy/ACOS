@@ -11,4 +11,7 @@ void vmm_map(PageTable* pml4, u64 virt, u64 phys, u64 flags);
 // W^X Page-table validation
 bool vmm_validate_wx();
 
+// Copy-On-Write handler
+bool vmm_handle_cow(u64 fault_addr);
+
 } // namespace acos::memory

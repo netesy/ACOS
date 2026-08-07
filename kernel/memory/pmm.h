@@ -11,4 +11,9 @@ namespace acos::memory {
     // Statistics
     u64 pmm_get_total_memory();
     u64 pmm_get_used_memory();
+
+    // Reference Counting
+    u16 pmm_get_ref_count(u64 page_index);
+    void pmm_inc_ref_count(u64 page_index);
+    void pmm_dec_ref_count(u64 page_index);
 }

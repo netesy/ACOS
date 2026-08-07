@@ -9,6 +9,7 @@ namespace acos::memory {
 static constexpr u64 PAGE_SIZE = 4096;
 
 static u64* g_bitmap = nullptr;
+static u16* g_page_ref_counts = nullptr;
 static u64 g_total_pages = 0;
 static u64 g_used_pages = 0;
 static u64 g_bitmap_size = 0;
@@ -156,10 +157,27 @@ void pmm_init(BootInfo* bootInfo) {
     acos::hal::serial_print_hex(g_bitmap[503]);
     acos::hal::serial_print("\n");
 
+    // Allocate reference counts array right after the bitmap
+    u64 ref_counts_start = bitmap_end;
+    u64 ref_counts_bytes = g_total_pages * sizeof(u16);
+    u64 ref_counts_end = align_up(ref_counts_start + ref_counts_bytes, PAGE_SIZE);
+
+    g_page_ref_counts = reinterpret_cast<u16*>(ref_counts_start);
+    for (u64 i = 0; i < g_total_pages; i++) {
+        g_page_ref_counts[i] = 0;
+    }
+
     // Mark bitmap's own pages as used
     u64 bitmap_start_page = bitmap_start / PAGE_SIZE;
     u64 bitmap_end_page = bitmap_end / PAGE_SIZE;
     for (u64 page = bitmap_start_page; page < bitmap_end_page; ++page) {
+        bitmap_set(page);
+    }
+
+    // Mark reference counts' own pages as used
+    u64 ref_start_page = ref_counts_start / PAGE_SIZE;
+    u64 ref_end_page = ref_counts_end / PAGE_SIZE;
+    for (u64 page = ref_start_page; page < ref_end_page; ++page) {
         bitmap_set(page);
     }
 
@@ -193,6 +211,9 @@ u64 pmm_alloc() {
         u64 page = allocated_addr / 4096;
         bitmap_set(page);
         g_used_pages++;
+        if (g_page_ref_counts) {
+            g_page_ref_counts[page] = 1;
+        }
 
         // Clear the page contents for security and safety
         for (usize i = 0; i < 4096 / sizeof(u64); i++) {
@@ -224,7 +245,11 @@ u64 pmm_alloc_contiguous(u64 page_count) {
         }
 
         for (u64 offset = 0; offset < page_count; ++offset) {
-            bitmap_set(start + offset);
+            u64 page = start + offset;
+            bitmap_set(page);
+            if (g_page_ref_counts) {
+                g_page_ref_counts[page] = 1;
+            }
         }
         g_used_pages += page_count;
 
@@ -241,6 +266,13 @@ u64 pmm_alloc_contiguous(u64 page_count) {
 
 void pmm_free(u64 addr) {
     u64 page = addr / 4096;
+    if (g_page_ref_counts && g_page_ref_counts[page] > 0) {
+        g_page_ref_counts[page]--;
+        if (g_page_ref_counts[page] > 0) {
+            return; // Keep allocated as it is still shared/referenced
+        }
+    }
+
     if (bitmap_test(page)) {
         bitmap_clear(page);
         g_used_pages--;
@@ -248,6 +280,27 @@ void pmm_free(u64 addr) {
         // Push the page back onto the fast constant-time O(1) free list
         *reinterpret_cast<u64*>(addr) = g_free_list_head;
         g_free_list_head = addr;
+    }
+}
+
+u16 pmm_get_ref_count(u64 page_index) {
+    if (g_page_ref_counts && page_index < g_total_pages) {
+        return g_page_ref_counts[page_index];
+    }
+    return 0;
+}
+
+void pmm_inc_ref_count(u64 page_index) {
+    if (g_page_ref_counts && page_index < g_total_pages) {
+        g_page_ref_counts[page_index]++;
+    }
+}
+
+void pmm_dec_ref_count(u64 page_index) {
+    if (g_page_ref_counts && page_index < g_total_pages) {
+        if (g_page_ref_counts[page_index] > 0) {
+            g_page_ref_counts[page_index]--;
+        }
     }
 }
 

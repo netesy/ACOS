@@ -36,8 +36,8 @@
 #include <kernel/input/keyboard_manager.h>
 #include <kernel/input/mouse_manager.h>
 
+#include <kernel/memory/vmm.h>
 namespace acos::hal { void idt_init(); }
-namespace acos::memory { void vmm_init(BootInfo* bootInfo); }
 
 extern "C" void console_push_char(char c);
 
@@ -65,6 +65,11 @@ extern "C" void k_handle_gp(acos::u64 rip, acos::u64 error_code) {
 }
 
 extern "C" void k_handle_pf(acos::u64 rip, acos::u64 error_code, acos::u64 address) {
+    // Detect and resolve Copy-On-Write faults
+    if ((error_code & 2) && acos::memory::vmm_handle_cow(address)) {
+        return;
+    }
+
     acos::hal::serial_print("PAGE FAULT at RIP: ");
     acos::hal::serial_print_hex(rip);
     acos::hal::serial_print(" Addr: ");

@@ -62,3 +62,40 @@ enter_user_mode:
     xor %r15, %r15
 
     iretq
+
+.global child_fork_return
+child_fork_return:
+    # rdi points to SyscallRegs structure:
+    # 0: rbx, 8: rbp, 16: rdi, 24: rsi, 32: rdx, 40: r10, 48: r8, 56: r9, 64: r12, 72: r13, 80: r14, 88: r15, 96: rflags, 104: rip, 112: rsp
+
+    # Restore callee-saved and caller-saved registers
+    mov 0(%rdi), %rbx
+    mov 8(%rdi), %rbp
+    mov 24(%rdi), %rsi
+    mov 32(%rdi), %rdx
+    mov 40(%rdi), %r10
+    mov 48(%rdi), %r8
+    mov 56(%rdi), %r9
+    mov 64(%rdi), %r12
+    mov 72(%rdi), %r13
+    mov 80(%rdi), %r14
+    mov 88(%rdi), %r15
+
+    # Load rflags into %r11
+    mov 96(%rdi), %r11
+    # Load rip into %rcx
+    mov 104(%rdi), %rcx
+    # Load rsp into %gs:0x0 (user stack pointer)
+    mov 112(%rdi), %rax
+    mov %rax, %gs:0x0
+
+    # Set RAX to 0 (fork return value for child)
+    xor %rax, %rax
+
+    # Finally, restore rdi
+    mov 16(%rdi), %rdi
+
+    # SwapGS, restore stack, and return to user space
+    swapgs
+    mov %gs:0x0, %rsp
+    sysretq
