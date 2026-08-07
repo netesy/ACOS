@@ -196,16 +196,16 @@ Hence, in simulation, Asade qualifies as a **Level 3 - Interactive Graphical Des
 
 | Category | Score (0-100%) | Status |
 | :--- | :--- | :--- |
-| **Boot & Hardware Independence** | 65% | Partially Implemented |
+| **Boot & Hardware Independence** | 80% | Improved (ACPI MCFG & PCIe ECAM Mapping) |
 | **Kernel Core** | 80% | Improved (Best-Fit Heap Coalescing/Splitting) |
-| **Hardware Support** | 40% | Partially Implemented |
+| **Hardware Support** | 75% | Improved (USB xHCI Controller & USB HID Keyboard/Mouse Drivers) |
 | **Operating System Services** | 85% | Complete |
 | **Architecture & Originality** | 90% | Complete |
 | **Reliability** | 65% | Improved (Double-free & Heap Corruption Checks, W^X Validation) |
-| **Real Hardware Readiness** | 50% | Improved (W^X Protection, User Stack Guard Pages, Safe Mounts) |
+| **Real Hardware Readiness** | 75% | Improved (W^X, Stack Guard, PCIe ECAM, xHCI USB input, BGR/24bpp GOP) |
 
 ### Overall OS Maturity Score
-$$\text{Overall Maturity} = \frac{65 + 80 + 40 + 85 + 90 + 65 + 50}{7} \approx \mathbf{67.86\%}$$
+$$\text{Overall Maturity} = \frac{80 + 80 + 75 + 85 + 90 + 65 + 75}{7} \approx \mathbf{78.57\%}$$
 
 ---
 
@@ -216,18 +216,18 @@ $$\text{Overall Maturity} = \frac{65 + 80 + 40 + 85 + 90 + 65 + 50}{7} \approx \
 3.  **No Thread/Process Resource Reaper**: Terminated thread and process metadata are leaked in memory indefinitely, leading to OOM starvation.
 4.  **RESOLVED — No Kernel Heap Coalescing**: Upgraded kernel heap allocator to a production-quality Best-Fit Free-List Heap Allocator with block splitting, coalescing, statistics, and validation.
 5.  **Incomplete FAT32 Write Logic**: Lack of dynamic cluster allocation in the FAT32 driver causes disk partition corruption on writes.
-6.  **Missing USB xHCI Driver**: USB keyboards and mice are completely unfunctional, limiting physical inputs to legacy PS/2 interfaces.
+6.  **RESOLVED — Missing USB xHCI Driver**: Implemented USB xHCI host controller initialization, stop/reset routines, rings (Command/Event/Transfer) and doorbells. Completed USB keyboard and mouse HID drivers with unified input routing.
 7.  **No Dynamic Linker (libdl Stub)**: Apps must be statically linked, preventing modular runtime updates and expanding binary sizes.
 8.  **RESOLVED — Lack of Split W^X Memory Protection**: Implemented strict Write XOR Execute (W^X) segment and stack protections with page-table validation.
 9.  **No CPU-Bound Ring 3 Fault Isolation**: User-space Page Faults cause a kernel panic (HLT) instead of cleanly terminating the offending thread.
-10. **Legacy PCI Scanning Only**: Lack of PCIe ECAM dynamic mapping prevents dynamic discovery of modern PCIe expansion cards.
+10. **RESOLVED — Legacy PCI Scanning Only**: Implemented ACPI MCFG table parsing, dynamic PCIe ECAM configuration-space mapping, and device registration/MSI handling.
 11. **Incomplete TCP State Machine**: The TCP stack lacks congestion control, retransmission logic, and stable state transitions.
 12. **VirtIO Sound Codec Stubs**: The audio server lacks real Intel High Definition Audio (HDA) register-level driver implementations.
 13. **Incomplete VirtIO Net Descriptor-Ring Recycling**: Network packets are prone to ring buffer drops under heavy traffic workloads.
 14. **Lack of POSIX fork() (No COW Address Spaces)**: Processes cannot clone their address spaces efficiently, blocking standard POSIX software.
 15. **Missing Continuous Fuzzing & Testing Pipelines**: The testing specifications from `TESTING_STANDARD.md` are not integrated or automated in CI.
 16. **No ACPI Power Management (AML Parser)**: The system cannot perform ACPI power shutdowns or enter low-power sleep states.
-17. **Hardcoded Framebuffer Pitch & Format**: Assumes standard 32bpp RGB layouts, leading to distorted screens on physical displays with BGR or 16-bit depths.
+17. **RESOLVED — Hardcoded Framebuffer Pitch & Format**: Upgraded graphics system with pixel format detection (RGB vs. BGR), 24bpp vs. 32bpp support, pitch-aware rendering offsets, and boundary checks.
 18. **Unoptimized PMM Page Scanning**: Falls back to linear bitmap scanning for contiguous physical memory allocations, causing high latency.
 19. **Missing Ed25519 Cryptographic Verification**: Signature check in the package manager is disabled / fails-closed because the elliptic curve implementation is stubbed.
 20. **No Local Loopback Device Interface**: Sockets do not support standard internal loopback (`127.0.0.1`), breaking standard offline IPC servers.

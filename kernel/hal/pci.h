@@ -16,8 +16,11 @@ struct PCIDevice {
 
 class PCI {
 public:
+    static void init_pcie(u64 ecam_base, u8 start_bus, u8 end_bus);
     static u32 read_config(u8 bus, u8 device, u8 function, u8 offset);
     static void write_config(u8 bus, u8 device, u8 function, u8 offset, u32 value);
+    static u32 read_config_ext(u8 bus, u8 device, u8 function, u16 offset);
+    static void write_config_ext(u8 bus, u8 device, u8 function, u16 offset, u32 value);
 
     static PCIDevice find_device(u8 class_code, u8 subclass);
     static u64 get_bar(const PCIDevice& dev, u8 bar_index);

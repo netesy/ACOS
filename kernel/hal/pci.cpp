@@ -5,7 +5,34 @@ namespace acos::hal {
 static constexpr u16 PCI_CONFIG_ADDRESS = 0xCF8;
 static constexpr u16 PCI_CONFIG_DATA    = 0xCFC;
 
+static u64 g_pcie_ecam_base = 0;
+static u8 g_pcie_start_bus = 0;
+static u8 g_pcie_end_bus = 0;
+
+void PCI::init_pcie(u64 ecam_base, u8 start_bus, u8 end_bus) {
+    g_pcie_ecam_base = ecam_base;
+    g_pcie_start_bus = start_bus;
+    g_pcie_end_bus = end_bus;
+}
+
 u32 PCI::read_config(u8 bus, u8 device, u8 function, u8 offset) {
+    return read_config_ext(bus, device, function, offset);
+}
+
+void PCI::write_config(u8 bus, u8 device, u8 function, u8 offset, u32 value) {
+    write_config_ext(bus, device, function, offset, value);
+}
+
+u32 PCI::read_config_ext(u8 bus, u8 device, u8 function, u16 offset) {
+    if (g_pcie_ecam_base && bus >= g_pcie_start_bus && bus <= g_pcie_end_bus) {
+        u64 addr = g_pcie_ecam_base +
+                   ((static_cast<u64>(bus - g_pcie_start_bus) << 20) |
+                    (static_cast<u64>(device) << 15) |
+                    (static_cast<u64>(function) << 12) |
+                    (offset & 0xFFC));
+        return *reinterpret_cast<volatile u32*>(addr);
+    }
+    // Legacy fallback
     u32 address = (u32)((u32)bus << 16) | ((u32)device << 11) |
                   ((u32)function << 8) | (offset & 0xFC) | ((u32)0x80000000);
     __asm__ volatile("outl %0, %1" : : "a"(address), "Nd"(PCI_CONFIG_ADDRESS));
@@ -14,7 +41,17 @@ u32 PCI::read_config(u8 bus, u8 device, u8 function, u8 offset) {
     return data;
 }
 
-void PCI::write_config(u8 bus, u8 device, u8 function, u8 offset, u32 value) {
+void PCI::write_config_ext(u8 bus, u8 device, u8 function, u16 offset, u32 value) {
+    if (g_pcie_ecam_base && bus >= g_pcie_start_bus && bus <= g_pcie_end_bus) {
+        u64 addr = g_pcie_ecam_base +
+                   ((static_cast<u64>(bus - g_pcie_start_bus) << 20) |
+                    (static_cast<u64>(device) << 15) |
+                    (static_cast<u64>(function) << 12) |
+                    (offset & 0xFFC));
+        *reinterpret_cast<volatile u32*>(addr) = value;
+        return;
+    }
+    // Legacy fallback
     u32 address = (u32)((u32)bus << 16) | ((u32)device << 11) |
                   ((u32)function << 8) | (offset & 0xFC) | ((u32)0x80000000);
     __asm__ volatile("outl %0, %1" : : "a"(address), "Nd"(PCI_CONFIG_ADDRESS));

@@ -379,6 +379,7 @@ extern "C" efi::Status efi_main(efi::Handle imageHandle, efi::SystemTable* syste
     fbInfo.height = 0;
     fbInfo.pitch = 0;
     fbInfo.bpp = 0;
+    fbInfo.format = 0;
     if (hasFramebuffer) {
         fbInfo.base = gop->mode->frameBufferBase;
         fbInfo.size = gop->mode->frameBufferSize;
@@ -386,6 +387,7 @@ extern "C" efi::Status efi_main(efi::Handle imageHandle, efi::SystemTable* syste
         fbInfo.height = gop->mode->info->verticalResolution;
         fbInfo.pitch = gop->mode->info->pixelsPerScanLine;
         fbInfo.bpp = 32;
+        fbInfo.format = (gop->mode->info->pixelFormat == efi::GraphicsPixelFormat::PixelBlueGreenRedReserved8BitPerColor) ? 1 : 0;
         bootInfo.framebuffer = &fbInfo;
     }
 

@@ -94,7 +94,8 @@ void GraphicsManager::init(FramebufferInfo* boot_framebuffer) {
         boot_framebuffer->width,
         boot_framebuffer->height,
         boot_framebuffer->pitch,
-        boot_framebuffer->bpp);
+        boot_framebuffer->bpp,
+        boot_framebuffer->format == 1 ? PixelFormat::BGR : PixelFormat::RGB);
     boot_display()->attach(g_boot_framebuffer);
     register_display(boot_display());
 

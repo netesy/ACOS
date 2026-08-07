@@ -4,9 +4,14 @@
 
 namespace acos::graphics {
 
+enum class PixelFormat {
+    RGB,
+    BGR
+};
+
 class Framebuffer {
 public:
-    Framebuffer(u64 base, u64 size, u32 width, u32 height, u32 pitch, u32 bpp);
+    Framebuffer(u64 base, u64 size, u32 width, u32 height, u32 pitch, u32 bpp, PixelFormat format = PixelFormat::RGB);
 
     // Basic operations
     void put_pixel(u32 x, u32 y, u32 color);
@@ -35,6 +40,8 @@ public:
     u64 base() const { return m_base; }
     u64 size() const { return m_size; }
     u32 pitch() const { return m_pitch; }
+    u32 bpp() const { return m_bpp; }
+    PixelFormat format() const { return m_format; }
 
 private:
     u64 m_base;
@@ -43,6 +50,7 @@ private:
     u32 m_height;
     u32 m_pitch;
     u32 m_bpp;
+    PixelFormat m_format;
     ClipRect m_clip_rect;
     bool m_clipping_enabled;
 };

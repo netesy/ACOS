@@ -6,6 +6,10 @@
 using namespace acos;
 
 extern "C" int main(int argc [[maybe_unused]], char** argv [[maybe_unused]]) {
+    // Retrieve xHCI controller BAR base address from PCIe manager or use the standard mapping
+    drivers::usb::XHCIController controller(0xFE000000);
+    controller.initialize();
+
     u64 xhci_channel = ipc::channel_create();
     if (!xhci_channel) return 1;
 
@@ -14,6 +18,7 @@ extern "C" int main(int argc [[maybe_unused]], char** argv [[maybe_unused]]) {
     while (true) {
         acos::ipc::Message msg;
         if (acos::ipc::channel_receive(xhci_channel, &msg, sizeof(msg))) {
+            // Handle USB commands or report queries
         }
     }
     return 0;

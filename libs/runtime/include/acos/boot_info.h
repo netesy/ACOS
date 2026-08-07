@@ -34,6 +34,7 @@ struct FramebufferInfo {
     u32 height;
     u32 pitch;
     u32 bpp;
+    u32 format; // 0 = RGB, 1 = BGR
 };
 
 struct CpuInfo {

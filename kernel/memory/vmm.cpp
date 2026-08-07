@@ -3,6 +3,8 @@
 #include <kernel/memory/pmm.h>
 #include <kernel/hal/serial.h>
 #include <acos/boot_info.h>
+#include <kernel/hal/pci.h>
+#include <kernel/arch/x86_64/acpi/madt.h>
 
 extern "C" {
     extern char _text_start[];
@@ -184,6 +186,48 @@ void vmm_init(BootInfo* bootInfo) {
         const u64 end = (bootInfo->framebuffer->base + bootInfo->framebuffer->size + 0x1FFFFF) & ~0x1FFFFFULL;
         for (u64 addr = start; addr < end; addr += 0x200000) {
             vmm_map_2m(g_kernel_pml4, addr, addr, 2 | (1ULL << 63));
+        }
+    }
+
+    // Parse ACPI MCFG table for PCI Express ECAM support
+    if (bootInfo && bootInfo->acpi) {
+        void* mcfg_table = acos::arch::x86_64::MADT::find_table(bootInfo->acpi, "MCFG");
+        if (mcfg_table) {
+            struct MCFGHeader {
+                acos::arch::x86_64::ACPISDTHeader h;
+                u64 reserved;
+            } __attribute__((packed));
+
+            struct MCFGEntry {
+                u64 base_address;
+                u16 pci_segment_group;
+                u8 start_bus;
+                u8 end_bus;
+                u32 reserved;
+            } __attribute__((packed));
+
+            auto* mcfg = reinterpret_cast<MCFGHeader*>(mcfg_table);
+            usize entry_count = (mcfg->h.length - sizeof(MCFGHeader)) / sizeof(MCFGEntry);
+            auto* entries = reinterpret_cast<MCFGEntry*>(mcfg + 1);
+
+            if (entry_count > 0) {
+                u64 ecam_base = entries[0].base_address;
+                u8 start_bus = entries[0].start_bus;
+                u8 end_bus = entries[0].end_bus;
+
+                // Map ECAM memory-mapped configuration range using 2MB pages
+                // Each bus is 1MB in size. We use Cache Disable (bit 4) + Write Through (bit 3) flags.
+                u64 ecam_size = static_cast<u64>(end_bus - start_bus + 1) * 1024 * 1024;
+                u64 ecam_end = (ecam_base + ecam_size + 0x1FFFFF) & ~0x1FFFFFULL;
+                for (u64 addr = ecam_base & ~0x1FFFFFULL; addr < ecam_end; addr += 0x200000) {
+                    vmm_map_2m(g_kernel_pml4, addr, addr, 2 | (1ULL << 63) | (1ULL << 4) | (1ULL << 3));
+                }
+
+                acos::hal::PCI::init_pcie(ecam_base, start_bus, end_bus);
+                acos::hal::serial_print("[VMM] Mapped and initialized PCI Express ECAM: base=");
+                acos::hal::serial_print_hex(ecam_base);
+                acos::hal::serial_print("\n");
+            }
         }
     }
 

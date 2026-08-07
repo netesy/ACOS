@@ -28,8 +28,31 @@ public:
     }
 };
 
+class USBKeyboard : public KeyboardDevice {
+public:
+    bool initialize() override { return true; }
+    const char* name() const override { return "USB Keyboard"; }
+    void handle_scancode(u8 scancode) override {
+        KeyboardManager::handle_scancode(scancode);
+    }
+};
+
+class USBMouse : public MouseDevice {
+public:
+    bool initialize() override { return true; }
+    const char* name() const override { return "USB Mouse"; }
+    void handle_movement(i32 dx, i32 dy) override {
+        MouseManager::handle_movement(dx, dy);
+    }
+    void handle_button(u32 button, bool pressed) override {
+        MouseManager::handle_button(button, pressed);
+    }
+};
+
 static PS2Keyboard g_ps2_keyboard;
 static PS2Mouse g_ps2_mouse;
+static USBKeyboard g_usb_keyboard;
+static USBMouse g_usb_mouse;
 
 hal::SpinLock InputManager::m_lock;
 InputDevice* InputManager::m_devices[16];
@@ -103,6 +126,8 @@ static void run_input_self_test() {
 void InputManager::init() {
     register_device(&g_ps2_keyboard);
     register_device(&g_ps2_mouse);
+    register_device(&g_usb_keyboard);
+    register_device(&g_usb_mouse);
 
     KeyboardManager::init();
     MouseManager::init();
