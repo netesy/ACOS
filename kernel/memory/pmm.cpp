@@ -1,6 +1,7 @@
 #include <acos/boot_info.h>
 #include <acos/types.h>
 #include <kernel/hal/serial.h>
+#include <kernel/hal/spinlock.h>
 
 extern char _kernel_end[];
 
@@ -10,12 +11,16 @@ static constexpr u64 PAGE_SIZE = 4096;
 
 static u64* g_bitmap = nullptr;
 static u16* g_page_ref_counts = nullptr;
+static u8* g_page_orders = nullptr;
 static u64 g_total_pages = 0;
 static u64 g_used_pages = 0;
 static u64 g_bitmap_size = 0;
 
-// O(1) Free-List Page Frame Allocator Head Pointer (Physical Address)
-static u64 g_free_list_head = 0;
+static hal::SpinLock g_pmm_lock;
+
+// Buddy Allocator structures
+static constexpr u32 MAX_ORDER = 16;
+static u64 g_buddy_free_head[MAX_ORDER + 1] = {0};
 
 // Accessors for global functions
 u64 get_total_pages() { return g_total_pages; }
@@ -37,17 +42,65 @@ static u64 align_up(u64 value, u64 alignment) {
     return (value + alignment - 1) & ~(alignment - 1);
 }
 
-// Rebuild the O(1) free list from the bitmap status
-static void pmm_rebuild_free_list() {
-    g_free_list_head = 0;
-    // Walk from end to start to maintain ascending address order
-    for (u64 i = g_total_pages - 1; i >= 1; --i) {
-        if (!bitmap_test(i)) {
-            u64 addr = i * 4096;
-            *reinterpret_cast<u64*>(addr) = g_free_list_head;
-            g_free_list_head = addr;
-        }
+static inline u64 order_to_pages(u32 order) {
+    return 1ULL << order;
+}
+
+static inline u32 pages_to_order(u64 pages) {
+    u32 order = 0;
+    while ((1ULL << order) < pages) {
+        order++;
     }
+    return order;
+}
+
+static void buddy_insert_to_list(u64 page_idx, u32 order) {
+    u64 addr = page_idx * 4096;
+    u64 old_head = g_buddy_free_head[order];
+    *reinterpret_cast<u64*>(addr) = old_head; // next
+    *reinterpret_cast<u64*>(addr + 8) = 0;    // prev
+    if (old_head != 0) {
+        *reinterpret_cast<u64*>(old_head + 8) = addr;
+    }
+    g_buddy_free_head[order] = addr;
+    g_page_orders[page_idx] = order;
+}
+
+static void buddy_remove_from_list(u64 page_idx, u32 order) {
+    u64 addr = page_idx * 4096;
+    u64 next_addr = *reinterpret_cast<u64*>(addr);
+    u64 prev_addr = *reinterpret_cast<u64*>(addr + 8);
+    if (prev_addr != 0) {
+        *reinterpret_cast<u64*>(prev_addr) = next_addr;
+    } else {
+        g_buddy_free_head[order] = next_addr;
+    }
+    if (next_addr != 0) {
+        *reinterpret_cast<u64*>(next_addr + 8) = prev_addr;
+    }
+}
+
+static void buddy_free_block(u64 page_idx, u32 order, bool check_processed) {
+    while (order < MAX_ORDER) {
+        u64 buddy_idx = page_idx ^ (1ULL << order);
+        if (buddy_idx + (1ULL << order) > g_total_pages) {
+            break; // Buddy is out of bounds
+        }
+        if (check_processed && buddy_idx > page_idx) {
+            break; // Buddy not processed yet during initialization
+        }
+        if (bitmap_test(buddy_idx) || g_page_orders[buddy_idx] != order) {
+            break; // Buddy is not free or has different order
+        }
+        // Coalesce! Remove buddy from its order list
+        buddy_remove_from_list(buddy_idx, order);
+        g_page_orders[buddy_idx] = 0xFF; // Mark buddy as merged
+        if (buddy_idx < page_idx) {
+            page_idx = buddy_idx;
+        }
+        order++;
+    }
+    buddy_insert_to_list(page_idx, order);
 }
 
 void pmm_init(BootInfo* bootInfo) {
@@ -56,8 +109,6 @@ void pmm_init(BootInfo* bootInfo) {
         return;
     }
 
-    // Find maximum physical address across available (RAM) regions only.
-    // This avoids counting MMIO/framebuffer gaps that inflate the bitmap.
     u64 max_addr = 0;
     for (u64 i = 0; i < bootInfo->memoryMap->count; ++i) {
         auto& region = bootInfo->memoryMap->regions[i];
@@ -76,27 +127,11 @@ void pmm_init(BootInfo* bootInfo) {
     acos::hal::serial_print_hex(max_addr);
     acos::hal::serial_print("\n");
 
-    // Print all memory regions
-    for (u64 i = 0; i < bootInfo->memoryMap->count; ++i) {
-        auto& region = bootInfo->memoryMap->regions[i];
-        acos::hal::serial_print("PMM: Region ");
-        acos::hal::serial_print_hex(i);
-        acos::hal::serial_print(" base=");
-        acos::hal::serial_print_hex(region.base);
-        acos::hal::serial_print(" len=");
-        acos::hal::serial_print_hex(region.length);
-        acos::hal::serial_print(" type=");
-        acos::hal::serial_print_hex(static_cast<u64>(region.type));
-        acos::hal::serial_print("\n");
-    }
-
-    // Place bitmap right after the kernel image, page-aligned
     u64 kernel_end_addr = align_up(reinterpret_cast<u64>(_kernel_end), PAGE_SIZE);
     u64 bitmap_start = kernel_end_addr;
     u64 bitmap_end = bitmap_start + bitmap_bytes;
     bitmap_end = align_up(bitmap_end, PAGE_SIZE);
 
-    // Verify the bitmap fits within an available memory region
     bool placed = false;
     for (u64 i = 0; i < bootInfo->memoryMap->count; ++i) {
         auto& region = bootInfo->memoryMap->regions[i];
@@ -117,10 +152,6 @@ void pmm_init(BootInfo* bootInfo) {
     // Mark all pages as used, then clear available regions
     for (u64 i = 0; i < g_bitmap_size; ++i) g_bitmap[i] = 0xFFFFFFFFFFFFFFFF;
 
-    acos::hal::serial_print("PMM: step 1 bitmap[503]=");
-    acos::hal::serial_print_hex(g_bitmap[503]);
-    acos::hal::serial_print("\n");
-
     for (u64 i = 0; i < bootInfo->memoryMap->count; ++i) {
         auto& region = bootInfo->memoryMap->regions[i];
         if (region.type == MemoryRegionType::Available) {
@@ -134,12 +165,7 @@ void pmm_init(BootInfo* bootInfo) {
         }
     }
 
-    acos::hal::serial_print("PMM: step 2 bitmap[503]=");
-    acos::hal::serial_print_hex(g_bitmap[503]);
-    acos::hal::serial_print("\n");
-
-    // Force all reserved/non-available regions to be marked as used,
-    // overriding any overlaps from other regions.
+    // Force all reserved/non-available regions to be marked as used
     for (u64 i = 0; i < bootInfo->memoryMap->count; ++i) {
         auto& region = bootInfo->memoryMap->regions[i];
         if (region.type != MemoryRegionType::Available) {
@@ -153,10 +179,6 @@ void pmm_init(BootInfo* bootInfo) {
         }
     }
 
-    acos::hal::serial_print("PMM: step 3 bitmap[503]=");
-    acos::hal::serial_print_hex(g_bitmap[503]);
-    acos::hal::serial_print("\n");
-
     // Allocate reference counts array right after the bitmap
     u64 ref_counts_start = bitmap_end;
     u64 ref_counts_bytes = g_total_pages * sizeof(u16);
@@ -165,6 +187,16 @@ void pmm_init(BootInfo* bootInfo) {
     g_page_ref_counts = reinterpret_cast<u16*>(ref_counts_start);
     for (u64 i = 0; i < g_total_pages; i++) {
         g_page_ref_counts[i] = 0;
+    }
+
+    // Allocate orders array right after ref counts
+    u64 orders_start = ref_counts_end;
+    u64 orders_bytes = g_total_pages * sizeof(u8);
+    u64 orders_end = align_up(orders_start + orders_bytes, PAGE_SIZE);
+
+    g_page_orders = reinterpret_cast<u8*>(orders_start);
+    for (u64 i = 0; i < g_total_pages; i++) {
+        g_page_orders[i] = 0xFF; // Initially invalid / sentinel
     }
 
     // Mark bitmap's own pages as used
@@ -181,105 +213,118 @@ void pmm_init(BootInfo* bootInfo) {
         bitmap_set(page);
     }
 
+    // Mark orders' own pages as used
+    u64 orders_start_page = orders_start / PAGE_SIZE;
+    u64 orders_end_page = orders_end / PAGE_SIZE;
+    for (u64 page = orders_start_page; page < orders_end_page; ++page) {
+        bitmap_set(page);
+    }
+
     // Mark page 0 as used (null page guard)
     bitmap_set(0);
 
-    // Mark kernel image pages as used.
+    // Mark kernel image pages as used
     u64 kernel_start = 0x100000; // linker.ld loads kernel at 1 MB
     for (u64 addr = kernel_start; addr < kernel_end_addr; addr += PAGE_SIZE) {
         bitmap_set(addr / PAGE_SIZE);
     }
 
-    acos::hal::serial_print("PMM: page 32255 test before rebuild=");
-    acos::hal::serial_print_hex(bitmap_test(32255));
-    acos::hal::serial_print("\n");
-
-    // Build the initial constant-time O(1) page frame free list
-    pmm_rebuild_free_list();
-
-    acos::hal::serial_print("[PMM] Initialized. Kernel image protected. O(1) Free List enabled.\n");
-}
-
-u64 pmm_alloc() {
-    if (!g_bitmap) return 0;
-
-    // Allocate from the fast constant-time O(1) free list
-    if (g_free_list_head != 0) {
-        u64 allocated_addr = g_free_list_head;
-        g_free_list_head = *reinterpret_cast<u64*>(allocated_addr);
-
-        u64 page = allocated_addr / 4096;
-        bitmap_set(page);
-        g_used_pages++;
-        if (g_page_ref_counts) {
-            g_page_ref_counts[page] = 1;
-        }
-
-        // Clear the page contents for security and safety
-        for (usize i = 0; i < 4096 / sizeof(u64); i++) {
-            reinterpret_cast<u64*>(allocated_addr)[i] = 0;
-        }
-
-        return allocated_addr;
+    // Initialize all buddy lists to empty
+    for (u32 o = 0; o <= MAX_ORDER; o++) {
+        g_buddy_free_head[o] = 0;
     }
 
-    // Out of memory
-    return 0;
+    // Build the buddy allocator free lists (coalescing free blocks)
+    for (u64 page = 1; page < g_total_pages; page++) {
+        if (!bitmap_test(page)) {
+            buddy_free_block(page, 0, true);
+        }
+    }
+
+    acos::hal::serial_print("[PMM] Initialized. Buddy Allocator active (orders 0-16).\n");
 }
 
 u64 pmm_alloc_contiguous(u64 page_count) {
     if (!g_bitmap || page_count == 0) return 0;
 
-    const u64 limit = g_total_pages;
-    for (u64 start = 1; start + page_count <= limit; ++start) {
-        bool free_run = true;
-        for (u64 offset = 0; offset < page_count; ++offset) {
-            if (bitmap_test(start + offset)) {
-                free_run = false;
-                start += offset;
-                break;
-            }
-        }
-        if (!free_run) {
-            continue;
-        }
+    hal::ScopedLock lock(g_pmm_lock);
 
-        for (u64 offset = 0; offset < page_count; ++offset) {
-            u64 page = start + offset;
-            bitmap_set(page);
-            if (g_page_ref_counts) {
-                g_page_ref_counts[page] = 1;
-            }
-        }
-        g_used_pages += page_count;
-
-        // Synchronize our O(1) free list
-        pmm_rebuild_free_list();
-
-        return start * 4096;
+    u32 order = pages_to_order(page_count);
+    if (order > MAX_ORDER) {
+        acos::hal::serial_print("PMM: pmm_alloc_contiguous FAILED because order exceeds MAX_ORDER\n");
+        return 0;
     }
-    acos::hal::serial_print("PMM: pmm_alloc_contiguous FAILED for pages=");
-    acos::hal::serial_print_hex(page_count);
-    acos::hal::serial_print("\n");
-    return 0;
+
+    u32 o = order;
+    while (o <= MAX_ORDER && g_buddy_free_head[o] == 0) {
+        o++;
+    }
+
+    if (o > MAX_ORDER) {
+        return 0; // Out of memory
+    }
+
+    u64 block_addr = g_buddy_free_head[o];
+    u64 next_block = *reinterpret_cast<u64*>(block_addr);
+    g_buddy_free_head[o] = next_block;
+    if (next_block != 0) {
+        *reinterpret_cast<u64*>(next_block + 8) = 0; // prev = 0
+    }
+
+    while (o > order) {
+        o--;
+        u64 buddy_addr = block_addr + (order_to_pages(o) * 4096);
+        buddy_insert_to_list(buddy_addr / 4096, o);
+    }
+
+    u64 start_page = block_addr / 4096;
+    u64 pages_allocated = order_to_pages(order);
+
+    for (u64 i = 0; i < pages_allocated; i++) {
+        bitmap_set(start_page + i);
+        if (g_page_ref_counts) {
+            g_page_ref_counts[start_page + i] = 1;
+        }
+    }
+    g_used_pages += pages_allocated;
+    g_page_orders[start_page] = order;
+
+    // Clear memory block
+    for (u64 i = 0; i < (pages_allocated * 4096) / sizeof(u64); i++) {
+        reinterpret_cast<u64*>(block_addr)[i] = 0;
+    }
+
+    return block_addr;
+}
+
+u64 pmm_alloc() {
+    return pmm_alloc_contiguous(1);
 }
 
 void pmm_free(u64 addr) {
+    if (addr == 0) return;
+
+    hal::ScopedLock lock(g_pmm_lock);
+
     u64 page = addr / 4096;
     if (g_page_ref_counts && g_page_ref_counts[page] > 0) {
         g_page_ref_counts[page]--;
         if (g_page_ref_counts[page] > 0) {
-            return; // Keep allocated as it is still shared/referenced
+            return; // Shared page, do not free yet
         }
     }
 
     if (bitmap_test(page)) {
-        bitmap_clear(page);
-        g_used_pages--;
-
-        // Push the page back onto the fast constant-time O(1) free list
-        *reinterpret_cast<u64*>(addr) = g_free_list_head;
-        g_free_list_head = addr;
+        u32 order = g_page_orders[page];
+        if (order > MAX_ORDER) {
+            order = 0; // Fallback sanity check
+        }
+        u64 pages_to_free = order_to_pages(order);
+        for (u64 i = 0; i < pages_to_free; i++) {
+            bitmap_clear(page + i);
+        }
+        g_used_pages -= pages_to_free;
+        buddy_free_block(page, order, false);
     }
 }
 
@@ -291,12 +336,14 @@ u16 pmm_get_ref_count(u64 page_index) {
 }
 
 void pmm_inc_ref_count(u64 page_index) {
+    hal::ScopedLock lock(g_pmm_lock);
     if (g_page_ref_counts && page_index < g_total_pages) {
         g_page_ref_counts[page_index]++;
     }
 }
 
 void pmm_dec_ref_count(u64 page_index) {
+    hal::ScopedLock lock(g_pmm_lock);
     if (g_page_ref_counts && page_index < g_total_pages) {
         if (g_page_ref_counts[page_index] > 0) {
             g_page_ref_counts[page_index]--;
@@ -305,11 +352,11 @@ void pmm_dec_ref_count(u64 page_index) {
 }
 
 u64 pmm_get_total_memory() {
-    return get_total_pages() * 4096;
+    return g_total_pages * 4096;
 }
 
 u64 pmm_get_used_memory() {
-    return get_used_pages() * 4096;
+    return g_used_pages * 4096;
 }
 
 } // namespace acos::memory

@@ -79,10 +79,20 @@ public:
         u32 cluster_bytes = (u32)m_sectors_per_cluster * 512;
 
         if (m_first_cluster == 0 && end_byte > 0) {
+            u32 search_start = m_fs->m_next_free_cluster_hint;
+            u32 total_clusters = (m_fs->m_total_sectors - m_fs->m_data_start) / m_fs->m_sectors_per_cluster;
+            if (search_start < 2 || search_start >= total_clusters + 2) {
+                search_start = 2;
+            }
+
             u32 free_cluster = 0;
             alignas(4096) u8 fat_sector[512];
-            u32 total_clusters = (m_fs->m_total_sectors - m_fs->m_data_start) / m_fs->m_sectors_per_cluster;
-            for (u32 c = 2; c < total_clusters + 2; c++) {
+            for (u32 i = 0; i < total_clusters; i++) {
+                u32 c = search_start + i;
+                if (c >= total_clusters + 2) {
+                    c = 2 + (c - (total_clusters + 2));
+                }
+
                 u32 fat_offset = c * 4;
                 u32 fat_block = m_fs->m_fat_start + (fat_offset / 512);
                 if (m_device->read_block(fat_block, fat_sector) == 0) {
@@ -96,10 +106,7 @@ public:
 
             if (free_cluster == 0) return -1;
 
-            if (!m_fs->write_fat_entry(free_cluster, 0x0FFFFFFF)) return -1;
-
-            m_first_cluster = free_cluster;
-
+            // Crash consistency: 1. Zero data sectors first
             alignas(4096) u8 zero_sector[512];
             memset(zero_sector, 0, 512);
             for (u8 s = 0; s < m_sectors_per_cluster; s++) {
@@ -107,6 +114,19 @@ public:
                 m_device->write_block(lba, zero_sector);
             }
 
+            // 2. Mark in FAT
+            if (!m_fs->write_fat_entry(free_cluster, 0x0FFFFFFF)) return -1;
+
+            m_first_cluster = free_cluster;
+
+            // Update free space
+            m_fs->m_next_free_cluster_hint = free_cluster + 1;
+            if (m_fs->m_free_clusters != 0xFFFFFFFF && m_fs->m_free_clusters > 0) {
+                m_fs->m_free_clusters--;
+            }
+            m_fs->update_fsinfo(m_fs->m_free_clusters, m_fs->m_next_free_cluster_hint);
+
+            // 3. Update directory entry
             alignas(4096) u8 dir_sector_buf[512];
             if (m_device->read_block(m_dir_sector, dir_sector_buf) == 0) {
                 u8* entry = dir_sector_buf + m_dir_offset;
@@ -130,10 +150,20 @@ public:
         }
 
         while (current_cluster_count < needed_cluster_count) {
+            u32 search_start = m_fs->m_next_free_cluster_hint;
+            u32 total_clusters = (m_fs->m_total_sectors - m_fs->m_data_start) / m_fs->m_sectors_per_cluster;
+            if (search_start < 2 || search_start >= total_clusters + 2) {
+                search_start = 2;
+            }
+
             u32 free_cluster = 0;
             alignas(4096) u8 fat_sector[512];
-            u32 total_clusters = (m_fs->m_total_sectors - m_fs->m_data_start) / m_fs->m_sectors_per_cluster;
-            for (u32 c = 2; c < total_clusters + 2; c++) {
+            for (u32 i = 0; i < total_clusters; i++) {
+                u32 c = search_start + i;
+                if (c >= total_clusters + 2) {
+                    c = 2 + (c - (total_clusters + 2));
+                }
+
                 u32 fat_offset = c * 4;
                 u32 fat_block = m_fs->m_fat_start + (fat_offset / 512);
                 if (m_device->read_block(fat_block, fat_sector) == 0) {
@@ -147,19 +177,30 @@ public:
 
             if (free_cluster == 0) return -1;
 
-            if (!m_fs->write_fat_entry(free_cluster, 0x0FFFFFFF)) return -1;
-            if (last_cluster != 0) {
-                if (!m_fs->write_fat_entry(last_cluster, free_cluster)) return -1;
-            }
-
-            last_cluster = free_cluster;
-
+            // Crash consistency: 1. Zero data sectors first
             alignas(4096) u8 zero_sector[512];
             memset(zero_sector, 0, 512);
             for (u8 s = 0; s < m_sectors_per_cluster; s++) {
                 u32 lba = m_data_start + ((free_cluster - 2) * (u32)m_sectors_per_cluster) + s;
                 m_device->write_block(lba, zero_sector);
             }
+
+            // 2. Mark free_cluster as EOC
+            if (!m_fs->write_fat_entry(free_cluster, 0x0FFFFFFF)) return -1;
+
+            // 3. Link existing chain to the new cluster in FAT
+            if (last_cluster != 0) {
+                if (!m_fs->write_fat_entry(last_cluster, free_cluster)) return -1;
+            }
+
+            last_cluster = free_cluster;
+
+            // Update free space
+            m_fs->m_next_free_cluster_hint = free_cluster + 1;
+            if (m_fs->m_free_clusters != 0xFFFFFFFF && m_fs->m_free_clusters > 0) {
+                m_fs->m_free_clusters--;
+            }
+            m_fs->update_fsinfo(m_fs->m_free_clusters, m_fs->m_next_free_cluster_hint);
 
             current_cluster_count++;
         }
@@ -438,6 +479,18 @@ bool FAT32FileSystem::write_fat_entry(u32 cluster, u32 value) {
     return true;
 }
 
+void FAT32FileSystem::update_fsinfo(u32 free_clusters, u32 next_free_hint) {
+    if (m_fsinfo_sector == 0 || m_fsinfo_sector == 0xFFFF) return;
+    alignas(4096) u8 fsinfo_buf[512];
+    if (m_device->read_block(m_fsinfo_sector, fsinfo_buf) == 0) {
+        if (*(u32*)(fsinfo_buf + 0) == 0x41615252 && *(u32*)(fsinfo_buf + 484) == 0x61417272) {
+            *(u32*)(fsinfo_buf + 488) = free_clusters;
+            *(u32*)(fsinfo_buf + 492) = next_free_hint;
+            m_device->write_block(m_fsinfo_sector, fsinfo_buf);
+        }
+    }
+}
+
 static FAT32FileSystem g_filesystems[4];
 static bool g_fs_used[4];
 
@@ -540,6 +593,11 @@ bool FAT32FileSystem::mount(const char* target [[maybe_unused]]) {
     hal::serial_print_hex(m_root_cluster);
     hal::serial_print("\n");
 
+    m_fsinfo_sector = *(u16*)(sector + 48);
+    hal::serial_print("FAT32: fsinfo_sector=");
+    hal::serial_print_hex(m_fsinfo_sector);
+    hal::serial_print("\n");
+
     m_fat_start = m_reserved_sectors;
     m_data_start = m_reserved_sectors + (m_num_fats * m_sectors_per_fat);
 
@@ -548,6 +606,22 @@ bool FAT32FileSystem::mount(const char* target [[maybe_unused]]) {
     hal::serial_print(" m_data_start=");
     hal::serial_print_hex(m_data_start);
     hal::serial_print("\n");
+
+    // Initialize FSInfo parameters
+    if (m_fsinfo_sector != 0 && m_fsinfo_sector != 0xFFFF) {
+        alignas(4096) u8 fsinfo_buf[512];
+        if (m_device->read_block(m_fsinfo_sector, fsinfo_buf) == 0) {
+            if (*(u32*)(fsinfo_buf + 0) == 0x41615252 && *(u32*)(fsinfo_buf + 484) == 0x61417272) {
+                m_free_clusters = *(u32*)(fsinfo_buf + 488);
+                m_next_free_cluster_hint = *(u32*)(fsinfo_buf + 492);
+                hal::serial_print("FAT32: FSInfo parsed. free_clusters=");
+                hal::serial_print_hex(m_free_clusters);
+                hal::serial_print(" next_free_hint=");
+                hal::serial_print_hex(m_next_free_cluster_hint);
+                hal::serial_print("\n");
+            }
+        }
+    }
 
     m_read_only = is_path_protected(target);
 

@@ -30,6 +30,13 @@ public:
     u32 m_root_cluster;
     u32 m_fat_start;
     u32 m_data_start;
+
+    // FSInfo fields for free-space management
+    u16 m_fsinfo_sector = 1;
+    u32 m_free_clusters = 0xFFFFFFFF;
+    u32 m_next_free_cluster_hint = 0xFFFFFFFF;
+
+    void update_fsinfo(u32 free_clusters, u32 next_free_hint);
 };
 
 } // namespace acos::storage

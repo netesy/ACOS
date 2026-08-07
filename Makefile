@@ -389,4 +389,23 @@ clean:
 	rm -f $(BOOT_EFI) $(KERNEL_ELF) $(DISK_IMG)
 	rm -rf $(BUILD_DIR) $(DIST_DIR)
 
-.PHONY: all image run clean
+# ----------------------------------------------------
+# Continuous Testing Infrastructure
+# ----------------------------------------------------
+
+test:
+	@mkdir -p $(BUILD_DIR)
+	g++ -std=c++20 -O3 tools/test_host.cpp -o $(BUILD_DIR)/test_host
+	./$(BUILD_DIR)/test_host --unit-tests --integration-tests --kernel-tests --userspace-tests --scheduler-tests --memory-tests --filesystem-tests --driver-tests --networking-tests
+
+stress:
+	@mkdir -p $(BUILD_DIR)
+	g++ -std=c++20 -O3 tools/test_host.cpp -o $(BUILD_DIR)/test_host
+	./$(BUILD_DIR)/test_host --stress-tests
+
+fuzz:
+	@mkdir -p $(BUILD_DIR)
+	g++ -std=c++20 -O3 tools/test_host.cpp -o $(BUILD_DIR)/test_host
+	./$(BUILD_DIR)/test_host --fuzz-tests
+
+.PHONY: all image run clean test stress fuzz
