@@ -27,6 +27,83 @@ public:
         memset(m_extents, 0, sizeof(m_extents));
     }
 
+    bool replace_block_in_extents(u64 relative_block, u64 old_block, u64 new_block) {
+        u64 blocks_accumulated = 0;
+        for (int e = 0; e < 6; e++) {
+            if (m_extents[e].block_count == 0) break;
+            if (relative_block < blocks_accumulated + m_extents[e].block_count) {
+                u64 offset_in_extent = relative_block - blocks_accumulated;
+                if (m_extents[e].block_count == 1) {
+                    m_extents[e].start_block = new_block;
+                    return true;
+                }
+
+                int active_count = 0;
+                for (int i = 0; i < 6; i++) {
+                    if (m_extents[i].block_count > 0) active_count++;
+                }
+
+                if (offset_in_extent == 0) {
+                    if (active_count >= 6) return false;
+                    for (int i = 5; i > e; i--) {
+                        m_extents[i] = m_extents[i - 1];
+                    }
+                    m_extents[e].start_block = new_block;
+                    m_extents[e].block_count = 1;
+                    m_extents[e + 1].start_block = old_block + 1;
+                    m_extents[e + 1].block_count = m_extents[e + 1].block_count - 1;
+                    return true;
+                } else if (offset_in_extent == m_extents[e].block_count - 1) {
+                    if (active_count >= 6) return false;
+                    for (int i = 5; i > e + 1; i--) {
+                        m_extents[i] = m_extents[i - 1];
+                    }
+                    m_extents[e].block_count = m_extents[e].block_count - 1;
+                    m_extents[e + 1].start_block = new_block;
+                    m_extents[e + 1].block_count = 1;
+                    return true;
+                } else {
+                    if (active_count >= 5) return false;
+                    for (int i = 5; i > e + 2; i--) {
+                        m_extents[i] = m_extents[i - 2];
+                    }
+                    u64 old_start = m_extents[e].start_block;
+                    u32 old_count = m_extents[e].block_count;
+
+                    m_extents[e].start_block = old_start;
+                    m_extents[e].block_count = offset_in_extent;
+
+                    m_extents[e + 1].start_block = new_block;
+                    m_extents[e + 1].block_count = 1;
+
+                    m_extents[e + 2].start_block = old_block + 1;
+                    m_extents[e + 2].block_count = old_count - offset_in_extent - 1;
+                    return true;
+                }
+            }
+            blocks_accumulated += m_extents[e].block_count;
+        }
+        return false;
+    }
+
+    void merge_extents() {
+        for (int i = 0; i < 5; i++) {
+            if (m_extents[i].block_count == 0) break;
+            if (m_extents[i + 1].block_count > 0) {
+                u64 end_block = m_extents[i].start_block + m_extents[i].block_count;
+                if (end_block == m_extents[i + 1].start_block) {
+                    m_extents[i].block_count += m_extents[i + 1].block_count;
+                    for (int j = i + 1; j < 5; j++) {
+                        m_extents[j] = m_extents[j + 1];
+                    }
+                    m_extents[5].start_block = 0;
+                    m_extents[5].block_count = 0;
+                    i--;
+                }
+            }
+        }
+    }
+
     void initialize(ASFSFileSystem* fs, u64 inode_block, const ASFSInode& inode) {
         m_fs = fs;
         m_inode_block = inode_block;
@@ -143,6 +220,32 @@ public:
                     break;
                 }
                 blocks_accumulated += m_extents[e].block_count;
+            }
+
+            if (resolved) {
+                u64 new_block = m_fs->allocate_blocks(1);
+                if (new_block == 0) {
+                    return written > 0 ? (i32)written : -1;
+                }
+                if (m_fs->device()->read_block(physical_block, block_buf) != 0) {
+                    m_fs->deallocate_blocks(new_block, 1);
+                    return written > 0 ? (i32)written : -1;
+                }
+                usize chunk = 512 - block_offset;
+                if (chunk > size - written) chunk = size - written;
+                memcpy(block_buf + block_offset, in + written, chunk);
+                if (m_fs->device()->write_block(new_block, block_buf) != 0) {
+                    m_fs->deallocate_blocks(new_block, 1);
+                    return written > 0 ? (i32)written : -1;
+                }
+                if (!replace_block_in_extents(relative_block, physical_block, new_block)) {
+                    m_fs->deallocate_blocks(new_block, 1);
+                    return written > 0 ? (i32)written : -1;
+                }
+                m_fs->deallocate_blocks(physical_block, 1);
+                merge_extents();
+                written += chunk;
+                continue;
             }
 
             if (!resolved) {
