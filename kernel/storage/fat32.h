@@ -13,7 +13,8 @@ public:
     bool mount(const char* target) override;
     bool probe(void* device, const char* target) override;
 
-private:
+    bool write_fat_entry(u32 cluster, u32 value);
+
     vfs::Node* open_internal(u32 cluster, const char* path);
 
     BlockDevice* m_device;
