@@ -381,6 +381,12 @@ extern "C" void kernelMain(acos::BootInfo* bootInfo) {
             }
             // Parse for CPUs and other info
             acos::arch::x86_64::MADT::parse(madt_table);
+            if (acos::arch::x86_64::MADT::ioapic_address() != 0) {
+                ioapic_base = acos::arch::x86_64::MADT::ioapic_address();
+                acos::hal::serial_print("[ACPI] Dynamic IOAPIC address from MADT: ");
+                acos::hal::serial_print_hex(ioapic_base);
+                acos::hal::serial_print("\n");
+            }
         } else {
             acos::hal::serial_print("[ACPI] Warning: MADT table not found. Using defaults.\n");
         }

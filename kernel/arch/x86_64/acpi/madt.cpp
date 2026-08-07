@@ -5,6 +5,7 @@ namespace acos::arch::x86_64 {
 
 u32 MADT::g_apic_ids[64];
 u32 MADT::g_cpu_count = 0;
+u32 MADT::g_ioapic_addr = 0xFEC00000;
 
 bool MADT::parse(void* table_ptr) {
     if (!table_ptr) return false;
@@ -24,6 +25,11 @@ bool MADT::parse(void* table_ptr) {
                 if (g_cpu_count < 64) {
                     g_apic_ids[g_cpu_count++] = apic_id;
                 }
+            }
+        } else if (type == 1) { // I/O APIC
+            u32 ioapic_addr = *reinterpret_cast<u32*>(ptr + 4);
+            if (ioapic_addr != 0) {
+                g_ioapic_addr = ioapic_addr;
             }
         }
         ptr += len;

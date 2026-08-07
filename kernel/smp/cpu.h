@@ -46,6 +46,7 @@ struct CpuData {
     scheduler::Process* current_process;
     bool is_bsp;
     u32 cpu_index;
+    scheduler::Thread* thread_to_reap;
 
     // Per-CPU GDT and TSS for secure interrupt stack-switching
     TSSEntry tss;

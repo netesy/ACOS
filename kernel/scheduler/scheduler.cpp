@@ -33,6 +33,23 @@ RunQueue* get_run_queues() {
     return g_run_queues;
 }
 
+void reap_zombies() {
+    smp::CpuData* cpu = smp::Cpu::current();
+    if (cpu && cpu->thread_to_reap) {
+        Thread* t = cpu->thread_to_reap;
+        cpu->thread_to_reap = nullptr;
+
+        // Free stack allocation safely
+        if (t->stack_top) {
+            u64 stack_base = t->stack_top - 16384;
+            acos::memory::kfree(reinterpret_cast<void*>(stack_base));
+        }
+
+        // Free the Thread structure itself
+        acos::memory::kfree(t);
+    }
+}
+
 void scheduler_init() {
     for (int i = 0; i < 64; i++) {
         g_run_queues[i].head = nullptr;
@@ -58,6 +75,8 @@ void enqueue_thread(u32 cpu_id, Thread* thread) {
 }
 
 void schedule() {
+    reap_zombies();
+
     u32 cpu_id = smp::Cpu::id();
 
     g_queue_locks[cpu_id].lock();
@@ -70,6 +89,30 @@ void schedule() {
     
     // Get next thread from run queue
     Thread* next = g_run_queues[cpu_id].head;
+    while (next && next->state == ThreadState::Terminated) {
+        // Enqueue next directly into cpu->thread_to_reap
+        // If there's already one, reap it first
+        if (cpu->thread_to_reap) {
+            Thread* t = cpu->thread_to_reap;
+            cpu->thread_to_reap = nullptr;
+            if (t->stack_top) {
+                u64 stack_base = t->stack_top - 16384;
+                acos::memory::kfree(reinterpret_cast<void*>(stack_base));
+            }
+            acos::memory::kfree(t);
+        }
+        cpu->thread_to_reap = next;
+
+        // Pop from ready queue
+        g_run_queues[cpu_id].head = next->next;
+        if (!g_run_queues[cpu_id].head) {
+            g_run_queues[cpu_id].tail = nullptr;
+        }
+        g_run_queues[cpu_id].count--;
+
+        next = g_run_queues[cpu_id].head;
+    }
+
     if (!next) {
         // No runnable threads — release lock and return.
         // Caller (idle loop) should hlt to avoid spinning.
@@ -114,14 +157,31 @@ void schedule() {
         hal::tss_set_rsp0(next->stack_top);
         cpu->kernel_rsp = next->stack_top;
 
+        // If the current thread has terminated, schedule it for deferred reaping
+        if (current && current->state == ThreadState::Terminated) {
+            if (cpu->thread_to_reap) {
+                Thread* t = cpu->thread_to_reap;
+                cpu->thread_to_reap = nullptr;
+                if (t->stack_top) {
+                    u64 stack_base = t->stack_top - 16384;
+                    acos::memory::kfree(reinterpret_cast<void*>(stack_base));
+                }
+                acos::memory::kfree(t);
+            }
+            cpu->thread_to_reap = current;
+        }
+
         // Release lock before context switch to avoid deadlock
         g_queue_locks[cpu_id].unlock();
 
         // Perform context switch
         if (current) {
+            __asm__ volatile("fxsave %0" : "=m"(current->fpu_state));
+            __asm__ volatile("fxrstor %0" : : "m"(next->fpu_state));
             context_switch(&current->stack_pointer, next->stack_pointer);
         } else {
             // First thread on this CPU
+            __asm__ volatile("fxrstor %0" : : "m"(next->fpu_state));
             __asm__ volatile("mov %0, %%rsp" : : "r"(next->stack_pointer));
         }
     } else {
@@ -180,6 +240,13 @@ Thread* create_thread(ThreadEntry entry, void* arg) {
     thread->next = nullptr;
     thread->entry_point = (u64)entry;
     thread->arg = arg;
+
+    // Initialize FPU/SSE state to safe hardware defaults without corrupting the caller's CPU FPU state
+    for (int i = 0; i < 512; i++) {
+        thread->fpu_state[i] = 0;
+    }
+    *reinterpret_cast<u16*>(&thread->fpu_state[0]) = 0x037F; // FCW: default x87 control word
+    *reinterpret_cast<u32*>(&thread->fpu_state[24]) = 0x1F80; // MXCSR: default SSE control/status (masks exceptions)
     
     // Allocate stack (16KB)
     const usize STACK_SIZE = 16384;

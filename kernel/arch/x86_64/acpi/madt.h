@@ -61,10 +61,12 @@ public:
     static void* find_table(void* rsdp_ptr, const char* signature);
     static u32 cpu_count() { return g_cpu_count; }
     static u32 get_apic_id(u32 index) { return g_apic_ids[index]; }
+    static u32 ioapic_address() { return g_ioapic_addr; }
 
 private:
     static u32 g_apic_ids[64];
     static u32 g_cpu_count;
+    static u32 g_ioapic_addr;
 };
 
 } // namespace acos::arch::x86_64
