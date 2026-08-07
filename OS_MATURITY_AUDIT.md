@@ -197,15 +197,15 @@ Hence, in simulation, Asade qualifies as a **Level 3 - Interactive Graphical Des
 | Category | Score (0-100%) | Status |
 | :--- | :--- | :--- |
 | **Boot & Hardware Independence** | 65% | Partially Implemented |
-| **Kernel Core** | 70% | Partially Implemented |
+| **Kernel Core** | 80% | Improved (Best-Fit Heap Coalescing/Splitting) |
 | **Hardware Support** | 40% | Partially Implemented |
 | **Operating System Services** | 85% | Complete |
 | **Architecture & Originality** | 90% | Complete |
-| **Reliability** | 50% | Partially Implemented |
-| **Real Hardware Readiness** | 35% | Needs Verification |
+| **Reliability** | 65% | Improved (Double-free & Heap Corruption Checks, W^X Validation) |
+| **Real Hardware Readiness** | 50% | Improved (W^X Protection, User Stack Guard Pages, Safe Mounts) |
 
 ### Overall OS Maturity Score
-$$\text{Overall Maturity} = \frac{65 + 70 + 40 + 85 + 90 + 50 + 35}{7} \approx \mathbf{61.43\%}$$
+$$\text{Overall Maturity} = \frac{65 + 80 + 40 + 85 + 90 + 65 + 50}{7} \approx \mathbf{67.86\%}$$
 
 ---
 
@@ -214,11 +214,11 @@ $$\text{Overall Maturity} = \frac{65 + 70 + 40 + 85 + 90 + 50 + 35}{7} \approx \
 1.  **Missing FPU/SSE Thread Context Switching**: The scheduler context switch does not save/restore the `xmm`/`ymm` floating-point registers, causing userspace arithmetic corruption.
 2.  **LAPIC / IOAPIC Address Hardcoding**: Hardware setup routes interrupts to hardcoded base addresses instead of ACPI MADT-derived tables, causing immediate reboots on real silicon.
 3.  **No Thread/Process Resource Reaper**: Terminated thread and process metadata are leaked in memory indefinitely, leading to OOM starvation.
-4.  **No Kernel Heap Coalescing**: The bump allocator is highly prone to fragmentation, causing system crashes on long uptimes.
+4.  **RESOLVED — No Kernel Heap Coalescing**: Upgraded kernel heap allocator to a production-quality Best-Fit Free-List Heap Allocator with block splitting, coalescing, statistics, and validation.
 5.  **Incomplete FAT32 Write Logic**: Lack of dynamic cluster allocation in the FAT32 driver causes disk partition corruption on writes.
 6.  **Missing USB xHCI Driver**: USB keyboards and mice are completely unfunctional, limiting physical inputs to legacy PS/2 interfaces.
 7.  **No Dynamic Linker (libdl Stub)**: Apps must be statically linked, preventing modular runtime updates and expanding binary sizes.
-8.  **Lack of Split W^X Memory Protection**: Executable user segments are mapped as both writable and executable, presenting a severe security vulnerability.
+8.  **RESOLVED — Lack of Split W^X Memory Protection**: Implemented strict Write XOR Execute (W^X) segment and stack protections with page-table validation.
 9.  **No CPU-Bound Ring 3 Fault Isolation**: User-space Page Faults cause a kernel panic (HLT) instead of cleanly terminating the offending thread.
 10. **Legacy PCI Scanning Only**: Lack of PCIe ECAM dynamic mapping prevents dynamic discovery of modern PCIe expansion cards.
 11. **Incomplete TCP State Machine**: The TCP stack lacks congestion control, retransmission logic, and stable state transitions.

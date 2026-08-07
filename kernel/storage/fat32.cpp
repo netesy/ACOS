@@ -1,6 +1,7 @@
 #include <kernel/storage/fat32.h>
 #include <acos/runtime.h>
 #include <kernel/hal/serial.h>
+#include <kernel/storage/asfs.h>
 
 namespace acos::storage {
 
@@ -69,6 +70,10 @@ public:
 
     i32 write(u64 offset, usize size, const void* buffer) override {
         if (!m_device || !m_fs || !buffer) return -1;
+        if (m_fs->m_read_only) {
+            hal::serial_print("FAT32 Error: Attempted to write to read-only mounted filesystem!\n");
+            return -1;
+        }
 
         u64 end_byte = offset + size;
         u32 cluster_bytes = (u32)m_sectors_per_cluster * 512;
@@ -531,6 +536,8 @@ bool FAT32FileSystem::mount(const char* target [[maybe_unused]]) {
     hal::serial_print(" m_data_start=");
     hal::serial_print_hex(m_data_start);
     hal::serial_print("\n");
+
+    m_read_only = is_path_protected(target);
 
     return true;
 }

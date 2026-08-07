@@ -61,6 +61,9 @@ ELFLoadResult ElfLoader::load_executable(memory::AddressSpace* target_as, const 
         if ((phdr[i].p_flags & PF_W) != 0) {
             flags |= memory::PageFlags::Writable;
         }
+        if ((phdr[i].p_flags & PF_X) == 0) {
+            flags |= memory::PageFlags::NoExecute;
+        }
 
         for (u64 page_addr = start_page; page_addr < end_page; page_addr += 4096) {
             u64 phys = target_as->translate(page_addr);

@@ -60,9 +60,10 @@ void idt_init() {
     // Initialize Syscall MSRs
     u32 low, high;
 
-    // EFER: Enable SCE (System Call Extensions)
+    // EFER: Enable SCE (System Call Extensions) and NXE (No-Execute Enable)
     __asm__ volatile("rdmsr" : "=a"(low), "=d"(high) : "c"(0xC0000080));
     low |= 1;
+    low |= (1ULL << 11); // NXE (bit 11)
     __asm__ volatile("wrmsr" : : "c"(0xC0000080), "a"(low), "d"(high));
 
     // STAR: Kernel CS 0x08, User Base 0x13 (for SYSRET)

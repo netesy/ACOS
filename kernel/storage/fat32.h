@@ -17,7 +17,10 @@ public:
 
     vfs::Node* open_internal(u32 cluster, const char* path);
 
+    bool is_read_only() const { return m_read_only; }
+
     BlockDevice* m_device;
+    bool m_read_only = false;
     u16 m_bytes_per_sector;
     u8 m_sectors_per_cluster;
     u16 m_reserved_sectors;

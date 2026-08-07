@@ -106,9 +106,11 @@ scheduler::Process* create_process_from_elf(const char* name, const void* elf_da
     for (u64 i = 0; i < STACK_PAGES; ++i) {
         u64 phys = memory::pmm_alloc();
         if (phys) {
-            p->address_space->map(stack_virt - (i + 1) * 4096, phys, memory::PageFlags::User | memory::PageFlags::Writable | memory::PageFlags::Present);
+            p->address_space->map(stack_virt - (i + 1) * 4096, phys, memory::PageFlags::User | memory::PageFlags::Writable | memory::PageFlags::Present | memory::PageFlags::NoExecute);
         }
     }
+    // Set up non-present Guard Page right below the userspace stack
+    p->address_space->map(stack_virt - (STACK_PAGES + 1) * 4096, 0, memory::PageFlags::None);
     for (u64 i = 0; i < STACK_PAGES; ++i) {
         u64 virt = stack_virt - (i + 1) * 4096;
         u64 translated = p->address_space->translate(virt);
