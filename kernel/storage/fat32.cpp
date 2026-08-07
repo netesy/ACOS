@@ -221,11 +221,17 @@ public:
 
 private:
     u32 next_cluster(u32 cluster) {
+        if (cluster < 2 || cluster >= 0x0FFFFFF8) return 0x0FFFFFFF;
         alignas(4096) u8 fat_sector[512];
         u32 fat_offset = cluster * 4;
         u32 fat_block = m_fat_start + (fat_offset / 512);
         if (!m_device || m_device->read_block(fat_block, fat_sector) != 0) return 0x0FFFFFFF;
-        return (*(u32*)(fat_sector + (fat_offset % 512))) & 0x0FFFFFFF;
+        u32 next = (*(u32*)(fat_sector + (fat_offset % 512))) & 0x0FFFFFFF;
+        if (next == cluster) {
+            hal::serial_print("[FAT32] CRITICAL ERROR: Infinite cluster loop detected! Partition is corrupt.\n");
+            return 0x0FFFFFFF;
+        }
+        return next;
     }
 
 public:
@@ -299,11 +305,17 @@ public:
 
 private:
     u32 next_cluster(u32 cluster) {
+        if (cluster < 2 || cluster >= 0x0FFFFFF8) return 0x0FFFFFFF;
         u8 fat_sector[512];
         u32 fat_offset = cluster * 4;
         u32 fat_block = m_fat_start + (fat_offset / 512);
         if (!m_device || m_device->read_block(fat_block, fat_sector) != 0) return 0x0FFFFFFF;
-        return (*(u32*)(fat_sector + (fat_offset % 512))) & 0x0FFFFFFF;
+        u32 next = (*(u32*)(fat_sector + (fat_offset % 512))) & 0x0FFFFFFF;
+        if (next == cluster) {
+            hal::serial_print("[FAT32] CRITICAL ERROR: Infinite cluster loop detected! Partition is corrupt.\n");
+            return 0x0FFFFFFF;
+        }
+        return next;
     }
 
 public:

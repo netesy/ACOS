@@ -109,7 +109,11 @@ void TCP::handle_packet(NetDevice* dev, u32 src_ip, const void* data, usize size
             conn->rcv_nxt = seq_num + 1;
             conn->snd_nxt = 1000;
             conn->snd_una = 1000;
+<<<<<<< HEAD
 
+=======
+
+>>>>>>> 294e81b (Phase 4 implementation complete)
             hal::serial_print("[TCP] SYN Received -> Transitioning to SYN_RECEIVED\n");
             // In a complete hardware driver, we would compose and send SYN-ACK packet here
         }
@@ -120,7 +124,11 @@ void TCP::handle_packet(NetDevice* dev, u32 src_ip, const void* data, usize size
             conn->rcv_nxt = seq_num + 1;
             conn->snd_una = ack_num;
             conn->snd_nxt = ack_num;
+<<<<<<< HEAD
 
+=======
+
+>>>>>>> 294e81b (Phase 4 implementation complete)
             hal::serial_print("[TCP] SYN-ACK Received -> Transitioning to ESTABLISHED\n");
         }
     } else if (ack && !fin) {

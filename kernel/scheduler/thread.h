@@ -30,7 +30,7 @@ struct Thread {
     Thread* next;  // For run queue linking
     u64 entry_point;
     void* arg;
-    alignas(16) u8 fpu_state[512]; // 16-byte aligned buffer for FPU/SSE state
+    alignas(64) u8 fpu_state[4096]; // 64-byte aligned buffer for FPU/SSE/AVX state
 };
 
 static_assert(sizeof(Thread) % 16 == 0, "Thread size must be a multiple of 16 for proper heap alignment");

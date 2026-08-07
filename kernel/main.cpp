@@ -56,11 +56,23 @@ static void poll_io() {
 }
 
 extern "C" void k_handle_gp(acos::u64 rip, acos::u64 error_code) {
-    acos::hal::serial_print("GENERAL PROTECTION FAULT at RIP: ");
+    acos::hal::serial_print("[FAULT] GENERAL PROTECTION FAULT at RIP: ");
     acos::hal::serial_print_hex(rip);
     acos::hal::serial_print(" Code: ");
     acos::hal::serial_print_hex(error_code);
     acos::hal::serial_print("\n");
+
+    auto* thr = acos::scheduler::current_thread();
+    if (thr && thr->is_user) {
+        acos::hal::serial_print("[FAULT] Offending Ring 3 thread terminated to preserve kernel stability. Thread ID: ");
+        acos::hal::serial_print_hex(thr->id);
+        acos::hal::serial_print("\n");
+
+        thr->state = acos::scheduler::ThreadState::Terminated;
+        acos::scheduler::schedule();
+        return;
+    }
+
     while(1) __asm__ volatile("hlt");
 }
 
@@ -70,13 +82,25 @@ extern "C" void k_handle_pf(acos::u64 rip, acos::u64 error_code, acos::u64 addre
         return;
     }
 
-    acos::hal::serial_print("PAGE FAULT at RIP: ");
+    acos::hal::serial_print("[FAULT] PAGE FAULT at RIP: ");
     acos::hal::serial_print_hex(rip);
     acos::hal::serial_print(" Addr: ");
     acos::hal::serial_print_hex(address);
     acos::hal::serial_print(" Code: ");
     acos::hal::serial_print_hex(error_code);
     acos::hal::serial_print("\n");
+
+    auto* thr = acos::scheduler::current_thread();
+    if (thr && thr->is_user) {
+        acos::hal::serial_print("[FAULT] Offending Ring 3 thread terminated to preserve kernel stability. Thread ID: ");
+        acos::hal::serial_print_hex(thr->id);
+        acos::hal::serial_print("\n");
+
+        thr->state = acos::scheduler::ThreadState::Terminated;
+        acos::scheduler::schedule();
+        return;
+    }
+
     while(1) __asm__ volatile("hlt");
 }
 

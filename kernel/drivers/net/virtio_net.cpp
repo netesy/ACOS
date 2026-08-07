@@ -93,7 +93,11 @@ void virtqueue_free_desc(VirtQueue& q, u16 index) {
 } // namespace
 
 VirtIONet::VirtIONet(u64 pci_base) : m_pci_base(pci_base) {
+<<<<<<< HEAD
     m_mac = {{0x52, 0x54, 0x00, 0x12, 0x34, 0x56}};
+=======
+    m_mac = {{0x52, 0x54, 0x00, 0x12, 0x34, 0x56}};
+>>>>>>> 294e81b (Phase 4 implementation complete)
 }
 
 bool VirtIONet::initialize() {
@@ -143,12 +147,20 @@ bool VirtIONet::initialize() {
             g_rx_queue.desc[desc_idx].addr = reinterpret_cast<u64>(buf);
             g_rx_queue.desc[desc_idx].len = 1514;
             g_rx_queue.desc[desc_idx].flags = 2; // Write-only for device
+<<<<<<< HEAD
 
+=======
+
+>>>>>>> 294e81b (Phase 4 implementation complete)
             g_rx_queue.avail->ring[g_rx_queue.avail->idx % rx_queue_size] = desc_idx;
             g_rx_queue.avail->idx++;
         }
     }
+<<<<<<< HEAD
 
+=======
+
+>>>>>>> 294e81b (Phase 4 implementation complete)
     // Set queue address (physical address >> 12)
     device_cfg[4] = (u32)((u64)rx_mem >> 12);
     
@@ -189,13 +201,21 @@ bool VirtIONet::send_packet(const void* data, usize size) {
     while (g_tx_queue.last_used_idx != g_tx_queue.used->idx) {
         u16 used_idx = g_tx_queue.last_used_idx % g_tx_queue.size;
         u16 desc_id = static_cast<u16>(g_tx_queue.used->ring[used_idx].id);
+<<<<<<< HEAD
 
+=======
+
+>>>>>>> 294e81b (Phase 4 implementation complete)
         // Free/Recycle the buffer
         if (g_tx_queue.buffers[desc_id]) {
             acos::memory::kfree(g_tx_queue.buffers[desc_id]);
             g_tx_queue.buffers[desc_id] = nullptr;
         }
+<<<<<<< HEAD
 
+=======
+
+>>>>>>> 294e81b (Phase 4 implementation complete)
         virtqueue_free_desc(g_tx_queue, desc_id);
         g_tx_queue.last_used_idx++;
     }

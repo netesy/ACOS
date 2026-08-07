@@ -8,6 +8,9 @@
 
 namespace acos::scheduler {
 
+static bool g_has_xsave = false;
+static bool g_has_avx = false;
+
 static RunQueue g_run_queues[64];
 static hal::SpinLock g_queue_locks[64];
 
@@ -55,6 +58,35 @@ void scheduler_init() {
         g_run_queues[i].head = nullptr;
         g_run_queues[i].tail = nullptr;
         g_run_queues[i].count = 0;
+    }
+
+    // Detect FPU/SSE/AVX capabilities via CPUID
+    u32 eax = 0, ebx = 0, ecx = 0, edx = 0;
+    __asm__ volatile("cpuid" : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx) : "a"(1));
+
+    g_has_xsave = (ecx & (1ULL << 26)) != 0;
+    g_has_avx = (ecx & (1ULL << 28)) != 0;
+
+    if (g_has_xsave) {
+        // Enable OSXSAVE in CR4 (bit 18)
+        u64 cr4;
+        __asm__ volatile("mov %%cr4, %0" : "=r"(cr4));
+        cr4 |= (1ULL << 18);
+        __asm__ volatile("mov %0, %%cr4" : : "r"(cr4));
+
+        // Set XCR0 register to enable x87 (bit 0), SSE (bit 1)
+        u64 xcr0 = 3;
+        if (g_has_avx) {
+            xcr0 |= 4; // Enable AVX (bit 2)
+        }
+
+        u32 low = xcr0 & 0xFFFFFFFF;
+        u32 high = (xcr0 >> 32) & 0xFFFFFFFF;
+        __asm__ volatile("xsetbv" : : "c"(0), "a"(low), "d"(high));
+
+        acos::hal::serial_print("[FPU] XSAVE and AVX context management enabled.\n");
+    } else {
+        acos::hal::serial_print("[FPU] Legacy FXSAVE/FXRSTOR context management enabled.\n");
     }
 }
 
@@ -176,12 +208,21 @@ void schedule() {
 
         // Perform context switch
         if (current) {
-            __asm__ volatile("fxsave %0" : "=m"(current->fpu_state));
-            __asm__ volatile("fxrstor %0" : : "m"(next->fpu_state));
+            if (g_has_xsave) {
+                __asm__ volatile("xsave %0" : "=m"(current->fpu_state) : "a"(0xFFFFFFFF), "d"(0xFFFFFFFF));
+                __asm__ volatile("xrstor %0" : : "m"(next->fpu_state), "a"(0xFFFFFFFF), "d"(0xFFFFFFFF));
+            } else {
+                __asm__ volatile("fxsave %0" : "=m"(current->fpu_state));
+                __asm__ volatile("fxrstor %0" : : "m"(next->fpu_state));
+            }
             context_switch(&current->stack_pointer, next->stack_pointer);
         } else {
             // First thread on this CPU
-            __asm__ volatile("fxrstor %0" : : "m"(next->fpu_state));
+            if (g_has_xsave) {
+                __asm__ volatile("xrstor %0" : : "m"(next->fpu_state), "a"(0xFFFFFFFF), "d"(0xFFFFFFFF));
+            } else {
+                __asm__ volatile("fxrstor %0" : : "m"(next->fpu_state));
+            }
             __asm__ volatile("mov %0, %%rsp" : : "r"(next->stack_pointer));
         }
     } else {
