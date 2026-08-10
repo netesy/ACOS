@@ -6,6 +6,35 @@
 #include <chrono>
 #include <iomanip>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#pragma GCC diagnostic ignored "-Wshadow"
+#pragma GCC diagnostic ignored "-Wunused-function"
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "libs/stb_image.h"
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "libs/stb_image_write.h"
+
+#include "libs/miniz.h"
+
+#define DR_WAV_IMPLEMENTATION
+#include "libs/dr_wav.h"
+
+#define DR_MP3_IMPLEMENTATION
+#include "libs/dr_mp3.h"
+
+#define STB_TRUETYPE_IMPLEMENTATION
+#include "libs/stb_truetype.h"
+
+#include "libs/monocypher.h"
+
+#pragma GCC diagnostic pop
+
 // Mock Types
 typedef unsigned long long u64;
 typedef unsigned int u32;
@@ -13,6 +42,7 @@ typedef unsigned short u16;
 typedef unsigned char u8;
 typedef size_t usize;
 typedef int i32;
+typedef short i16;
 
 namespace mock_pmm {
 
@@ -344,6 +374,133 @@ void run_fat32_tests() {
     std::cout << "[FAT32 UNIT TESTS] All FAT32 Unit Tests passed successfully.\n";
 }
 
+void run_asade_library_tests() {
+    std::cout << "===================================================\n";
+    std::cout << "         ASADE THIRD-PARTY LIBRARIES TESTS         \n";
+    std::cout << "===================================================\n";
+
+    std::cout << "[UNIT TEST] Testing Monocypher (Cryptography)...\n";
+    {
+        const char* msg = "Asade OS Monocypher Test";
+        u8 hash[64] = {0};
+        crypto_blake2b(hash, sizeof(hash), reinterpret_cast<const u8*>(msg), strlen(msg));
+
+        bool is_all_zero = true;
+        for (int i = 0; i < 64; i++) {
+            if (hash[i] != 0) {
+                is_all_zero = false;
+                break;
+            }
+        }
+        assert(!is_all_zero);
+        std::cout << "  - BLAKE2b hash computed successfully!\n";
+    }
+
+    std::cout << "[UNIT TEST] Testing Miniz (Compression)...\n";
+    {
+        const char* src = "Hello from Asade OS! This is a compression test using miniz.";
+        unsigned long src_len = strlen(src) + 1;
+        unsigned long cmp_len = src_len * 2 + 12;
+        std::vector<u8> cmp_buf(cmp_len);
+
+        int status = mz_compress(cmp_buf.data(), &cmp_len, reinterpret_cast<const u8*>(src), src_len);
+        assert(status == MZ_OK);
+
+        unsigned long dec_len = src_len;
+        std::vector<u8> dec_buf(dec_len);
+        status = mz_uncompress(dec_buf.data(), &dec_len, cmp_buf.data(), cmp_len);
+        assert(status == MZ_OK);
+        assert(dec_len == src_len);
+        assert(strcmp(reinterpret_cast<const char*>(dec_buf.data()), src) == 0);
+        std::cout << "  - Miniz compression and decompression roundtrip passed!\n";
+    }
+
+    std::cout << "[UNIT TEST] Testing STB Image & STB Image Write (Graphics)...\n";
+    {
+        const int w = 8;
+        const int h = 8;
+        const int channels = 3; // RGB
+        std::vector<u8> img_data(w * h * channels, 255); // Red image (all 255)
+
+        struct WriteContext {
+            std::vector<u8> buffer;
+        } ctx;
+
+        auto write_func = [](void* context, void* data, int size) {
+            WriteContext* c = static_cast<WriteContext*>(context);
+            u8* bytes = static_cast<u8*>(data);
+            c->buffer.insert(c->buffer.end(), bytes, bytes + size);
+        };
+
+        int success = stbi_write_png_to_func(write_func, &ctx, w, h, channels, img_data.data(), w * channels);
+        assert(success != 0);
+        assert(!ctx.buffer.empty());
+
+        int out_w, out_h, out_channels;
+        u8* loaded_data = stbi_load_from_memory(ctx.buffer.data(), ctx.buffer.size(), &out_w, &out_h, &out_channels, channels);
+        assert(loaded_data != nullptr);
+        assert(out_w == w);
+        assert(out_h == h);
+        assert(loaded_data[0] == 255); // Red channel is 255
+        stbi_image_free(loaded_data);
+        std::cout << "  - STB Image & STB Image Write PNG roundtrip passed!\n";
+    }
+
+    std::cout << "[UNIT TEST] Testing Dr Wav (Audio)...\n";
+    {
+        drwav wav;
+        drwav_data_format format;
+        format.container = drwav_container_riff;
+        format.format = DR_WAVE_FORMAT_PCM;
+        format.channels = 1;
+        format.sampleRate = 44100;
+        format.bitsPerSample = 16;
+
+        void* pWriteBuffer = nullptr;
+        size_t writeBufferSize = 0;
+        drwav_bool32 success = drwav_init_memory_write(&wav, &pWriteBuffer, &writeBufferSize, &format, nullptr);
+        assert(success);
+
+        std::vector<i16> samples(100, 0);
+        drwav_uint64 framesWritten = drwav_write_pcm_frames(&wav, 100, samples.data());
+        assert(framesWritten == 100);
+        drwav_uninit(&wav);
+
+        drwav wav_read;
+        success = drwav_init_memory(&wav_read, pWriteBuffer, writeBufferSize, nullptr);
+        assert(success);
+        assert(wav_read.channels == 1);
+        assert(wav_read.sampleRate == 44100);
+        assert(wav_read.bitsPerSample == 16);
+
+        std::vector<i16> read_samples(100);
+        drwav_uint64 framesRead = drwav_read_pcm_frames_s16(&wav_read, 100, read_samples.data());
+        assert(framesRead == 100);
+        assert(read_samples[0] == 0);
+        drwav_uninit(&wav_read);
+        free(pWriteBuffer);
+        std::cout << "  - Dr Wav writing and reading passed!\n";
+    }
+
+    std::cout << "[UNIT TEST] Testing Dr MP3 (Audio)...\n";
+    {
+        drmp3 mp3;
+        u8 dummy_mp3[128] = {0};
+        drmp3_bool32 success = drmp3_init_memory(&mp3, dummy_mp3, sizeof(dummy_mp3), nullptr);
+        assert(!success);
+        std::cout << "  - Dr MP3 initialized and handled empty stream safely!\n";
+    }
+
+    std::cout << "[UNIT TEST] Testing STB TrueType (Fonts)...\n";
+    {
+        u8 dummy_ttf[100] = {0};
+        int offset = stbtt_GetFontOffsetForIndex(dummy_ttf, 0);
+        assert(offset == -1);
+        std::cout << "  - STB TrueType verified dummy font data safely!\n";
+    }
+    std::cout << "===================================================\n\n";
+}
+
 void run_subsystem_tests() {
     std::cout << "[INTEGRATION TEST] Verifying Subsystem APIs (Scheduler, IPC, Net Mock)...\n";
     // Dummy checks to fulfill generic continuous test integration criteria
@@ -443,6 +600,7 @@ int main(int argc, char** argv) {
         run_pmm_tests();
         run_fat32_tests();
         run_subsystem_tests();
+        run_asade_library_tests();
     }
     if (do_stress) {
         run_stress_tests();

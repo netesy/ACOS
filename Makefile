@@ -142,11 +142,14 @@ LIBACOS_SRCS = \
 	userland/loader/symbol_resolver.cpp \
 	userland/loader/relocation.cpp \
 	userland/loader/loader_cache.cpp \
-	userland/loader/rtld.cpp
+	userland/loader/rtld.cpp \
+	libs/miniz.cpp \
+	libs/monocypher.cpp
 
 GUI_SRCS = $(wildcard userland/gui/*.cpp) $(wildcard userland/gui/core/*.cpp)
 
-LIBACOS_OBJS = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(LIBACOS_SRCS))
+LIBACOS_OBJS = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(filter-out libs/%, $(LIBACOS_SRCS))) \
+               $(patsubst libs/%.cpp, $(BUILD_DIR)/userland/libs/%.o, $(filter libs/%, $(LIBACOS_SRCS)))
 GUI_OBJS = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(GUI_SRCS))
 
 # Services
@@ -395,17 +398,17 @@ clean:
 
 test:
 	@mkdir -p $(BUILD_DIR)
-	g++ -std=c++20 -O3 tools/test_host.cpp -o $(BUILD_DIR)/test_host
+	g++ -std=c++20 -O3 tools/test_host.cpp libs/miniz.cpp libs/monocypher.cpp -o $(BUILD_DIR)/test_host -I.
 	./$(BUILD_DIR)/test_host --unit-tests --integration-tests --kernel-tests --userspace-tests --scheduler-tests --memory-tests --filesystem-tests --driver-tests --networking-tests
 
 stress:
 	@mkdir -p $(BUILD_DIR)
-	g++ -std=c++20 -O3 tools/test_host.cpp -o $(BUILD_DIR)/test_host
+	g++ -std=c++20 -O3 tools/test_host.cpp libs/miniz.cpp libs/monocypher.cpp -o $(BUILD_DIR)/test_host -I.
 	./$(BUILD_DIR)/test_host --stress-tests
 
 fuzz:
 	@mkdir -p $(BUILD_DIR)
-	g++ -std=c++20 -O3 tools/test_host.cpp -o $(BUILD_DIR)/test_host
+	g++ -std=c++20 -O3 tools/test_host.cpp libs/miniz.cpp libs/monocypher.cpp -o $(BUILD_DIR)/test_host -I.
 	./$(BUILD_DIR)/test_host --fuzz-tests
 
 .PHONY: all image run clean test stress fuzz

@@ -59,6 +59,30 @@ void* malloc(usize size) {
     return nullptr;
 }
 
+void* realloc(void* ptr, usize size) {
+    if (!ptr) return malloc(size);
+    if (size == 0) {
+        free(ptr);
+        return nullptr;
+    }
+
+    // Align size to 8-byte boundary
+    usize aligned_size = (size + 7) & ~7ULL;
+
+    BlockHeader* block = reinterpret_cast<BlockHeader*>(ptr) - 1;
+    usize old_size = block->size;
+    if (old_size >= aligned_size) {
+        return ptr;
+    }
+
+    void* new_ptr = malloc(size);
+    if (new_ptr) {
+        memcpy(new_ptr, ptr, old_size);
+        free(ptr);
+    }
+    return new_ptr;
+}
+
 void free(void* ptr) {
     if (!ptr) return;
 
