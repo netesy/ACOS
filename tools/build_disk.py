@@ -68,15 +68,15 @@ def build_gpt_entry(type_guid, unique_guid, start_lba, end_lba, name):
     return entry
 
 def create_fat32_image():
-    # Construct a minimal FAT32 filesystem (32MB, 65536 sectors)
-    fat_data = bytearray(65536 * 512)
+    # Construct a minimal FAT32 filesystem (64MB, 131072 sectors)
+    fat_data = bytearray(131072 * 512)
 
     # 1. Boot Sector (LBA 0 of partition)
     boot = bytearray(512)
     boot[0:3] = b"\xEB\x58\x90"
     boot[3:11] = b"MSWIN4.1"
-    struct.pack_into("<HBHBHHBHHHII", boot, 11, 512, 8, 32, 2, 0, 0, 0xF8, 0, 32, 64, 2048, 65536)
-    struct.pack_into("<IHHIIH", boot, 36, 64, 0, 0, 2, 1, 6)
+    struct.pack_into("<HBHBHHBHHHII", boot, 11, 512, 1, 32, 2, 0, 0, 0xF8, 0, 32, 64, 2048, 131072)
+    struct.pack_into("<IHHIHH", boot, 36, 1024, 0, 0, 2, 1, 6)
     boot[64] = 0x80 # Drive
     boot[66] = 0x29 # Signature
     struct.pack_into("<I11s8s", boot, 67, 0x12345678, b"ACOS_BOOT  ", b"FAT32   ")
@@ -93,9 +93,9 @@ def create_fat32_image():
     fat_data[1 * 512 : 2 * 512] = fsinfo
     fat_data[7 * 512 : 8 * 512] = fsinfo # Backup FSInfo
 
-    # 3. File Allocation Tables (FAT 1 at sector 32, FAT 2 at sector 96)
+    # 3. File Allocation Tables (FAT 1 at sector 32, FAT 2 at sector 1056)
     fat1_offset = 32 * 512
-    fat2_offset = 96 * 512
+    fat2_offset = 1056 * 512
     struct.pack_into("<II", fat_data, fat1_offset, 0x0FFFFFF8, 0x0FFFFFFF)
     struct.pack_into("<II", fat_data, fat2_offset, 0x0FFFFFF8, 0x0FFFFFFF)
 
@@ -113,7 +113,7 @@ def create_fat32_image():
         return start
 
     def write_cluster_data(cluster, data):
-        cluster_offset = (32 + 2 * 64 + (cluster - 2) * 8) * 512
+        cluster_offset = (32 + 2 * 1024 + (cluster - 2) * 1) * 512
         fat_data[cluster_offset : cluster_offset + len(data)] = data
 
     # Root Directory (Cluster 2)
@@ -134,16 +134,21 @@ def create_fat32_image():
             kernel_elf = f.read()
 
     boot_efi_size = len(boot_efi)
-    boot_efi_clusters = max(1, (boot_efi_size + 4095) // 4096)
+    boot_efi_clusters = max(1, (boot_efi_size + 511) // 512)
     boot_efi_start = allocate_clusters(boot_efi_clusters)
     write_cluster_data(boot_efi_start, boot_efi)
 
     kernel_size = len(kernel_elf)
-    kernel_clusters = max(1, (kernel_size + 4095) // 4096)
+    kernel_clusters = max(1, (kernel_size + 511) // 512)
     kernel_start = allocate_clusters(kernel_clusters)
     write_cluster_data(kernel_start, kernel_elf)
 
-    root_dir = bytearray(4096)
+    startup_nsh_content = b"fs0:\r\nEFI\\BOOT\\BOOTX64.EFI\r\n"
+    startup_nsh_size = len(startup_nsh_content)
+    startup_nsh_cluster = allocate_clusters(1)
+    write_cluster_data(startup_nsh_cluster, startup_nsh_content)
+
+    root_dir = bytearray(512)
     struct.pack_into(
         "<11sBBBHHHHHHHI",
         root_dir, 0,
@@ -164,9 +169,19 @@ def create_fat32_image():
         kernel_start & 0xFFFF,
         kernel_size
     )
+    struct.pack_into(
+        "<11sBBBHHHHHHHI",
+        root_dir, 64,
+        b"STARTUP NSH", 0x20,
+        0, 0, 0, 0, 0,
+        (startup_nsh_cluster >> 16) & 0xFFFF,
+        0, 0,
+        startup_nsh_cluster & 0xFFFF,
+        startup_nsh_size
+    )
     write_cluster_data(2, root_dir)
 
-    efi_dir = bytearray(4096)
+    efi_dir = bytearray(512)
     struct.pack_into(
         "<11sBBBHHHHHHHI",
         efi_dir, 0,
@@ -179,7 +194,7 @@ def create_fat32_image():
     )
     write_cluster_data(efi_cluster, efi_dir)
 
-    boot_dir_b = bytearray(4096)
+    boot_dir_b = bytearray(512)
     struct.pack_into(
         "<11sBBBHHHHHHHI",
         boot_dir_b, 0,
@@ -352,8 +367,8 @@ def create_asfs_data_image():
     return asfs_data
 
 def build_full_disk_image():
-    # 128MB Disk Image = 262144 sectors
-    total_sectors = 262144
+    # 256MB Disk Image = 524288 sectors
+    total_sectors = 524288
     disk = bytearray(total_sectors * 512)
 
     # 1. Protective MBR at Sector 0
@@ -370,20 +385,20 @@ def build_full_disk_image():
     print("Success: Generated standalone asfs_test.img (ASFS system)!")
 
     # Write partition data to unified acos.img disk layout
-    # Partition 1: FAT32 ESP (LBA 2048 to 67583)
+    # Partition 1: FAT32 ESP (LBA 2048 to 133119)
     disk[2048 * 512 : 2048 * 512 + len(fat32_partition_data)] = fat32_partition_data
 
-    # Partition 2: ASFS System Partition (LBA 67584 to 131038)
-    disk[67584 * 512 : 67584 * 512 + len(asfs_sys_data)] = asfs_sys_data
+    # Partition 2: ASFS System Partition (LBA 133120 to 196574)
+    disk[133120 * 512 : 133120 * 512 + len(asfs_sys_data)] = asfs_sys_data
 
-    # Partition 3: ASFS Writable Data Partition (LBA 131072 to 260095)
-    disk[131072 * 512 : 131072 * 512 + len(asfs_data_data)] = asfs_data_data
+    # Partition 3: ASFS Writable Data Partition (LBA 196608 to 325631)
+    disk[196608 * 512 : 196608 * 512 + len(asfs_data_data)] = asfs_data_data
 
     # 2. Build GPT entries block (Sectors 2 to 33)
     entries = bytearray(32 * 512)
-    entries[0:128] = build_gpt_entry(ESP_GUID, b"\x11" * 16, 2048, 67583, "EFI System Partition")
-    entries[128:256] = build_gpt_entry(ASFS_GUID, b"\x22" * 16, 67584, 131038, "ASFS System")
-    entries[256:384] = build_gpt_entry(ASFS_DATA_GUID, b"\x33" * 16, 131072, 260095, "ASFS Data")
+    entries[0:128] = build_gpt_entry(ESP_GUID, b"\x11" * 16, 2048, 133119, "EFI System Partition")
+    entries[128:256] = build_gpt_entry(ASFS_GUID, b"\x22" * 16, 133120, 196574, "ASFS System")
+    entries[256:384] = build_gpt_entry(ASFS_DATA_GUID, b"\x33" * 16, 196608, 325631, "ASFS Data")
 
     entries_crc = crc32_unsigned(entries)
     disk[2 * 512 : 34 * 512] = entries # Primary entries table

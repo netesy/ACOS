@@ -85,7 +85,7 @@ bool AHCIController::initialize() {
 }
 
 AHCIPort::AHCIPort(u32 port_num, void* hba_port_reg)
-    : m_port_num(port_num), m_reg(hba_port_reg), m_capacity(0) {}
+    : m_port_num(port_num), m_reg(hba_port_reg), m_capacity(256ULL * 1024 * 1024) {}
 
 void AHCIPort::configure() {
     volatile u32* port = (volatile u32*)m_reg;
