@@ -23,8 +23,21 @@ static inline int strcmp_nocase(const char* a, const char* b) {
 
 class ASFSFileNode final : public vfs::Node {
 public:
-    ASFSFileNode() : m_is_used(false), m_fs(nullptr), m_inode_block(0), m_size(0) {
+    ASFSFileNode() : m_is_used(false), m_ref_count(0), m_fs(nullptr), m_inode_block(0), m_size(0) {
         memset(m_extents, 0, sizeof(m_extents));
+    }
+
+    void add_ref() override {
+        m_ref_count++;
+    }
+
+    void close_node() override {
+        if (m_ref_count > 0) {
+            m_ref_count--;
+        }
+        if (m_ref_count == 0) {
+            m_is_used = false;
+        }
     }
 
     bool replace_block_in_extents(u64 relative_block, u64 old_block, u64 new_block) {
@@ -322,11 +335,14 @@ public:
         // Persist Inode updates
         m_size = (m_size > end_byte) ? m_size : end_byte;
 
-        ASFSInode inode;
-        if (m_fs->device()->read_block(m_inode_block, &inode) == 0) {
+        alignas(4096) u8 inode_buf[512];
+        if (m_fs->device()->read_block(m_inode_block, inode_buf) == 0) {
+            ASFSInode inode;
+            memcpy(&inode, inode_buf, sizeof(ASFSInode));
             inode.size = m_size;
             memcpy(inode.extents, m_extents, sizeof(m_extents));
-            m_fs->device()->write_block(m_inode_block, &inode);
+            memcpy(inode_buf, &inode, sizeof(ASFSInode));
+            m_fs->device()->write_block(m_inode_block, inode_buf);
         }
 
         // Call device flush to guarantee physical persistence
@@ -342,6 +358,7 @@ public:
 
 public:
     bool m_is_used;
+    u32 m_ref_count;
 private:
     ASFSFileSystem* m_fs;
     u64 m_inode_block;
@@ -351,8 +368,21 @@ private:
 
 class ASFSDirNode final : public vfs::Node {
 public:
-    ASFSDirNode() : m_is_used(false), m_device(nullptr) {
+    ASFSDirNode() : m_is_used(false), m_ref_count(0), m_device(nullptr) {
         memset(m_extents, 0, sizeof(m_extents));
+    }
+
+    void add_ref() override {
+        m_ref_count++;
+    }
+
+    void close_node() override {
+        if (m_ref_count > 0) {
+            m_ref_count--;
+        }
+        if (m_ref_count == 0) {
+            m_is_used = false;
+        }
     }
 
     void initialize(BlockDevice* device, const ASFSInode& inode) {
@@ -430,6 +460,7 @@ public:
 
 public:
     bool m_is_used;
+    u32 m_ref_count;
 private:
     BlockDevice* m_device;
     ASFSExtent m_extents[6];
@@ -443,6 +474,7 @@ vfs::Node* allocate_asfs_file_node(ASFSFileSystem* fs, u64 inode_block, const AS
         if (!g_asfs_file_nodes[i].m_is_used) {
             new (&g_asfs_file_nodes[i]) ASFSFileNode();
             g_asfs_file_nodes[i].m_is_used = true;
+            g_asfs_file_nodes[i].m_ref_count = 1;
             g_asfs_file_nodes[i].initialize(fs, inode_block, inode);
             return &g_asfs_file_nodes[i];
         }
@@ -455,6 +487,7 @@ vfs::Node* allocate_asfs_dir_node(BlockDevice* device, const ASFSInode& inode) {
         if (!g_asfs_dir_nodes[i].m_is_used) {
             new (&g_asfs_dir_nodes[i]) ASFSDirNode();
             g_asfs_dir_nodes[i].m_is_used = true;
+            g_asfs_dir_nodes[i].m_ref_count = 1;
             g_asfs_dir_nodes[i].initialize(device, inode);
             return &g_asfs_dir_nodes[i];
         }
@@ -629,7 +662,9 @@ bool ASFSFileSystem::create_file(const char* path, u64 mode) {
     file_inode.size = 0;
     file_inode.permissions = (u32)mode;
 
-    if (m_device->write_block(new_file_inode, &file_inode) != 0) {
+    alignas(4096) u8 inode_buf[512] = {0};
+    memcpy(inode_buf, &file_inode, sizeof(ASFSInode));
+    if (m_device->write_block(new_file_inode, inode_buf) != 0) {
         deallocate_blocks(new_file_inode, 1);
         return false;
     }
@@ -710,7 +745,9 @@ bool ASFSFileSystem::mkdir(const char* path) {
     dir_inode.extents[0].start_block = new_dir_data;
     dir_inode.extents[0].block_count = 1;
 
-    if (m_device->write_block(new_dir_inode, &dir_inode) != 0) {
+    alignas(4096) u8 inode_buf[512] = {0};
+    memcpy(inode_buf, &dir_inode, sizeof(ASFSInode));
+    if (m_device->write_block(new_dir_inode, inode_buf) != 0) {
         deallocate_blocks(new_dir_inode, 1);
         deallocate_blocks(new_dir_data, 1);
         return false;
@@ -946,7 +983,9 @@ bool ASFSFileSystem::insert_dir_entry(u64 dir_inode_block, const char* name, u8 
             inode.extents[e].start_block = new_block;
             inode.extents[e].block_count = 1;
             inode.size += 512;
-            if (m_device->write_block(dir_inode_block, &inode) != 0) return false;
+            alignas(4096) u8 inode_buf[512] = {0};
+            memcpy(inode_buf, &inode, sizeof(ASFSInode));
+            if (m_device->write_block(dir_inode_block, inode_buf) != 0) return false;
         }
 
         for (u32 b = 0; b < inode.extents[e].block_count; b++) {
@@ -1092,9 +1131,11 @@ void ASFSFileSystem::deallocate_blocks(u64 start_block, u32 count) {
 
 void ASFSFileSystem::flush_superblock() {
     if (!m_device) return;
-    m_device->write_block(0, &m_sb);
+    alignas(4096) u8 sb_buf[512] = {0};
+    memcpy(sb_buf, &m_sb, sizeof(ASFSSuperblock));
+    m_device->write_block(0, sb_buf);
     u64 last_block = m_device->capacity() / 512 - 1;
-    m_device->write_block(last_block, &m_sb);
+    m_device->write_block(last_block, sb_buf);
 }
 
 static ASFSFileSystem g_asfs_filesystems[4];
