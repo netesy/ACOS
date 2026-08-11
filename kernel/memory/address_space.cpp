@@ -104,6 +104,7 @@ bool AddressSpace::map(u64 virt, u64 phys, u64 flags) {
     if (!pt) return false;
 
     pt->entries[pt_idx] = phys | flags | 1;
+    __asm__ volatile("mov %%cr3, %%rax\n\tmov %%rax, %%cr3" : : : "rax", "memory");
     return true;
 }
 

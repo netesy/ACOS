@@ -223,6 +223,16 @@ void pmm_init(BootInfo* bootInfo) {
     // Mark page 0 as used (null page guard)
     bitmap_set(0);
 
+    // Mark first 64MB of physical RAM as used/reserved to protect kernel image, PMM tables,
+    // and user segment physical mappings from overlap/clobbering by page table allocations.
+    u64 reserved_limit = 64 * 1024 * 1024; // 64MB
+    u64 reserved_pages = reserved_limit / PAGE_SIZE;
+    for (u64 page = 0; page < reserved_pages; ++page) {
+        if (page < g_total_pages) {
+            bitmap_set(page);
+        }
+    }
+
     // Mark kernel image pages as used
     u64 kernel_start = 0x100000; // linker.ld loads kernel at 1 MB
     for (u64 addr = kernel_start; addr < kernel_end_addr; addr += PAGE_SIZE) {

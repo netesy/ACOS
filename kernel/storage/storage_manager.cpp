@@ -10,8 +10,11 @@ usize StorageManager::g_device_count = 0;
 void StorageManager::register_device(u64 id, BlockDevice* device) {
     if (g_device_count < 16) {
         g_devices[g_device_count++] = {id, device};
-        // Trigger partition discovery
-        PartitionManager::enumerate(device);
+        // Trigger partition discovery ONLY if it is a whole/physical disk (e.g., not a partition)
+        // Partition IDs start at 0x100 (MBR) and 0x200 (GPT).
+        if (id < 0x100) {
+            PartitionManager::enumerate(device);
+        }
     }
 }
 

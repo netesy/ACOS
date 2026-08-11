@@ -1171,23 +1171,46 @@ bool ASFSFileSystem::probe(void* device, const char* target) {
 
 bool ASFSFileSystem::mount(const char* target [[maybe_unused]]) {
     u8 sector[512];
-    if (m_device->read_block(0, sector) != 0) return false;
+    if (m_device->read_block(0, sector) != 0) {
+        hal::serial_print("ASFS Mount Error: Read block 0 failed!\n");
+        return false;
+    }
     memcpy(&m_sb, sector, sizeof(ASFSSuperblock));
 
     if (m_sb.magic != 0x415346535F4F535FULL) {
         // Fallback to redundant superblock
         u64 last_block = m_device->capacity() / 512 - 1;
-        if (m_device->read_block(last_block, sector) != 0) return false;
+        if (m_device->read_block(last_block, sector) != 0) {
+            hal::serial_print("ASFS Mount Error: Read redundant superblock failed!\n");
+            return false;
+        }
         memcpy(&m_sb, sector, sizeof(ASFSSuperblock));
-        if (m_sb.magic != 0x415346535F4F535FULL) return false;
+        if (m_sb.magic != 0x415346535F4F535FULL) {
+            hal::serial_print("ASFS Mount Error: Invalid magic number!\n");
+            return false;
+        }
     }
 
-    if (m_sb.version != 1) return false;
+    if (m_sb.version != 1) {
+        hal::serial_print("ASFS Mount Error: Unsupported version!\n");
+        return false;
+    }
 
     // Validate properties
-    if (m_sb.block_size != 512 && m_sb.block_size != 4096) return false;
+    if (m_sb.block_size != 512 && m_sb.block_size != 4096) {
+        hal::serial_print("ASFS Mount Error: Unsupported block size!\n");
+        return false;
+    }
     u64 total_blocks = m_device->capacity() / 512;
-    if (m_sb.root_inode == 0 || m_sb.root_inode >= total_blocks) return false;
+    hal::serial_print("ASFS Mount: total_blocks=");
+    hal::serial_print_hex(total_blocks);
+    hal::serial_print(" root_inode=");
+    hal::serial_print_hex(m_sb.root_inode);
+    hal::serial_print("\n");
+    if (m_sb.root_inode == 0 || m_sb.root_inode >= total_blocks) {
+        hal::serial_print("ASFS Mount Error: Out of bounds root inode!\n");
+        return false;
+    }
 
     m_read_only = is_path_protected(target);
 

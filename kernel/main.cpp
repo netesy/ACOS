@@ -77,6 +77,45 @@ extern "C" void k_handle_gp(acos::u64 rip, acos::u64 error_code) {
 }
 
 extern "C" void k_handle_pf(acos::u64 rip, acos::u64 error_code, acos::u64 address) {
+    if (address == 0xC000000000) {
+        auto* space = acos::scheduler::current_thread()->parent->address_space;
+        if (space) {
+            acos::u64 pml4_phys = space->pml4_phys();
+            acos::memory::PageTable* pml4_virt = reinterpret_cast<acos::memory::PageTable*>(pml4_phys);
+            acos::u64 pml4_idx = (address >> 39) & 0x1FF;
+            acos::u64 pdpt_idx = (address >> 30) & 0x1FF;
+            acos::u64 pd_idx   = (address >> 21) & 0x1FF;
+            acos::u64 pt_idx   = (address >> 12) & 0x1FF;
+
+            acos::hal::serial_print("[FAULT PF] pml4_phys: ");
+            acos::hal::serial_print_hex(pml4_phys);
+            acos::hal::serial_print(" entry: ");
+            acos::hal::serial_print_hex(pml4_virt->entries[pml4_idx]);
+            acos::hal::serial_print("\n");
+
+            if (pml4_virt->entries[pml4_idx] & 1) {
+                acos::memory::PageTable* pdpt = reinterpret_cast<acos::memory::PageTable*>(pml4_virt->entries[pml4_idx] & ~0xFFFULL);
+                acos::hal::serial_print("[FAULT PF] pdpt_entry: ");
+                acos::hal::serial_print_hex(pdpt->entries[pdpt_idx]);
+                acos::hal::serial_print("\n");
+
+                if (pdpt->entries[pdpt_idx] & 1) {
+                    acos::memory::PageTable* pd = reinterpret_cast<acos::memory::PageTable*>(pdpt->entries[pdpt_idx] & ~0xFFFULL);
+                    acos::hal::serial_print("[FAULT PF] pd_entry: ");
+                    acos::hal::serial_print_hex(pd->entries[pd_idx]);
+                    acos::hal::serial_print("\n");
+
+                    if (pd->entries[pd_idx] & 1) {
+                        acos::memory::PageTable* pt = reinterpret_cast<acos::memory::PageTable*>(pd->entries[pd_idx] & ~0xFFFULL);
+                        acos::hal::serial_print("[FAULT PF] pt_entry: ");
+                        acos::hal::serial_print_hex(pt->entries[pt_idx]);
+                        acos::hal::serial_print("\n");
+                    }
+                }
+            }
+        }
+    }
+
     // Detect and resolve Copy-On-Write faults
     if ((error_code & 2) && acos::memory::vmm_handle_cow(address)) {
         return;

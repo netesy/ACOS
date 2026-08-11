@@ -5,13 +5,17 @@
 
 namespace acos::memory {
 
-struct BlockHeader {
+struct alignas(16) BlockHeader {
     usize size;        // Size of the usable block (excluding header)
     BlockHeader* next; // Pointer to the next block in physical memory layout
     bool is_free;      // Whether the block is currently free
+    u8 padding[15];    // Explicit padding to ensure 32-byte size and alignment
 };
 
-static u8 g_user_heap[32 * 1024 * 1024]; // 32MB static heap to prevent heap exhaustion
+static_assert(sizeof(BlockHeader) == 32, "BlockHeader size must be exactly 32 bytes");
+static_assert(sizeof(BlockHeader) % 16 == 0, "BlockHeader size must be a multiple of 16");
+
+alignas(16) static u8 g_user_heap[32 * 1024 * 1024]; // 32MB static heap to prevent heap exhaustion
 static bool g_heap_initialized = false;
 
 static void init_heap() {
@@ -25,8 +29,8 @@ static void init_heap() {
 void* malloc(usize size) {
     if (size == 0) return nullptr;
 
-    // Align size to 8-byte boundary
-    usize aligned_size = (size + 7) & ~7ULL;
+    // Align size to 16-byte boundary
+    usize aligned_size = (size + 15) & ~15ULL;
 
     if (!g_heap_initialized) {
         init_heap();
@@ -36,8 +40,8 @@ void* malloc(usize size) {
     while (current != nullptr) {
         if (current->is_free && current->size >= aligned_size) {
             // Check if we can split this block
-            // We need enough space for the aligned request, a new header, and at least 8 bytes of payload
-            if (current->size >= aligned_size + sizeof(BlockHeader) + 8) {
+            // We need enough space for the aligned request, a new header, and at least 16 bytes of payload
+            if (current->size >= aligned_size + sizeof(BlockHeader) + 16) {
                 u8* current_bytes = reinterpret_cast<u8*>(current);
                 BlockHeader* next_block = reinterpret_cast<BlockHeader*>(current_bytes + sizeof(BlockHeader) + aligned_size);
 
@@ -66,8 +70,8 @@ void* realloc(void* ptr, usize size) {
         return nullptr;
     }
 
-    // Align size to 8-byte boundary
-    usize aligned_size = (size + 7) & ~7ULL;
+    // Align size to 16-byte boundary
+    usize aligned_size = (size + 15) & ~15ULL;
 
     BlockHeader* block = reinterpret_cast<BlockHeader*>(ptr) - 1;
     usize old_size = block->size;
@@ -81,6 +85,17 @@ void* realloc(void* ptr, usize size) {
         free(ptr);
     }
     return new_ptr;
+}
+
+extern "C" void* memset(void* s, int c, acos::usize n);
+
+void* calloc(usize num, usize size) {
+    usize total = num * size;
+    void* ptr = malloc(total);
+    if (ptr) {
+        memset(ptr, 0, total);
+    }
+    return ptr;
 }
 
 void free(void* ptr) {

@@ -16,6 +16,8 @@ namespace acos::memory {
 
 void* malloc(usize size);
 void free(void* ptr);
+void* realloc(void* ptr, usize size);
+void* calloc(usize num, usize size);
 
 // Compatibility
 inline void* kmalloc(usize size) { return malloc(size); }

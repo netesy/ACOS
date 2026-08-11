@@ -189,6 +189,11 @@ void schedule() {
         hal::tss_set_rsp0(next->stack_top);
         cpu->kernel_rsp = next->stack_top;
 
+        // Switch page table (CR3) to the target thread's process address space
+        if (next->parent && next->parent->address_space) {
+            __asm__ volatile("mov %0, %%cr3" : : "r"(next->parent->address_space->pml4_phys()));
+        }
+
         // If the current thread has terminated, schedule it for deferred reaping
         if (current && current->state == ThreadState::Terminated) {
             if (cpu->thread_to_reap) {
