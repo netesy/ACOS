@@ -116,7 +116,9 @@ i32 VFS::read_dir(const char* path, DirectoryEntry* entries, usize max_entries) 
 
     Node* node = mp->fs->open(relative_path);
     if (!node) return -1;
-    return node->read_dir(0, entries, max_entries);
+    i32 result = node->read_dir(0, entries, max_entries);
+    node->close_node();
+    return result;
 }
 
 NodeType VFS::get_node_type(const char* path) {
@@ -132,7 +134,9 @@ NodeType VFS::get_node_type(const char* path) {
 
     Node* node = mp->fs->open(relative_path);
     if (!node) return NodeType::File;
-    return node->type();
+    NodeType result = node->type();
+    node->close_node();
+    return result;
 }
 
 i32 VFS::mkdir(const char* path, u64 mode [[maybe_unused]]) {
