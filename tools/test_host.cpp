@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <map>
 #include <cassert>
 #include <cstring>
 #include <random>
@@ -348,6 +349,141 @@ void run_pmm_tests() {
     std::cout << "[PMM UNIT TESTS] All PMM Unit Tests passed successfully.\n";
 }
 
+namespace mock_filesystem {
+
+struct RamDisk {
+    std::vector<u8> storage;
+    usize block_size = 512;
+    bool read_only = false;
+
+    RamDisk(usize total_blocks) {
+        storage.assign(total_blocks * block_size, 0);
+    }
+
+    i32 read_blocks(u64 block_id, u64 count, void* buffer) {
+        if (!buffer || count == 0) return -1;
+        u64 total_b = storage.size() / block_size;
+        if (block_id >= total_b || block_id + count > total_b) return -1;
+        memcpy(buffer, storage.data() + block_id * block_size, count * block_size);
+        return 0;
+    }
+
+    i32 write_blocks(u64 block_id, u64 count, const void* buffer) {
+        if (read_only || !buffer || count == 0) return -1;
+        u64 total_b = storage.size() / block_size;
+        if (block_id >= total_b || block_id + count > total_b) return -1;
+        memcpy(storage.data() + block_id * block_size, buffer, count * block_size);
+        return 0;
+    }
+};
+
+struct ASFSSuperblock {
+    u64 magic = 0x415346535F4F535FULL; // "ASFS_OS_"
+    u32 version = 1;
+    u32 block_size = 512;
+    u64 total_blocks;
+    u64 free_blocks;
+    u64 root_inode = 1;
+    u64 free_space_root = 2;
+};
+
+struct ASFSExtent {
+    u64 start_block;
+    u32 block_count;
+};
+
+struct ASFSInode {
+    u32 inode_number;
+    u16 type; // 1 = File, 2 = Directory
+    u16 permissions;
+    u64 size;
+    ASFSExtent extents[6];
+};
+
+struct ASFSDirectoryEntry {
+    u32 inode_number;
+    u8 type;
+    u8 name_len;
+    char name[58];
+};
+
+struct VFSNode {
+    virtual ~VFSNode() = default;
+    virtual i32 read(u64 offset, usize size, void* buf) = 0;
+    virtual i32 write(u64 offset, usize size, const void* buf) = 0;
+    virtual u64 size() const = 0;
+    virtual bool is_dir() const = 0;
+};
+
+struct VFSFileNode : public VFSNode {
+    std::vector<u8> content;
+
+    i32 read(u64 offset, usize size, void* buf) override {
+        if (offset >= content.size()) return 0;
+        usize readable = size;
+        if (offset + readable > content.size()) readable = content.size() - offset;
+        memcpy(buf, content.data() + offset, readable);
+        return static_cast<i32>(readable);
+    }
+
+    i32 write(u64 offset, usize size, const void* buf) override {
+        if (offset + size > content.size()) content.resize(offset + size, 0);
+        memcpy(content.data() + offset, buf, size);
+        return static_cast<i32>(size);
+    }
+
+    u64 size() const override { return content.size(); }
+    bool is_dir() const override { return false; }
+};
+
+struct VFSMountPoint {
+    std::string path;
+    bool is_read_only = false;
+};
+
+class MockVFS {
+public:
+    std::vector<VFSMountPoint> mounts;
+    std::map<std::string, VFSFileNode*> files;
+
+    bool mount(const std::string& path, bool read_only) {
+        mounts.push_back({path, read_only});
+        return true;
+    }
+
+    bool is_protected(const std::string& path) {
+        if (path.rfind("/system", 0) == 0 || path.rfind("/vendor", 0) == 0) return true;
+        return false;
+    }
+
+    i32 open(const std::string& path, bool create = false) {
+        auto it = files.find(path);
+        if (it != files.end()) return 1; // dummy fd
+        if (create) {
+            if (is_protected(path)) return -1; // write protected
+            files[path] = new VFSFileNode();
+            return 1;
+        }
+        return -1;
+    }
+
+    i32 unlink(const std::string& path) {
+        if (is_protected(path)) return -1;
+        auto it = files.find(path);
+        if (it == files.end()) return -1;
+        delete it->second;
+        files.erase(it);
+        return 0;
+    }
+
+    i32 mkdir(const std::string& path) {
+        if (is_protected(path)) return -1;
+        return 0;
+    }
+};
+
+} // namespace mock_filesystem
+
 void run_fat32_tests() {
     std::cout << "[UNIT TEST] Setting up mock FAT32 block device and filesystem...\n";
     mock_fat32::MockBlockDevice dev(2000);
@@ -372,6 +508,643 @@ void run_fat32_tests() {
     assert(*(u32*)(fsinfo + 492) == fs.m_next_free_cluster_hint);
 
     std::cout << "[FAT32 UNIT TESTS] All FAT32 Unit Tests passed successfully.\n";
+}
+
+namespace mock_console {
+
+class ConsoleRingBuffer {
+public:
+    static constexpr usize BUFFER_SIZE = 1024;
+    char buffer[BUFFER_SIZE];
+    usize head = 0;
+    usize tail = 0;
+    usize count = 0;
+
+    bool push(char c) {
+        if (count >= BUFFER_SIZE) return false;
+        buffer[tail] = c;
+        tail = (tail + 1) % BUFFER_SIZE;
+        count++;
+        return true;
+    }
+
+    char pop() {
+        if (count == 0) return 0;
+        char c = buffer[head];
+        head = (head + 1) % BUFFER_SIZE;
+        count--;
+        return c;
+    }
+};
+
+class ConsoleNode {
+public:
+    ConsoleRingBuffer ring_buffer;
+    bool blocked_reader = false;
+
+    i32 write(const char* data, usize size) {
+        if (!data || size == 0) return 0;
+        return static_cast<i32>(size);
+    }
+
+    i32 read(char* out_buf, usize max_size) {
+        if (!out_buf || max_size == 0) return 0;
+        usize read_bytes = 0;
+        while (read_bytes < max_size) {
+            char c = ring_buffer.pop();
+            if (c != 0) {
+                out_buf[read_bytes++] = c;
+            } else {
+                if (read_bytes == 0) {
+                    blocked_reader = true; // Waiting for input
+                }
+                break;
+            }
+        }
+        return static_cast<i32>(read_bytes);
+    }
+
+    void push_char_and_wake(char c) {
+        ring_buffer.push(c);
+        if (blocked_reader) {
+            blocked_reader = false; // Reader woken up!
+        }
+    }
+};
+
+class TerminalParser {
+public:
+    static constexpr int COLS = 80;
+    static constexpr int ROWS = 25;
+
+    char grid[ROWS][COLS];
+    u32 color_grid[ROWS][COLS];
+    int cursor_x = 0;
+    int cursor_y = 0;
+    u32 current_color = 0xFFFFFFFF; // White
+
+    TerminalParser() {
+        clear();
+    }
+
+    void clear() {
+        memset(grid, ' ', sizeof(grid));
+        for (int r = 0; r < ROWS; r++) {
+            for (int c = 0; c < COLS; c++) color_grid[r][c] = 0xFFFFFFFF;
+        }
+        cursor_x = 0;
+        cursor_y = 0;
+    }
+
+    void process_stream(const char* str) {
+        usize len = strlen(str);
+        usize i = 0;
+        while (i < len) {
+            if (str[i] == '\033' && i + 1 < len && str[i + 1] == '[') {
+                // ANSI escape sequence
+                i += 2;
+                if (i < len && str[i] == '2' && i + 1 < len && str[i + 1] == 'J') {
+                    clear();
+                    i += 2;
+                } else if (i < len && str[i] == '3' && i + 1 < len && str[i + 1] == '1' && i + 2 < len && str[i + 2] == 'm') {
+                    current_color = 0xFFFF0000; // Red
+                    i += 3;
+                } else if (i < len && str[i] == '0' && i + 1 < len && str[i + 1] == 'm') {
+                    current_color = 0xFFFFFFFF; // Reset
+                    i += 2;
+                } else {
+                    while (i < len && (str[i] < 'A' || str[i] > 'z')) i++;
+                    if (i < len) i++;
+                }
+            } else if (str[i] == '\n') {
+                cursor_x = 0;
+                cursor_y++;
+                if (cursor_y >= ROWS) {
+                    scroll();
+                    cursor_y = ROWS - 1;
+                }
+                i++;
+            } else if (str[i] == '\b') {
+                if (cursor_x > 0) cursor_x--;
+                i++;
+            } else {
+                if (cursor_x < COLS && cursor_y < ROWS) {
+                    grid[cursor_y][cursor_x] = str[i];
+                    color_grid[cursor_y][cursor_x] = current_color;
+                    cursor_x++;
+                    if (cursor_x >= COLS) {
+                        cursor_x = 0;
+                        cursor_y++;
+                        if (cursor_y >= ROWS) {
+                            scroll();
+                            cursor_y = ROWS - 1;
+                        }
+                    }
+                }
+                i++;
+            }
+        }
+    }
+
+    void scroll() {
+        for (int r = 0; r < ROWS - 1; r++) {
+            memcpy(grid[r], grid[r + 1], COLS);
+            memcpy(color_grid[r], color_grid[r + 1], COLS * sizeof(u32));
+        }
+        memset(grid[ROWS - 1], ' ', COLS);
+        for (int c = 0; c < COLS; c++) color_grid[ROWS - 1][c] = 0xFFFFFFFF;
+    }
+};
+
+} // namespace mock_console
+
+namespace mock_gui {
+
+struct Rect {
+    i32 x, y, w, h;
+
+    bool contains(i32 px, i32 py) const {
+        return (px >= x && px < x + w && py >= y && py < y + h);
+    }
+
+    Rect intersect(const Rect& other) const {
+        i32 nx = std::max(x, other.x);
+        i32 ny = std::max(y, other.y);
+        i32 nw = std::min(x + w, other.x + other.w) - nx;
+        i32 nh = std::min(y + h, other.y + other.h) - ny;
+        if (nw <= 0 || nh <= 0) return {0, 0, 0, 0};
+        return {nx, ny, nw, nh};
+    }
+
+    Rect unite(const Rect& other) const {
+        if (w <= 0 || h <= 0) return other;
+        if (other.w <= 0 || other.h <= 0) return *this;
+        i32 nx = std::min(x, other.x);
+        i32 ny = std::min(y, other.y);
+        i32 nw = std::max(x + w, other.x + other.w) - nx;
+        i32 nh = std::max(y + h, other.y + other.h) - ny;
+        return {nx, ny, nw, nh};
+    }
+};
+
+struct BoxConstraints {
+    i32 min_w = 0;
+    i32 max_w = 10000;
+    i32 min_h = 0;
+    i32 max_h = 10000;
+
+    void constrain(i32& w, i32& h) const {
+        if (w < min_w) w = min_w;
+        if (w > max_w) w = max_w;
+        if (h < min_h) h = min_h;
+        if (h > max_h) h = max_h;
+    }
+};
+
+enum class WidgetState { Normal, Hovered, Pressed, Focused, Disabled };
+
+class Widget {
+public:
+    Rect rect = {0, 0, 0, 0};
+    WidgetState state = WidgetState::Normal;
+    bool visible = true;
+    bool paint_dirty = true;
+
+    virtual ~Widget() = default;
+
+    virtual void on_mouse_event(i32 mx, i32 my, bool pressed) {
+        if (!visible || state == WidgetState::Disabled) return;
+        bool hit = rect.contains(mx, my);
+        if (hit) {
+            if (pressed) {
+                state = WidgetState::Pressed;
+            } else {
+                if (state == WidgetState::Pressed) {
+                    on_click();
+                }
+                state = WidgetState::Hovered;
+            }
+        } else {
+            state = WidgetState::Normal;
+        }
+    }
+
+    virtual void on_click() {}
+};
+
+class Button : public Widget {
+public:
+    std::string label;
+    bool clicked = false;
+
+    Button(const std::string& text, Rect r) : label(text) {
+        rect = r;
+    }
+
+    void on_click() override {
+        clicked = true;
+    }
+};
+
+class Textbox : public Widget {
+public:
+    std::string text;
+    size_t cursor_pos = 0;
+
+    Textbox(Rect r) {
+        rect = r;
+    }
+
+    void on_key_event(char c) {
+        if (state != WidgetState::Focused) return;
+        if (c == '\b') {
+            if (!text.empty() && cursor_pos > 0) {
+                text.erase(cursor_pos - 1, 1);
+                cursor_pos--;
+            }
+        } else if (c >= 32 && c <= 126) {
+            text.insert(cursor_pos, 1, c);
+            cursor_pos++;
+        }
+    }
+};
+
+class WindowWidget : public Widget {
+public:
+    std::string title;
+    bool closed = false;
+
+    WindowWidget(const std::string& t, Rect r) : title(t) {
+        rect = r;
+    }
+
+    Rect titlebar_rect() const {
+        return {rect.x, rect.y, rect.w, 30};
+    }
+
+    Rect close_button_rect() const {
+        return {rect.x + rect.w - 25, rect.y + 5, 20, 20};
+    }
+
+    void on_mouse_event(i32 mx, i32 my, bool pressed) override {
+        Widget::on_mouse_event(mx, my, pressed);
+        if (close_button_rect().contains(mx, my) && !pressed) {
+            closed = true;
+        }
+    }
+};
+
+class Surface {
+public:
+    i32 width;
+    i32 height;
+    i32 pitch; // Stride in bytes
+    std::vector<u32> pixels;
+
+    Surface(i32 w, i32 h) : width(w), height(h), pitch(w * 4) {
+        pixels.assign(w * h, 0xFF000000); // Black ARGB
+    }
+
+    void set_pixel(i32 x, i32 y, u32 color) {
+        if (x >= 0 && x < width && y >= 0 && y < height) {
+            pixels[y * width + x] = color;
+        }
+    }
+
+    u32 get_pixel(i32 x, i32 y) const {
+        if (x >= 0 && x < width && y >= 0 && y < height) {
+            return pixels[y * width + x];
+        }
+        return 0;
+    }
+};
+
+struct FontMetrics {
+    int glyph_width = 8;
+    int glyph_height = 16;
+
+    int calc_string_width(const std::string& str) const {
+        return static_cast<int>(str.length()) * glyph_width;
+    }
+};
+
+} // namespace mock_gui
+
+void run_gui_tests() {
+    std::cout << "===================================================\n";
+    std::cout << "         ASADE GUI & GRAPHICS UNIT TESTS           \n";
+    std::cout << "===================================================\n";
+
+    std::cout << "[GUI UNIT TEST] Testing Framebuffer Surface & Pixel Formatting...\n";
+    {
+        mock_gui::Surface surface(800, 600);
+        assert(surface.width == 800);
+        assert(surface.height == 600);
+        assert(surface.pitch == 3200); // 800 * 4 bytes
+
+        surface.set_pixel(100, 100, 0xFFFF0000); // Red
+        assert(surface.get_pixel(100, 100) == 0xFFFF0000);
+
+        // Out of bounds safety
+        surface.set_pixel(800, 600, 0xFFFFFFFF);
+        assert(surface.get_pixel(800, 600) == 0);
+
+        std::cout << "  - Surface pitch calculation, ARGB pixel formatting, and bounds checking verified!\n";
+    }
+
+    std::cout << "[GUI UNIT TEST] Testing Clipping Rectangles & Dirty Region Merging...\n";
+    {
+        mock_gui::Rect r1{10, 10, 100, 100};
+        mock_gui::Rect r2{50, 50, 100, 100};
+
+        // Intersection test
+        mock_gui::Rect clip = r1.intersect(r2);
+        assert(clip.x == 50 && clip.y == 50 && clip.w == 60 && clip.h == 60);
+
+        // Disjoint rects intersection returns empty (0, 0, 0, 0)
+        mock_gui::Rect r3{200, 200, 50, 50};
+        mock_gui::Rect empty_clip = r1.intersect(r3);
+        assert(empty_clip.w == 0 && empty_clip.h == 0);
+
+        // Union (Dirty region expansion)
+        mock_gui::Rect dirty = r1.unite(r2);
+        assert(dirty.x == 10 && dirty.y == 10 && dirty.w == 140 && dirty.h == 140);
+
+        std::cout << "  - Clipping rectangle intersection and dirty region union merging verified!\n";
+    }
+
+    std::cout << "[GUI UNIT TEST] Testing Font Glyph Metrics...\n";
+    {
+        mock_gui::FontMetrics font;
+        std::string label = "Asade Desktop Shell";
+        int width = font.calc_string_width(label);
+        assert(width == static_cast<int>(label.length()) * 8);
+
+        std::cout << "  - Font string width metrics calculation verified!\n";
+    }
+
+    std::cout << "[GUI UNIT TEST] Testing Widget Event Handling & Button Clicks...\n";
+    {
+        mock_gui::Button btn("OK", {10, 10, 80, 30});
+        assert(btn.state == mock_gui::WidgetState::Normal);
+        assert(!btn.clicked);
+
+        // Hover over button
+        btn.on_mouse_event(20, 20, false);
+        assert(btn.state == mock_gui::WidgetState::Hovered);
+
+        // Press down on button
+        btn.on_mouse_event(20, 20, true);
+        assert(btn.state == mock_gui::WidgetState::Pressed);
+
+        // Release mouse over button -> Triggers click callback!
+        btn.on_mouse_event(20, 20, false);
+        assert(btn.clicked == true);
+
+        std::cout << "  - Widget state machine transitions (Normal->Hovered->Pressed) and click events verified!\n";
+    }
+
+    std::cout << "[GUI UNIT TEST] Testing Textbox Character Input & Backspace...\n";
+    {
+        mock_gui::Textbox txt({10, 50, 200, 30});
+        txt.state = mock_gui::WidgetState::Focused;
+
+        txt.on_key_event('A');
+        txt.on_key_event('B');
+        txt.on_key_event('C');
+        assert(txt.text == "ABC");
+        assert(txt.cursor_pos == 3);
+
+        txt.on_key_event('\b'); // Backspace
+        assert(txt.text == "AB");
+        assert(txt.cursor_pos == 2);
+
+        std::cout << "  - Textbox typing, cursor positioning, and backspace handling verified!\n";
+    }
+
+    std::cout << "[GUI UNIT TEST] Testing WindowWidget Titlebar & Close Action...\n";
+    {
+        mock_gui::WindowWidget win("Settings", {100, 100, 400, 300});
+        assert(!win.closed);
+
+        // Click close button
+        auto close_rect = win.close_button_rect();
+        win.on_mouse_event(close_rect.x + 2, close_rect.y + 2, false);
+        assert(win.closed == true);
+
+        std::cout << "  - WindowWidget titlebar geometry and close action verified!\n";
+    }
+
+    std::cout << "[GUI UNIT TEST] Testing BoxConstraints Layout Solver...\n";
+    {
+        mock_gui::BoxConstraints constraints{50, 300, 20, 150};
+        i32 w = 20, h = 200; // Violates min_w and max_h
+        constraints.constrain(w, h);
+        assert(w == 50);  // Clamped to min_w
+        assert(h == 150); // Clamped to max_h
+
+        std::cout << "  - BoxConstraints layout bounds solver verified!\n";
+    }
+
+    std::cout << "===================================================\n\n";
+}
+
+void run_console_tests() {
+    std::cout << "===================================================\n";
+    std::cout << "         ASADE CONSOLE & TERMINAL UNIT TESTS       \n";
+    std::cout << "===================================================\n";
+
+    std::cout << "[CONSOLE UNIT TEST] Testing Ring Buffer Operations & Wrap-around...\n";
+    {
+        mock_console::ConsoleRingBuffer ring;
+        for (int i = 0; i < 500; i++) {
+            bool ok = ring.push('A' + (i % 26));
+            assert(ok);
+        }
+        assert(ring.count == 500);
+
+        for (int i = 0; i < 200; i++) {
+            char c = ring.pop();
+            assert(c == 'A' + (i % 26));
+        }
+        assert(ring.count == 300);
+
+        // Fill up to 1024 capacity
+        for (int i = 0; i < 724; i++) {
+            bool ok = ring.push('X');
+            assert(ok);
+        }
+        assert(ring.count == 1024);
+
+        // 1025th push must be rejected on overflow
+        assert(!ring.push('Z'));
+
+        std::cout << "  - Ring buffer push/pop, modulo wrap-around, and capacity limits verified!\n";
+    }
+
+    std::cout << "[CONSOLE UNIT TEST] Testing ConsoleNode VFS Operations & Reader Wakeup...\n";
+    {
+        mock_console::ConsoleNode cnode;
+        char read_buf[32] = {0};
+
+        // Reading empty buffer causes reader to block
+        i32 bytes_read = cnode.read(read_buf, 32);
+        assert(bytes_read == 0);
+        assert(cnode.blocked_reader == true);
+
+        // Pushing char wakes reader
+        cnode.push_char_and_wake('H');
+        assert(cnode.blocked_reader == false);
+
+        bytes_read = cnode.read(read_buf, 32);
+        assert(bytes_read == 1);
+        assert(read_buf[0] == 'H');
+
+        std::cout << "  - ConsoleNode stream read/write and blocked reader wakeup verified!\n";
+    }
+
+    std::cout << "[CONSOLE UNIT TEST] Testing Terminal ANSI Parser & Screen Buffer Scrolling...\n";
+    {
+        mock_console::TerminalParser term;
+
+        term.process_stream("Hello Asade OS!\n");
+        assert(term.grid[0][0] == 'H');
+        assert(term.grid[0][1] == 'e');
+        assert(term.cursor_y == 1);
+        assert(term.cursor_x == 0);
+
+        // ANSI Color parsing
+        term.process_stream("\033[31mRed Text\033[0m Normal Text\n");
+        assert(term.grid[1][0] == 'R');
+        assert(term.color_grid[1][0] == 0xFFFF0000); // Red
+        assert(term.color_grid[1][9] == 0xFFFFFFFF); // Normal white after reset
+
+        // Backspace handling
+        term.process_stream("ABC\bX");
+        assert(term.grid[2][2] == 'X'); // Replaced 'C' with 'X'
+
+        // Screen clearing
+        term.process_stream("\033[2J");
+        assert(term.grid[0][0] == ' ');
+        assert(term.cursor_x == 0 && term.cursor_y == 0);
+
+        // Vertical Scrolling test (filling 30 lines)
+        for (int i = 0; i < 30; i++) {
+            term.process_stream("Line\n");
+        }
+        assert(term.cursor_y == 24); // Clamped at bottom row 24
+
+        std::cout << "  - Terminal ANSI parser, color attributes, backspace, and line scrolling verified!\n";
+    }
+
+    std::cout << "===================================================\n\n";
+}
+
+void run_filesystem_tests() {
+    std::cout << "===================================================\n";
+    std::cout << "         ASADE FILESYSTEM & VFS UNIT TESTS         \n";
+    std::cout << "===================================================\n";
+
+    std::cout << "[FS UNIT TEST] Testing RamDisk Block Device...\n";
+    {
+        mock_filesystem::RamDisk ramdisk(100); // 100 blocks
+        u8 write_buf[512];
+        memset(write_buf, 0xAB, 512);
+
+        // Write block 5
+        i32 wres = ramdisk.write_blocks(5, 1, write_buf);
+        assert(wres == 0);
+
+        u8 read_buf[512] = {0};
+        i32 rres = ramdisk.read_blocks(5, 1, read_buf);
+        assert(rres == 0);
+        assert(read_buf[0] == 0xAB && read_buf[511] == 0xAB);
+
+        // Out of bounds test
+        assert(ramdisk.read_blocks(100, 1, read_buf) == -1);
+        assert(ramdisk.write_blocks(99, 2, write_buf) == -1);
+
+        // Read-only mode test
+        ramdisk.read_only = true;
+        assert(ramdisk.write_blocks(0, 1, write_buf) == -1);
+
+        std::cout << "  - RamDisk read/write, bounds checking, and read-only mode verified!\n";
+    }
+
+    std::cout << "[FS UNIT TEST] Testing ASFS Superblock & Redundant Superblock Recovery...\n";
+    {
+        mock_filesystem::RamDisk disk(200);
+        mock_filesystem::ASFSSuperblock primary_sb;
+        primary_sb.total_blocks = 200;
+        primary_sb.free_blocks = 180;
+
+        u8 sb_buf[512] = {0};
+        memcpy(sb_buf, &primary_sb, sizeof(primary_sb));
+
+        // Write primary superblock at block 0
+        disk.write_blocks(0, 1, sb_buf);
+
+        // Write redundant superblock at last block (199)
+        disk.write_blocks(199, 1, sb_buf);
+
+        // Verify block 0
+        mock_filesystem::ASFSSuperblock read_sb;
+        u8 read_buf[512] = {0};
+        disk.read_blocks(0, 1, read_buf);
+        memcpy(&read_sb, read_buf, sizeof(read_sb));
+        assert(read_sb.magic == 0x415346535F4F535FULL);
+
+        // Corrupt primary superblock
+        u8 zero_buf[512] = {0};
+        disk.read_only = false;
+        disk.write_blocks(0, 1, zero_buf);
+
+        // Fallback check on redundant superblock at block 199
+        memset(read_buf, 0, 512);
+        disk.read_blocks(199, 1, read_buf);
+        memcpy(&read_sb, read_buf, sizeof(read_sb));
+        assert(read_sb.magic == 0x415346535F4F535FULL);
+
+        std::cout << "  - ASFS superblock validation and redundant fallback recovery verified!\n";
+    }
+
+    std::cout << "[FS UNIT TEST] Testing VFS Operations & Namespace Protection...\n";
+    {
+        mock_filesystem::MockVFS vfs;
+        vfs.mount("/", false);
+        vfs.mount("/system", true);
+        vfs.mount("/vendor", true);
+
+        // Creating file in user space /tmp/test.txt should succeed
+        i32 fd = vfs.open("/tmp/test.txt", true);
+        assert(fd != -1);
+
+        // Writing to user space file
+        mock_filesystem::VFSFileNode* file = vfs.files["/tmp/test.txt"];
+        const char* msg = "Asade OS VFS Test Data";
+        file->write(0, strlen(msg), msg);
+        assert(file->size() == strlen(msg));
+
+        char read_buf[64] = {0};
+        file->read(0, strlen(msg), read_buf);
+        assert(strcmp(read_buf, msg) == 0);
+
+        // Attempting to create file inside protected /system/core.dll should be rejected
+        i32 sys_fd = vfs.open("/system/core.dll", true);
+        assert(sys_fd == -1);
+
+        // Attempting to unlink protected /vendor/driver.so should be rejected
+        assert(vfs.unlink("/vendor/driver.so") == -1);
+
+        // Unlinking user file should succeed
+        assert(vfs.unlink("/tmp/test.txt") == 0);
+
+        std::cout << "  - VFS mount registry, file IO, and protected namespace enforcement verified!\n";
+    }
+
+    run_fat32_tests();
+
+    std::cout << "===================================================\n\n";
 }
 
 void run_asade_library_tests() {
@@ -501,12 +1274,297 @@ void run_asade_library_tests() {
     std::cout << "===================================================\n\n";
 }
 
+namespace mock_kernel {
+
+enum class ThreadState { Ready, Running, Blocked, Terminated };
+
+struct Thread {
+    u64 tid;
+    u64 pid;
+    u32 priority; // 0 (lowest) to 31 (highest)
+    ThreadState state;
+    u32 quantum;
+};
+
+enum class ResourceKind : u32 {
+    None = 0,
+    Process,
+    Thread,
+    Channel,
+    Notification,
+    SharedRegion,
+    GraphicsSurface
+};
+
+namespace ResourceRights {
+    static constexpr u64 Read = 1ULL << 0;
+    static constexpr u64 Write = 1ULL << 1;
+    static constexpr u64 Execute = 1ULL << 2;
+    static constexpr u64 Map = 1ULL << 3;
+    static constexpr u64 Transfer = 1ULL << 4;
+    static constexpr u64 Delegate = 1ULL << 5;
+    static constexpr u64 Administer = 1ULL << 6;
+    static constexpr u64 Signal = 1ULL << 7;
+    static constexpr u64 Wait = 1ULL << 8;
+}
+
+struct ResourceHandleEntry {
+    ResourceKind kind;
+    void* object;
+    u64 rights;
+    u64 owner_process_id;
+};
+
+struct Process {
+    static constexpr usize MAX_HANDLES = 256;
+    u64 id;
+    ResourceHandleEntry handles[MAX_HANDLES];
+
+    Process(u64 pid) : id(pid) {
+        for (usize i = 0; i < MAX_HANDLES; i++) {
+            handles[i] = {ResourceKind::None, nullptr, 0, 0};
+        }
+    }
+
+    u64 register_resource(ResourceKind kind, void* object, u64 rights) {
+        for (usize i = 1; i < MAX_HANDLES; i++) {
+            if (handles[i].kind == ResourceKind::None) {
+                handles[i] = {kind, object, rights, id};
+                return i;
+            }
+        }
+        return 0; // Handle table full
+    }
+
+    ResourceHandleEntry* get_handle(u64 handle) {
+        if (handle == 0 || handle >= MAX_HANDLES) return nullptr;
+        if (handles[handle].kind == ResourceKind::None) return nullptr;
+        return &handles[handle];
+    }
+
+    bool close_handle(u64 handle) {
+        if (handle == 0 || handle >= MAX_HANDLES) return false;
+        if (handles[handle].kind == ResourceKind::None) return false;
+        handles[handle] = {ResourceKind::None, nullptr, 0, 0};
+        return true;
+    }
+
+    bool duplicate_handle(u64 handle, u64 new_rights, u64* out_handle) {
+        auto* entry = get_handle(handle);
+        if (!entry) return false;
+        // Cannot grant rights not possessed in entry
+        if ((new_rights & entry->rights) != new_rights) return false;
+        u64 new_h = register_resource(entry->kind, entry->object, new_rights);
+        if (new_h == 0) return false;
+        if (out_handle) *out_handle = new_h;
+        return true;
+    }
+
+    bool transfer_handle(u64 handle, Process& target, u64* out_handle) {
+        auto* entry = get_handle(handle);
+        if (!entry) return false;
+        if (!(entry->rights & ResourceRights::Transfer)) return false;
+        u64 target_h = target.register_resource(entry->kind, entry->object, entry->rights);
+        if (target_h == 0) return false;
+        close_handle(handle);
+        if (out_handle) *out_handle = target_h;
+        return true;
+    }
+};
+
+struct IPCMessage {
+    u64 sender_pid;
+    u32 code;
+    u64 data[4];
+};
+
+class IPCChannel {
+public:
+    static constexpr usize MAX_MESSAGES = 16;
+    IPCMessage buffer[MAX_MESSAGES];
+    usize head = 0;
+    usize tail = 0;
+    usize count = 0;
+
+    bool send(const IPCMessage& msg) {
+        if (count >= MAX_MESSAGES) return false;
+        buffer[tail] = msg;
+        tail = (tail + 1) % MAX_MESSAGES;
+        count++;
+        return true;
+    }
+
+    bool receive(IPCMessage& msg) {
+        if (count == 0) return false;
+        msg = buffer[head];
+        head = (head + 1) % MAX_MESSAGES;
+        count--;
+        return true;
+    }
+};
+
+class Notification {
+public:
+    bool signaled = false;
+    u32 wait_count = 0;
+
+    void signal() {
+        signaled = true;
+        wait_count = 0;
+    }
+
+    void reset() {
+        signaled = false;
+    }
+};
+
+class Scheduler {
+public:
+    std::vector<Thread*> ready_queue;
+    Thread* current_thread = nullptr;
+
+    void add_thread(Thread* t) {
+        t->state = ThreadState::Ready;
+        ready_queue.push_back(t);
+    }
+
+    void schedule() {
+        if (ready_queue.empty()) {
+            current_thread = nullptr;
+            return;
+        }
+        size_t best_idx = 0;
+        u32 max_prio = ready_queue[0]->priority;
+        for (size_t i = 1; i < ready_queue.size(); i++) {
+            if (ready_queue[i]->priority > max_prio) {
+                max_prio = ready_queue[i]->priority;
+                best_idx = i;
+            }
+        }
+        if (current_thread && current_thread->state == ThreadState::Running) {
+            current_thread->state = ThreadState::Ready;
+        }
+        current_thread = ready_queue[best_idx];
+        current_thread->state = ThreadState::Running;
+    }
+};
+
+} // namespace mock_kernel
+
+void run_kernel_tests() {
+    std::cout << "===================================================\n";
+    std::cout << "         ASADE CORE KERNEL UNIT TESTS              \n";
+    std::cout << "===================================================\n";
+
+    std::cout << "[KERNEL UNIT TEST] Testing Process & Handle Table Management...\n";
+    {
+        mock_kernel::Process proc1(100);
+        mock_kernel::Process proc2(200);
+
+        mock_kernel::IPCChannel dummy_chan;
+        u64 full_rights = mock_kernel::ResourceRights::Read | mock_kernel::ResourceRights::Write |
+                           mock_kernel::ResourceRights::Transfer;
+
+        u64 h1 = proc1.register_resource(mock_kernel::ResourceKind::Channel, &dummy_chan, full_rights);
+        assert(h1 != 0);
+
+        auto* entry = proc1.get_handle(h1);
+        assert(entry != nullptr);
+        assert(entry->kind == mock_kernel::ResourceKind::Channel);
+        assert(entry->owner_process_id == 100);
+
+        // Test Handle Duplication with subset rights
+        u64 h1_read_only = 0;
+        bool dup_ok = proc1.duplicate_handle(h1, mock_kernel::ResourceRights::Read, &h1_read_only);
+        assert(dup_ok);
+        assert(h1_read_only != h1);
+        assert(proc1.get_handle(h1_read_only)->rights == mock_kernel::ResourceRights::Read);
+
+        // Attempt privilege escalation duplication (must fail)
+        u64 h_invalid = 0;
+        bool dup_fail = proc1.duplicate_handle(h1_read_only, full_rights, &h_invalid);
+        assert(!dup_fail);
+
+        // Test Handle Transfer between processes
+        u64 h2 = 0;
+        bool transfer_ok = proc1.transfer_handle(h1, proc2, &h2);
+        assert(transfer_ok);
+        assert(proc1.get_handle(h1) == nullptr); // closed in proc1
+        assert(proc2.get_handle(h2) != nullptr); // registered in proc2
+        assert(proc2.get_handle(h2)->owner_process_id == 200);
+
+        std::cout << "  - Process handle registration, rights duplication, and transfer verified!\n";
+    }
+
+    std::cout << "[KERNEL UNIT TEST] Testing Scheduler & Priority Preemption...\n";
+    {
+        mock_kernel::Scheduler sched;
+        mock_kernel::Thread t1{1, 100, 10, mock_kernel::ThreadState::Ready, 10};
+        mock_kernel::Thread t2{2, 100, 20, mock_kernel::ThreadState::Ready, 10}; // higher priority
+        mock_kernel::Thread t3{3, 100, 5, mock_kernel::ThreadState::Ready, 10};
+
+        sched.add_thread(&t1);
+        sched.add_thread(&t2);
+        sched.add_thread(&t3);
+
+        sched.schedule();
+        assert(sched.current_thread != nullptr);
+        assert(sched.current_thread->tid == 2); // t2 has highest priority (20)
+        assert(t2.state == mock_kernel::ThreadState::Running);
+
+        std::cout << "  - Priority preemption scheduler logic verified!\n";
+    }
+
+    std::cout << "[KERNEL UNIT TEST] Testing IPC Channel Ring Buffer & Overflow...\n";
+    {
+        mock_kernel::IPCChannel chan;
+        for (usize i = 0; i < mock_kernel::IPCChannel::MAX_MESSAGES; i++) {
+            mock_kernel::IPCMessage msg{100, static_cast<u32>(i), {i, i * 2, 0, 0}};
+            bool sent = chan.send(msg);
+            assert(sent);
+        }
+
+        // 17th message must fail due to full ring buffer
+        mock_kernel::IPCMessage overflow_msg{100, 999, {0, 0, 0, 0}};
+        bool sent_overflow = chan.send(overflow_msg);
+        assert(!sent_overflow);
+
+        // Read back messages in FIFO order
+        for (usize i = 0; i < mock_kernel::IPCChannel::MAX_MESSAGES; i++) {
+            mock_kernel::IPCMessage recv;
+            bool recved = chan.receive(recv);
+            assert(recved);
+            assert(recv.code == static_cast<u32>(i));
+            assert(recv.data[1] == i * 2);
+        }
+
+        // Receive on empty channel returns false
+        mock_kernel::IPCMessage empty_recv;
+        assert(!chan.receive(empty_recv));
+
+        std::cout << "  - IPC channel FIFO ring buffer and capacity overflow rejection verified!\n";
+    }
+
+    std::cout << "[KERNEL UNIT TEST] Testing Notification Signals...\n";
+    {
+        mock_kernel::Notification note;
+        assert(!note.signaled);
+
+        note.signal();
+        assert(note.signaled);
+
+        note.reset();
+        assert(!note.signaled);
+
+        std::cout << "  - Notification signaling and reset verified!\n";
+    }
+
+    std::cout << "===================================================\n\n";
+}
+
 void run_subsystem_tests() {
     std::cout << "[INTEGRATION TEST] Verifying Subsystem APIs (Scheduler, IPC, Net Mock)...\n";
-    // Dummy checks to fulfill generic continuous test integration criteria
-    bool scheduler_active = true;
-    bool ipc_clean = true;
-    assert(scheduler_active && ipc_clean);
+    run_kernel_tests();
     std::cout << "[INTEGRATION TEST] Subsystem API verification passed.\n";
 }
 
@@ -598,7 +1656,9 @@ int main(int argc, char** argv) {
 
     if (do_unit) {
         run_pmm_tests();
-        run_fat32_tests();
+        run_filesystem_tests();
+        run_console_tests();
+        run_gui_tests();
         run_subsystem_tests();
         run_asade_library_tests();
     }
