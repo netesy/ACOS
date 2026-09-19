@@ -53,6 +53,33 @@ void reap_zombies() {
     }
 }
 
+void* kthread_reaper(void* arg) {
+    (void)arg;
+    while (true) {
+        u32 total_cpus = smp::Cpu::count();
+        if (total_cpus == 0) total_cpus = 1;
+
+        for (u32 i = 0; i < total_cpus && i < 64; i++) {
+            smp::CpuData* cpu = smp::Cpu::get_by_index(i);
+            if (cpu && cpu->thread_to_reap) {
+                Thread* t = cpu->thread_to_reap;
+                cpu->thread_to_reap = nullptr;
+
+                if (t) {
+                    if (t->stack_top) {
+                        u64 stack_base = t->stack_top - 16384;
+                        acos::memory::kfree(reinterpret_cast<void*>(stack_base));
+                    }
+                    acos::memory::kfree(t);
+                }
+            }
+        }
+
+        schedule();
+    }
+    return nullptr;
+}
+
 void scheduler_init() {
     for (int i = 0; i < 64; i++) {
         g_run_queues[i].head = nullptr;
@@ -66,6 +93,12 @@ void scheduler_init() {
 
     g_has_xsave = (ecx & (1ULL << 26)) != 0;
     g_has_avx = (ecx & (1ULL << 28)) != 0;
+
+    // Create and start dedicated background kernel reaper thread
+    Thread* reaper_thread = create_thread(kthread_reaper, nullptr);
+    if (reaper_thread) {
+        wake_thread(reaper_thread);
+    }
 
     if (g_has_xsave) {
         // Enable OSXSAVE in CR4 (bit 18)

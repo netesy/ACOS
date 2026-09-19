@@ -47,4 +47,7 @@ usize get_running_thread_count();
 // Internal helper
 RunQueue* get_run_queues();
 
+// Dedicated background kernel reaper thread
+void* kthread_reaper(void* arg);
+
 } // namespace acos::scheduler
