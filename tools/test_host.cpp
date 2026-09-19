@@ -959,43 +959,53 @@ void run_gui_tests() {
         std::cout << "  - Font string width metrics calculation verified!\n";
     }
 
-    std::cout << "[GUI UNIT TEST] Testing Widget Event Handling & Button Clicks...\n";
+    std::cout << "[GUI UNIT TEST] Testing Widget Event Handling & Non-Zero Coordinate Hit Testing...\n";
     {
-        mock_gui::Button btn("OK", {10, 10, 80, 30});
+        mock_gui::Button btn("OK", {100, 100, 80, 30}); // Non-zero position (100, 100)
         assert(btn.state == mock_gui::WidgetState::Normal);
         assert(!btn.clicked);
 
-        // Hover over button
-        btn.on_mouse_event(20, 20, false);
+        // Mouse event at global coordinates (120, 120) inside button (100, 100, 80, 30)
+        btn.on_mouse_event(120, 120, false);
         assert(btn.state == mock_gui::WidgetState::Hovered);
 
-        // Press down on button
-        btn.on_mouse_event(20, 20, true);
+        // Press down on button at (120, 120)
+        btn.on_mouse_event(120, 120, true);
         assert(btn.state == mock_gui::WidgetState::Pressed);
 
         // Release mouse over button -> Triggers click callback!
-        btn.on_mouse_event(20, 20, false);
+        btn.on_mouse_event(120, 120, false);
         assert(btn.clicked == true);
 
-        std::cout << "  - Widget state machine transitions (Normal->Hovered->Pressed) and click events verified!\n";
+        // Mouse outside button bounds (50, 50)
+        btn.on_mouse_event(50, 50, false);
+        assert(btn.state == mock_gui::WidgetState::Normal);
+
+        std::cout << "  - Non-zero offset hit testing and button click callbacks verified!\n";
     }
 
-    std::cout << "[GUI UNIT TEST] Testing Textbox Character Input & Backspace...\n";
+    std::cout << "[GUI UNIT TEST] Testing Textbox Mid-String Insertion & Backspace Deletion...\n";
     {
         mock_gui::Textbox txt({10, 50, 200, 30});
         txt.state = mock_gui::WidgetState::Focused;
 
         txt.on_key_event('A');
-        txt.on_key_event('B');
         txt.on_key_event('C');
-        assert(txt.text == "ABC");
-        assert(txt.cursor_pos == 3);
-
-        txt.on_key_event('\b'); // Backspace
-        assert(txt.text == "AB");
+        assert(txt.text == "AC");
         assert(txt.cursor_pos == 2);
 
-        std::cout << "  - Textbox typing, cursor positioning, and backspace handling verified!\n";
+        // Move cursor back to index 1 (between 'A' and 'C')
+        txt.cursor_pos = 1;
+        txt.on_key_event('B'); // Insert 'B' -> should become "ABC"
+        assert(txt.text == "ABC");
+        assert(txt.cursor_pos == 2);
+
+        // Backspace at cursor index 2 (deletes 'B') -> should revert to "AC"
+        txt.on_key_event('\b');
+        assert(txt.text == "AC");
+        assert(txt.cursor_pos == 1);
+
+        std::cout << "  - Textbox typing, mid-string insertion, cursor positioning, and non-truncating backspace verified!\n";
     }
 
     std::cout << "[GUI UNIT TEST] Testing WindowWidget Titlebar & Close Action...\n";
