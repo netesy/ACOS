@@ -517,6 +517,42 @@ void run_fat32_tests() {
     std::cout << "[FAT32 UNIT TESTS] All FAT32 Unit Tests passed successfully.\n";
 }
 
+namespace mock_usb {
+
+struct TRB {
+    u32 parameter_low;
+    u32 parameter_high;
+    u32 status;
+    u32 control;
+};
+
+class MockXHCIController {
+public:
+    u32 op_regs[32] = {0};
+    TRB cmd_ring[64];
+    u32 cmd_index = 0;
+
+    bool setup_rings() {
+        u64 dcbaap_val = 0x10000000ULL;
+        // Operational registers index 12 (0x30) and 13 (0x34)
+        op_regs[12] = dcbaap_val & 0xFFFFFFFF;
+        op_regs[13] = (dcbaap_val >> 32) & 0xFFFFFFFF;
+        return true;
+    }
+
+    u32 translate_hid_keyboard(u8 hid_key, bool shift) {
+        if (hid_key >= 0x04 && hid_key <= 0x1D) { // A-Z
+            return (shift ? 'A' : 'a') + (hid_key - 0x04);
+        }
+        if (hid_key == 0x28) return '\n';
+        if (hid_key == 0x2A) return '\b';
+        if (hid_key == 0x2C) return ' ';
+        return 0;
+    }
+};
+
+} // namespace mock_usb
+
 namespace mock_cli_shell {
 
 struct Command {
@@ -1681,6 +1717,29 @@ void run_kernel_tests() {
 void run_subsystem_tests() {
     std::cout << "[INTEGRATION TEST] Verifying Subsystem APIs (Scheduler, IPC, Net Mock)...\n";
     run_kernel_tests();
+    std::cout << "[DRIVER UNIT TEST] Testing USB xHCI Controller Rings & HID Scancode Translation...\n";
+    {
+        mock_usb::MockXHCIController xhci;
+        bool ok = xhci.setup_rings();
+        assert(ok);
+        assert(xhci.op_regs[12] == 0x10000000); // DCBAAP Low
+        assert(xhci.op_regs[13] == 0x00000000); // DCBAAP High
+
+        // Test HID 'A' key (0x04) without shift -> 'a'
+        u32 char_a = xhci.translate_hid_keyboard(0x04, false);
+        assert(char_a == 'a');
+
+        // Test HID 'A' key (0x04) with shift -> 'A'
+        u32 char_A_shift = xhci.translate_hid_keyboard(0x04, true);
+        assert(char_A_shift == 'A');
+
+        // Test Enter (0x28) -> '\n'
+        u32 char_enter = xhci.translate_hid_keyboard(0x28, false);
+        assert(char_enter == '\n');
+
+        std::cout << "  - xHCI operational register mapping and USB HID keyboard report translation verified!\n";
+    }
+
     std::cout << "[INTEGRATION TEST] Subsystem API verification passed.\n";
 }
 

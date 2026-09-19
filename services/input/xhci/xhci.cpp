@@ -125,10 +125,10 @@ bool XHCIController::setup_rings() {
         m_dcbaap[i] = 0;
     }
 
-    // Configure DCBAAP base register (offset 0x14 in Operational Registers)
+    // Configure DCBAAP base register (offset 0x30 in Operational Registers -> index 12 & 13)
     u64 dcbaap_val = reinterpret_cast<u64>(m_dcbaap);
-    m_op_regs[5] = dcbaap_val & 0xFFFFFFFF;
-    m_op_regs[12] = (dcbaap_val >> 32) & 0xFFFFFFFF; // Wait, operational regs offset 5 and 6 (actually 0x14 and 0x18)
+    m_op_regs[12] = dcbaap_val & 0xFFFFFFFF;
+    m_op_regs[13] = (dcbaap_val >> 32) & 0xFFFFFFFF;
 
     // Enable interrupts on Interrupter 0
     m_rt_regs[8] |= 0x03; // Interrupt Enable (IE = 1) + Interrupt Pending (IP = 1)
@@ -218,20 +218,47 @@ void XHCIController::handle_interrupt() {
 
 void XHCIController::handle_keyboard_report(const u8* report, usize len) {
     if (!report || len < 8) return;
-    // Basic HID scancode translation and input routing
-    u8 key = report[2];
-    if (key != 0) {
-        // Map standard USB HID to scancodes
-        // Route event into Input Subsystem
+
+    u8 modifier = report[0];
+    bool shift = (modifier & 0x22) != 0; // Left or Right Shift
+
+    for (usize i = 2; i < 8 && i < len; i++) {
+        u8 hid_key = report[i];
+        if (hid_key == 0) continue;
+
+        u32 ascii_code = 0;
+        if (hid_key >= 0x04 && hid_key <= 0x1D) { // A-Z
+            ascii_code = (shift ? 'A' : 'a') + (hid_key - 0x04);
+        } else if (hid_key >= 0x1E && hid_key <= 0x27) { // 1-9, 0
+            static const char num_shift[] = "!@#$%^&*()";
+            static const char num_normal[] = "1234567890";
+            u8 num_idx = (hid_key == 0x27) ? 9 : (hid_key - 0x1E);
+            ascii_code = shift ? num_shift[num_idx] : num_normal[num_idx];
+        } else if (hid_key == 0x28) { // Enter
+            ascii_code = '\n';
+        } else if (hid_key == 0x2A) { // Backspace
+            ascii_code = '\b';
+        } else if (hid_key == 0x2C) { // Space
+            ascii_code = ' ';
+        }
+
+        if (ascii_code != 0) {
+            // Valid translated ASCII character from USB HID report
+            (void)ascii_code;
+        }
     }
 }
 
 void XHCIController::handle_mouse_report(const u8* report, usize len) {
-    if (!report || len < 4) return;
-    // Parse mouse relative movement (dx, dy)
+    if (!report || len < 3) return;
+
+    u8 buttons = report[0];
     i8 dx = static_cast<i8>(report[1]);
     i8 dy = static_cast<i8>(report[2]);
-    (void)dx; (void)dy;
+
+    (void)buttons;
+    (void)dx;
+    (void)dy;
 }
 
 } // namespace acos::drivers::usb
