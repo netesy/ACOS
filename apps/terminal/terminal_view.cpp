@@ -20,10 +20,10 @@ public:
         // Draw solid background
         renderer->fill_rect(m_rect.x, m_rect.y, m_rect.w, m_rect.h, TerminalBuffer::DEFAULT_BG);
 
-        // Get console font for character drawing
-        // If the console font isn't available, the software renderer fallback text drawing works
-        u32 font_w = 8;
-        u32 font_h = 16;
+        // Explicitly request UIMonospace font for terminal rendering
+        const ::acos::graphics::Font* mono_font = ::acos::graphics::FontManager::get_font(::acos::graphics::FontID::UIMonospace);
+        u32 font_w = (mono_font && mono_font->is_valid()) ? mono_font->glyph_width() : 8;
+        u32 font_h = (mono_font && mono_font->is_valid()) ? mono_font->glyph_height() : 16;
 
         usize cols = m_buffer->cols();
         usize rows = m_buffer->rows();
