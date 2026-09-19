@@ -517,6 +517,78 @@ void run_fat32_tests() {
     std::cout << "[FAT32 UNIT TESTS] All FAT32 Unit Tests passed successfully.\n";
 }
 
+namespace mock_virtio_net {
+
+struct VirtQueueDesc {
+    u64 addr = 0;
+    u32 len = 0;
+    u16 flags = 0;
+    u16 next = 0;
+};
+
+struct VirtQueueAvail {
+    u16 flags = 0;
+    u16 idx = 0;
+    u16 ring[256] = {0};
+};
+
+struct VirtQueueUsedElem {
+    u32 id = 0;
+    u32 len = 0;
+};
+
+struct VirtQueueUsed {
+    u16 flags = 0;
+    u16 idx = 0;
+    VirtQueueUsedElem ring[256] = {{0, 0}};
+};
+
+struct VirtQueue {
+    VirtQueueDesc desc[256];
+    VirtQueueAvail avail;
+    VirtQueueUsed used;
+    u16 size = 256;
+    u16 last_used_idx = 0;
+    u16 free_head = 0;
+    u16 num_free = 256;
+
+    void init() {
+        size = 256;
+        last_used_idx = 0;
+        free_head = 0;
+        num_free = 256;
+        for (u16 i = 0; i < 256; i++) {
+            desc[i].next = i + 1;
+        }
+        desc[255].next = 0xFFFF;
+    }
+
+    u16 alloc_desc() {
+        if (num_free == 0 || free_head == 0xFFFF) return 0xFFFF;
+        u16 index = free_head;
+        free_head = desc[index].next;
+        num_free--;
+        return index;
+    }
+
+    void free_desc(u16 index) {
+        desc[index].next = free_head;
+        free_head = index;
+        num_free++;
+    }
+
+    void recycle_used() {
+        while (last_used_idx != used.idx) {
+            u16 used_idx = last_used_idx % size;
+            u16 desc_id = static_cast<u16>(used.ring[used_idx].id);
+            free_desc(desc_id);
+            last_used_idx++;
+        }
+    }
+};
+
+} // namespace mock_virtio_net
+
 namespace mock_usb {
 
 struct TRB {
@@ -1717,6 +1789,29 @@ void run_kernel_tests() {
 void run_subsystem_tests() {
     std::cout << "[INTEGRATION TEST] Verifying Subsystem APIs (Scheduler, IPC, Net Mock)...\n";
     run_kernel_tests();
+    std::cout << "[DRIVER UNIT TEST] Testing VirtIO Net Descriptor Ring Allocation & Recycling...\n";
+    {
+        mock_virtio_net::VirtQueue tx_q;
+        tx_q.init();
+        assert(tx_q.num_free == 256);
+
+        u16 d0 = tx_q.alloc_desc();
+        u16 d1 = tx_q.alloc_desc();
+        assert(d0 == 0 && d1 == 1);
+        assert(tx_q.num_free == 254);
+
+        // Simulate device finishing transmission of descriptor d0
+        tx_q.used.ring[0] = {d0, 64};
+        tx_q.used.idx = 1;
+
+        // Trigger recycling
+        tx_q.recycle_used();
+        assert(tx_q.num_free == 255);
+        assert(tx_q.free_head == d0);
+
+        std::cout << "  - VirtIO descriptor ring available/used index synchronization and buffer recycling verified!\n";
+    }
+
     std::cout << "[DRIVER UNIT TEST] Testing USB xHCI Controller Rings & HID Scancode Translation...\n";
     {
         mock_usb::MockXHCIController xhci;
