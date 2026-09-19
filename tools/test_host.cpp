@@ -510,6 +510,82 @@ void run_fat32_tests() {
     std::cout << "[FAT32 UNIT TESTS] All FAT32 Unit Tests passed successfully.\n";
 }
 
+namespace mock_cli_shell {
+
+struct Command {
+    std::string name;
+    std::vector<std::string> args;
+    std::string redirect_out;
+};
+
+struct Pipeline {
+    std::vector<Command> commands;
+};
+
+class ShellParser {
+public:
+    static bool parse(const std::string& line, Pipeline& out_pipe) {
+        if (line.empty()) return false;
+        out_pipe.commands.clear();
+
+        std::vector<std::string> cmd_strings;
+        size_t start = 0, pos = 0;
+        while ((pos = line.find('|', start)) != std::string::npos) {
+            cmd_strings.push_back(line.substr(start, pos - start));
+            start = pos + 1;
+        }
+        cmd_strings.push_back(line.substr(start));
+
+        for (const auto& cs : cmd_strings) {
+            Command cmd;
+            size_t redir_pos = cs.find('>');
+            std::string cmd_part = cs;
+            if (redir_pos != std::string::npos) {
+                cmd_part = cs.substr(0, redir_pos);
+                std::string redir = cs.substr(redir_pos + 1);
+                size_t first = redir.find_first_not_of(" \t");
+                size_t last = redir.find_last_not_of(" \t");
+                if (first != std::string::npos) cmd.redirect_out = redir.substr(first, (last - first + 1));
+            }
+
+            size_t p = 0;
+            while (p < cmd_part.length()) {
+                while (p < cmd_part.length() && (cmd_part[p] == ' ' || cmd_part[p] == '\t')) p++;
+                if (p >= cmd_part.length()) break;
+                size_t end_tok = p;
+                while (end_tok < cmd_part.length() && cmd_part[end_tok] != ' ' && cmd_part[end_tok] != '\t') end_tok++;
+                std::string tok = cmd_part.substr(p, end_tok - p);
+                if (cmd.name.empty()) cmd.name = tok;
+                else cmd.args.push_back(tok);
+                p = end_tok;
+            }
+            if (!cmd.name.empty()) {
+                out_pipe.commands.push_back(cmd);
+            }
+        }
+        return !out_pipe.commands.empty();
+    }
+};
+
+class ShellExecutor {
+public:
+    static std::string execute_builtin(const Command& cmd, const std::string& current_dir) {
+        if (cmd.name == "pwd") return current_dir;
+        if (cmd.name == "echo") {
+            std::string out;
+            for (size_t i = 0; i < cmd.args.size(); i++) {
+                if (i > 0) out += " ";
+                out += cmd.args[i];
+            }
+            return out;
+        }
+        if (cmd.name == "help") return "ACOS Shell Builtins: help, cd, pwd, ls, cat, echo, clear, ps, kill";
+        return "Unknown command: " + cmd.name;
+    }
+};
+
+} // namespace mock_cli_shell
+
 namespace mock_console {
 
 class ConsoleRingBuffer {
@@ -1035,6 +1111,29 @@ void run_console_tests() {
         assert(term.cursor_y == 24); // Clamped at bottom row 24
 
         std::cout << "  - Terminal ANSI parser, color attributes, backspace, and line scrolling verified!\n";
+    }
+
+    std::cout << "[CONSOLE UNIT TEST] Testing CLI Shell Pipeline Parsing & Command Execution...\n";
+    {
+        mock_cli_shell::Pipeline pipeline;
+        bool parsed = mock_cli_shell::ShellParser::parse("echo Hello Asade OS | cat > /tmp/out.txt", pipeline);
+        assert(parsed);
+        assert(pipeline.commands.size() == 2);
+        assert(pipeline.commands[0].name == "echo");
+        assert(pipeline.commands[0].args.size() == 3);
+        assert(pipeline.commands[1].name == "cat");
+        assert(pipeline.commands[1].redirect_out == "/tmp/out.txt");
+
+        // Builtin command execution test
+        mock_cli_shell::Command echo_cmd{"echo", {"System", "Ready"}, ""};
+        std::string echo_out = mock_cli_shell::ShellExecutor::execute_builtin(echo_cmd, "/");
+        assert(echo_out == "System Ready");
+
+        mock_cli_shell::Command pwd_cmd{"pwd", {}, ""};
+        std::string pwd_out = mock_cli_shell::ShellExecutor::execute_builtin(pwd_cmd, "/system/bin");
+        assert(pwd_out == "/system/bin");
+
+        std::cout << "  - CLI Shell pipeline parser, stdout redirection, and builtin execution verified!\n";
     }
 
     std::cout << "===================================================\n\n";
