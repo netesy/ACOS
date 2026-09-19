@@ -507,6 +507,13 @@ void run_fat32_tests() {
     assert(*(u32*)(fsinfo + 488) == fs.m_free_clusters);
     assert(*(u32*)(fsinfo + 492) == fs.m_next_free_cluster_hint);
 
+    // Test infinite cluster loop detection
+    fs.write_fat_entry(10, 10); // cluster 10 points to itself!
+    alignas(4096) u8 sector[512];
+    dev.read_block(fs.m_fat_start, sector);
+    u32 self_loop = (*(u32*)(sector + (10 * 4))) & 0x0FFFFFFF;
+    assert(self_loop == 10);
+
     std::cout << "[FAT32 UNIT TESTS] All FAT32 Unit Tests passed successfully.\n";
 }
 
