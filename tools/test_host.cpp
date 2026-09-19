@@ -517,6 +517,57 @@ void run_fat32_tests() {
     std::cout << "[FAT32 UNIT TESTS] All FAT32 Unit Tests passed successfully.\n";
 }
 
+namespace mock_vmm_cow {
+
+struct PageEntry {
+    u64 phys = 0;
+    bool present = false;
+    bool writable = false;
+    bool cow = false;
+    u16 ref_count = 1;
+};
+
+class AddressSpace {
+public:
+    std::map<u64, PageEntry> pages;
+
+    bool map(u64 virt, u64 phys, bool writable) {
+        pages[virt] = {phys, true, writable, false, 1};
+        return true;
+    }
+
+    AddressSpace* clone() {
+        AddressSpace* child = new AddressSpace();
+        for (auto& [virt, entry] : pages) {
+            if (entry.writable) {
+                entry.writable = false;
+                entry.cow = true;
+            }
+            entry.ref_count++;
+            child->pages[virt] = entry;
+        }
+        return child;
+    }
+
+    bool handle_cow_fault(u64 virt) {
+        auto it = pages.find(virt);
+        if (it == pages.end() || !it->second.cow) return false;
+
+        if (it->second.ref_count > 1) {
+            it->second.ref_count--;
+            u64 new_phys = it->second.phys + 0x10000;
+            pages[virt] = {new_phys, true, true, false, 1};
+            return true;
+        } else {
+            it->second.cow = false;
+            it->second.writable = true;
+            return true;
+        }
+    }
+};
+
+} // namespace mock_vmm_cow
+
 namespace mock_virtio_net {
 
 struct VirtQueueDesc {
@@ -1789,6 +1840,34 @@ void run_kernel_tests() {
 void run_subsystem_tests() {
     std::cout << "[INTEGRATION TEST] Verifying Subsystem APIs (Scheduler, IPC, Net Mock)...\n";
     run_kernel_tests();
+    std::cout << "[PMM/VMM UNIT TEST] Testing Copy-On-Write (COW) Address Space Cloning...\n";
+    {
+        mock_vmm_cow::AddressSpace parent;
+        parent.map(0x400000, 0x1000, true);  // Writable user code/data page at 0x400000
+        parent.map(0x7FFFF000, 0x2000, true); // Writable user stack page
+
+        // Clone parent address space into child
+        mock_vmm_cow::AddressSpace* child = parent.clone();
+        assert(child != nullptr);
+
+        // Parent and Child pages are write-protected and marked COW
+        assert(parent.pages[0x400000].cow == true);
+        assert(parent.pages[0x400000].writable == false);
+        assert(child->pages[0x400000].cow == true);
+
+        // Simulate write-fault on parent address space at 0x400000
+        bool resolved = parent.handle_cow_fault(0x400000);
+        assert(resolved == true);
+        assert(parent.pages[0x400000].cow == false);
+        assert(parent.pages[0x400000].writable == true);
+
+        // Child page at 0x400000 remains COW until written to
+        assert(child->pages[0x400000].cow == true);
+
+        delete child;
+        std::cout << "  - Copy-On-Write address space cloning and write-fault page duplication verified!\n";
+    }
+
     std::cout << "[DRIVER UNIT TEST] Testing VirtIO Net Descriptor Ring Allocation & Recycling...\n";
     {
         mock_virtio_net::VirtQueue tx_q;
