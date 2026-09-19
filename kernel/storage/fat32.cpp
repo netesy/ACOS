@@ -244,7 +244,7 @@ public:
             m_size = end_byte;
 
             alignas(4096) u8 dir_sector_buf[512];
-            if (m_device->read_block(m_dir_sector, dir_sector_buf) == 0) {
+            if (m_dir_sector != 0 && m_device->read_block(m_dir_sector, dir_sector_buf) == 0) {
                 u8* entry = dir_sector_buf + m_dir_offset;
                 *(u32*)(entry + 28) = (u32)m_size;
                 m_device->write_block(m_dir_sector, dir_sector_buf);
@@ -460,7 +460,12 @@ vfs::Node* FAT32FileSystem::open_internal(u32 cluster, const char* path) {
         u32 fat_offset = cluster * 4;
         u32 fat_block = m_fat_start + (fat_offset / 512);
         if (m_device->read_block(fat_block, sector) != 0) return nullptr;
-        cluster = (*(u32*)(sector + (fat_offset % 512))) & 0x0FFFFFFF;
+        u32 next = (*(u32*)(sector + (fat_offset % 512))) & 0x0FFFFFFF;
+        if (next == cluster) {
+            hal::serial_print("[FAT32] CRITICAL ERROR: Infinite cluster loop detected in open_internal!\n");
+            return nullptr;
+        }
+        cluster = next;
     }
     return nullptr;
 }

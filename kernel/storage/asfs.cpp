@@ -336,7 +336,7 @@ public:
         m_size = (m_size > end_byte) ? m_size : end_byte;
 
         alignas(4096) u8 inode_buf[512];
-        if (m_fs->device()->read_block(m_inode_block, inode_buf) == 0) {
+        if (m_inode_block != 0 && m_fs->device()->read_block(m_inode_block, inode_buf) == 0) {
             ASFSInode inode;
             memcpy(&inode, inode_buf, sizeof(ASFSInode));
             inode.size = m_size;
@@ -592,6 +592,7 @@ vfs::Node* ASFSFileSystem::open_internal(u64 inode_block, const char* path, u64 
 
                 if (strcmp_nocase(entry_name, component) == 0) {
                     if (*remaining != '\0') {
+                        if (entries[i].inode_number == inode_block) return nullptr;
                         return open_internal(entries[i].inode_number, remaining, flags);
                     }
 
@@ -952,6 +953,7 @@ u64 ASFSFileSystem::find_inode_block(u64 inode_block, const char* path) {
 
                 if (strcmp_nocase(entry_name, component) == 0) {
                     if (*remaining != '\0') {
+                        if (entries[i].inode_number == inode_block) return 0;
                         return find_inode_block(entries[i].inode_number, remaining);
                     }
                     return entries[i].inode_number;

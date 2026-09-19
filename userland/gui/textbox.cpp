@@ -42,14 +42,21 @@ void TextBox::on_event(Event& event) {
     } else if (raw.type == acos::abi::InputType::Keyboard && m_state == WidgetState::Focused) {
         if (raw.code == 8) { // Backspace
             if (m_cursor > 0) {
+                usize len = strlen(m_buffer);
+                for (usize i = m_cursor - 1; i < len; i++) {
+                    m_buffer[i] = m_buffer[i + 1];
+                }
                 m_cursor--;
-                m_buffer[m_cursor] = '\0';
                 set_paint_dirty();
             }
         } else if (raw.code >= 32 && raw.code <= 126) {
-            if (m_cursor < m_max_length) {
-                m_buffer[m_cursor++] = (char)raw.code;
-                m_buffer[m_cursor] = '\0';
+            usize len = strlen(m_buffer);
+            if (len < m_max_length && m_cursor <= len) {
+                for (usize i = len + 1; i > m_cursor; i--) {
+                    m_buffer[i] = m_buffer[i - 1];
+                }
+                m_buffer[m_cursor] = (char)raw.code;
+                m_cursor++;
                 set_paint_dirty();
             }
         }
