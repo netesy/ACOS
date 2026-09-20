@@ -163,6 +163,11 @@ bool VirtIONet::initialize() {
     
     virtqueue_init(g_tx_queue, tx_queue_size, tx_mem);
 
+    // Preallocate TX buffers to avoid kmalloc/kfree per packet in hot path
+    for (u16 i = 0; i < tx_queue_size; i++) {
+        g_tx_queue.buffers[i] = (u8*)acos::memory::kmalloc(1514);
+    }
+
     // Set queue address
     device_cfg[4] = (u32)((u64)tx_mem >> 12);
     
@@ -185,16 +190,10 @@ bool VirtIONet::send_packet(const void* data, usize size) {
     
     volatile u32* device_cfg = (volatile u32*)m_pci_base;
     
-    // 1. Recycle previously used transmit descriptors/buffers to prevent OOM
+    // 1. Recycle previously used transmit descriptors to prevent queue exhaustion
     while (g_tx_queue.last_used_idx != g_tx_queue.used->idx) {
         u16 used_idx = g_tx_queue.last_used_idx % g_tx_queue.size;
         u16 desc_id = static_cast<u16>(g_tx_queue.used->ring[used_idx].id);
-
-        // Free/Recycle the buffer
-        if (g_tx_queue.buffers[desc_id]) {
-            acos::memory::kfree(g_tx_queue.buffers[desc_id]);
-            g_tx_queue.buffers[desc_id] = nullptr;
-        }
 
         virtqueue_free_desc(g_tx_queue, desc_id);
         g_tx_queue.last_used_idx++;
@@ -207,8 +206,8 @@ bool VirtIONet::send_packet(const void* data, usize size) {
         return false;
     }
     
-    // 3. Allocate and copy the packet buffer
-    u8* tx_buffer = (u8*)acos::memory::kmalloc(size);
+    // 3. Copy packet into the preallocated buffer for this descriptor
+    u8* tx_buffer = g_tx_queue.buffers[desc_idx];
     if (!tx_buffer) {
         virtqueue_free_desc(g_tx_queue, desc_idx);
         return false;
@@ -216,7 +215,6 @@ bool VirtIONet::send_packet(const void* data, usize size) {
     memcpy(tx_buffer, data, size);
     
     // 4. Fill descriptor fields
-    g_tx_queue.buffers[desc_idx] = tx_buffer;
     g_tx_queue.desc[desc_idx].addr = reinterpret_cast<u64>(tx_buffer);
     g_tx_queue.desc[desc_idx].len = size;
     g_tx_queue.desc[desc_idx].flags = 0; // Read-only for device
