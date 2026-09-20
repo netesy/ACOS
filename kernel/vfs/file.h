@@ -14,6 +14,7 @@ public:
     i32 read(void* buffer, usize size);
     i32 write(const void* buffer, usize size);
     u64 seek(u64 offset);
+    u64 offset() const { return m_offset; }
     u64 size() const;
 
 private:

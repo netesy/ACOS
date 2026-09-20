@@ -214,10 +214,10 @@ void vmm_init(BootInfo* bootInfo) {
             usize entry_count = (mcfg->h.length - sizeof(MCFGHeader)) / sizeof(MCFGEntry);
             auto* entries = reinterpret_cast<MCFGEntry*>(mcfg + 1);
 
-            if (entry_count > 0) {
-                u64 ecam_base = entries[0].base_address;
-                u8 start_bus = entries[0].start_bus;
-                u8 end_bus = entries[0].end_bus;
+            for (usize idx = 0; idx < entry_count; idx++) {
+                u64 ecam_base = entries[idx].base_address;
+                u8 start_bus = entries[idx].start_bus;
+                u8 end_bus = entries[idx].end_bus;
 
                 // Map ECAM memory-mapped configuration range using 2MB pages
                 // Each bus is 1MB in size. We use Cache Disable (bit 4) + Write Through (bit 3) flags.
@@ -228,7 +228,9 @@ void vmm_init(BootInfo* bootInfo) {
                 }
 
                 acos::hal::PCI::init_pcie(ecam_base, start_bus, end_bus);
-                acos::hal::serial_print("[VMM] Mapped and initialized PCI Express ECAM: base=");
+                acos::hal::serial_print("[VMM] Mapped and initialized PCI Express ECAM segment ");
+                acos::hal::serial_print_hex(idx);
+                acos::hal::serial_print(": base=");
                 acos::hal::serial_print_hex(ecam_base);
                 acos::hal::serial_print("\n");
             }

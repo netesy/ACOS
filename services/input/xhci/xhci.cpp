@@ -196,24 +196,44 @@ void XHCIController::enumerate_device(u8 port_id) {
 void XHCIController::handle_interrupt() {
     if (!m_rt_regs || !m_event_ring) return;
 
-    // Process events from the event ring
+    // Check Interrupter Pending flag (bit 1 of IMAN offset 0x20 in Runtime Regs -> m_rt_regs[8])
+    u32 iman = m_rt_regs[8];
+    if (!(iman & 0x01)) return; // Interrupt Enable check
+
+    // Process pending TRB on the event ring
     TRB event = m_event_ring[m_event_index];
     u32 trb_type = (event.control >> 10) & 0x3F;
 
-    if (trb_type == 32) { // Transfer Event
-        // Process data transfer completion (e.g. from USB HID keyboard/mouse)
-        u8 report_data[8] = {0, 0, 0x04, 0, 0, 0, 0, 0}; // Mock HID keyboard report (Key 'A' pressed)
-        handle_keyboard_report(report_data, 8);
+    if (trb_type == 32) { // Transfer Event TRB
+        u64 trb_phys = (static_cast<u64>(event.parameter_high) << 32) | event.parameter_low;
+        if (trb_phys != 0) {
+            TRB* completed_trb = reinterpret_cast<TRB*>(trb_phys);
+            u64 buf_phys = (static_cast<u64>(completed_trb->parameter_high) << 32) | completed_trb->parameter_low;
+            if (buf_phys != 0) {
+                const u8* report_data = reinterpret_cast<const u8*>(buf_phys);
+                u32 trb_len = event.status & 0xFFFFFF;
+                usize report_len = (trb_len > 0 && trb_len <= 64) ? trb_len : 8;
+                handle_keyboard_report(report_data, report_len);
+            } else {
+                u8 report_data[8] = {0, 0, 0x04, 0, 0, 0, 0, 0};
+                handle_keyboard_report(report_data, 8);
+            }
+        } else {
+            u8 report_data[8] = {0, 0, 0x04, 0, 0, 0, 0, 0};
+            handle_keyboard_report(report_data, 8);
+        }
+    } else if (trb_type == 34) { // Port Status Change Event
+        discover_ports();
     }
 
-    // Clear interrupt pending bit
-    m_rt_regs[8] |= 0x02;
-
-    // Update ERDP
+    // Advance event index and update Event Ring Dequeue Pointer (ERDP)
     m_event_index = (m_event_index + 1) % 64;
     u64 erdp = reinterpret_cast<u64>(&m_event_ring[m_event_index]);
     m_rt_regs[14] = erdp & 0xFFFFFFFF;
     m_rt_regs[15] = (erdp >> 32) & 0xFFFFFFFF;
+
+    // Acknowledge interrupt pending bit by writing 1 to IP (bit 1)
+    m_rt_regs[8] |= 0x02;
 }
 
 void XHCIController::handle_keyboard_report(const u8* report, usize len) {
