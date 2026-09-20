@@ -198,17 +198,26 @@ AddressSpace* AddressSpace::clone() {
                     // Lazily construct child page table hierarchy directly
                     if (!child_pdpt) {
                         child_pdpt = alloc_table_clean();
-                        if (!child_pdpt) return nullptr;
+                        if (!child_pdpt) {
+                            delete child;
+                            return nullptr;
+                        }
                         child->m_pml4_virt->entries[i] = reinterpret_cast<u64>(child_pdpt) | (pml4e & 0xFFFULL);
                     }
                     if (!child_pd) {
                         child_pd = alloc_table_clean();
-                        if (!child_pd) return nullptr;
+                        if (!child_pd) {
+                            delete child;
+                            return nullptr;
+                        }
                         child_pdpt->entries[j] = reinterpret_cast<u64>(child_pd) | (pdpte & 0xFFFULL);
                     }
                     if (!child_pt) {
                         child_pt = alloc_table_clean();
-                        if (!child_pt) return nullptr;
+                        if (!child_pt) {
+                            delete child;
+                            return nullptr;
+                        }
                         child_pd->entries[k] = reinterpret_cast<u64>(child_pt) | (pde & 0xFFFULL);
                     }
 

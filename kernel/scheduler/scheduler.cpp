@@ -179,23 +179,26 @@ void schedule() {
     }
 
     if (!next) {
-        // Work-stealing: Attempt to steal a runnable thread from another CPU
+        // Work-stealing: Attempt to steal a runnable thread from another CPU using non-blocking try_lock()
         u32 total_cpus = smp::Cpu::count();
         for (u32 target = 0; target < total_cpus && target < 64; target++) {
             if (target == cpu_id) continue;
             if (g_run_queues[target].count > 1) {
-                hal::ScopedLock target_lock(g_queue_locks[target]);
-                if (g_run_queues[target].head && g_run_queues[target].head->next) {
-                    Thread* stolen = g_run_queues[target].head->next;
-                    g_run_queues[target].head->next = stolen->next;
-                    if (!g_run_queues[target].head->next) {
-                        g_run_queues[target].tail = g_run_queues[target].head;
-                    }
-                    g_run_queues[target].count--;
+                if (g_queue_locks[target].try_lock()) {
+                    if (g_run_queues[target].head && g_run_queues[target].head->next) {
+                        Thread* stolen = g_run_queues[target].head->next;
+                        g_run_queues[target].head->next = stolen->next;
+                        if (!g_run_queues[target].head->next) {
+                            g_run_queues[target].tail = g_run_queues[target].head;
+                        }
+                        g_run_queues[target].count--;
 
-                    stolen->next = nullptr;
-                    next = stolen;
-                    break;
+                        stolen->next = nullptr;
+                        next = stolen;
+                        g_queue_locks[target].unlock();
+                        break;
+                    }
+                    g_queue_locks[target].unlock();
                 }
             }
         }

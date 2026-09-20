@@ -48,6 +48,8 @@ i32 VFS::open(const char* path, u64 flags [[maybe_unused]]) {
     return fd;
 }
 
+#include <kernel/hal/spinlock.h>
+
 namespace {
 struct PageCacheEntry {
     File* file;
@@ -59,8 +61,10 @@ struct PageCacheEntry {
 
 static PageCacheEntry g_vfs_cache[32];
 static usize g_vfs_cache_idx = 0;
+static hal::SpinLock g_vfs_cache_lock;
 
 static void vfs_cache_invalidate(File* file) {
+    hal::ScopedLock lock(g_vfs_cache_lock);
     for (usize i = 0; i < 32; i++) {
         if (g_vfs_cache[i].file == file) {
             g_vfs_cache[i].valid = false;
@@ -90,6 +94,7 @@ i32 VFS::read(u64 fd, void* buffer, usize size) {
 
     u64 offset = file->offset();
     if (size <= 4096) {
+        hal::ScopedLock lock(g_vfs_cache_lock);
         for (usize i = 0; i < 32; i++) {
             if (g_vfs_cache[i].valid && g_vfs_cache[i].file == file && g_vfs_cache[i].offset == offset && g_vfs_cache[i].size >= size) {
                 memcpy(buffer, g_vfs_cache[i].data, size);
@@ -101,6 +106,7 @@ i32 VFS::read(u64 fd, void* buffer, usize size) {
 
     i32 bytes_read = file->read(buffer, size);
     if (bytes_read > 0 && bytes_read <= 4096) {
+        hal::ScopedLock lock(g_vfs_cache_lock);
         usize idx = g_vfs_cache_idx % 32;
         g_vfs_cache[idx].file = file;
         g_vfs_cache[idx].offset = offset;

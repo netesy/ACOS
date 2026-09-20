@@ -11,6 +11,10 @@ public:
         }
     }
 
+    bool try_lock() {
+        return !__atomic_test_and_set(&m_locked, __ATOMIC_ACQUIRE);
+    }
+
     void unlock() {
         __atomic_clear(&m_locked, __ATOMIC_RELEASE);
     }
