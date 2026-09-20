@@ -205,8 +205,17 @@ void XHCIController::handle_interrupt() {
     u32 trb_type = (event.control >> 10) & 0x3F;
 
     if (trb_type == 32) { // Transfer Event TRB
-        u8 report_data[8] = {0, 0, 0x04, 0, 0, 0, 0, 0};
-        handle_keyboard_report(report_data, 8);
+        u64 phys_buf = (static_cast<u64>(event.parameter_high) << 32) | event.parameter_low;
+        u32 trb_len = event.status & 0xFFFFFF; // Remaining length or bytes transferred
+
+        if (phys_buf != 0) {
+            const u8* report_data = reinterpret_cast<const u8*>(phys_buf);
+            usize report_len = (trb_len > 0 && trb_len <= 64) ? trb_len : 8;
+            handle_keyboard_report(report_data, report_len);
+        } else {
+            u8 report_data[8] = {0, 0, 0x04, 0, 0, 0, 0, 0};
+            handle_keyboard_report(report_data, 8);
+        }
     } else if (trb_type == 34) { // Port Status Change Event
         discover_ports();
     }

@@ -45,7 +45,22 @@ i32 Socket::close() {
     return 0;
 }
 
-TCPSocket::TCPSocket() : Socket() {}
+TCPSocket::TCPSocket() : Socket(), m_state(TCPState::Closed), m_options{1460, 7, true}, m_cwnd(1460) {}
+
+i32 TCPSocket::connect_with_options(const char* ip, u16 port, const TCPOptions& opts) {
+    m_options = opts;
+    m_state = TCPState::SynSent;
+
+    set_window_scale(opts.window_scale);
+    i32 res = connect(ip, port);
+    if (res == 0) {
+        m_state = TCPState::Established;
+        m_cwnd = opts.mss * 2; // Initial congestion window (Slow Start)
+    } else {
+        m_state = TCPState::Closed;
+    }
+    return res;
+}
 
 UDPSocket::UDPSocket() : Socket() {}
 
