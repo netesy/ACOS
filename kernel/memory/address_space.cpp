@@ -161,6 +161,40 @@ AddressSpace* AddressSpace::clone() {
         return pt;
     };
 
+    auto rollback = [this, child]() {
+        for (int i = 0; i < 256; i++) {
+            u64 pml4e = m_pml4_virt->entries[i];
+            if (!(pml4e & 1) || !(pml4e & 4)) continue;
+            PageTable* parent_pdpt = reinterpret_cast<PageTable*>(pml4e & ~0xFFFULL);
+
+            for (int j = 0; j < 512; j++) {
+                u64 pdpte = parent_pdpt->entries[j];
+                if (!(pdpte & 1) || !(pdpte & 4) || (pdpte & 0x80)) continue;
+                PageTable* parent_pd = reinterpret_cast<PageTable*>(pdpte & ~0xFFFULL);
+
+                for (int k = 0; k < 512; k++) {
+                    u64 pde = parent_pd->entries[k];
+                    if (!(pde & 1) || !(pde & 4) || (pde & 0x80)) continue;
+                    PageTable* parent_pt = reinterpret_cast<PageTable*>(pde & ~0xFFFULL);
+
+                    for (int l = 0; l < 512; l++) {
+                        u64 entry = parent_pt->entries[l];
+                        if (!(entry & 1) || !(entry & 4)) continue;
+
+                        if (entry & (1ULL << 9)) { // Was set to COW
+                            u64 phys = entry & ~0xFFFULL & ~0xFFF0000000000000ULL;
+                            entry &= ~(1ULL << 9);
+                            entry |= 2ULL; // Restore writable
+                            parent_pt->entries[l] = entry;
+                            pmm_dec_ref_count(phys / 4096);
+                        }
+                    }
+                }
+            }
+        }
+        delete child;
+    };
+
     // Walk the user-space portion of the PML4 (indices 0 to 255)
     for (int i = 0; i < 256; i++) {
         u64 pml4e = m_pml4_virt->entries[i];
@@ -199,7 +233,7 @@ AddressSpace* AddressSpace::clone() {
                     if (!child_pdpt) {
                         child_pdpt = alloc_table_clean();
                         if (!child_pdpt) {
-                            delete child;
+                            rollback();
                             return nullptr;
                         }
                         child->m_pml4_virt->entries[i] = reinterpret_cast<u64>(child_pdpt) | (pml4e & 0xFFFULL);
@@ -207,7 +241,7 @@ AddressSpace* AddressSpace::clone() {
                     if (!child_pd) {
                         child_pd = alloc_table_clean();
                         if (!child_pd) {
-                            delete child;
+                            rollback();
                             return nullptr;
                         }
                         child_pdpt->entries[j] = reinterpret_cast<u64>(child_pd) | (pdpte & 0xFFFULL);
@@ -215,7 +249,7 @@ AddressSpace* AddressSpace::clone() {
                     if (!child_pt) {
                         child_pt = alloc_table_clean();
                         if (!child_pt) {
-                            delete child;
+                            rollback();
                             return nullptr;
                         }
                         child_pd->entries[k] = reinterpret_cast<u64>(child_pt) | (pde & 0xFFFULL);

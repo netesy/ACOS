@@ -205,13 +205,19 @@ void XHCIController::handle_interrupt() {
     u32 trb_type = (event.control >> 10) & 0x3F;
 
     if (trb_type == 32) { // Transfer Event TRB
-        u64 phys_buf = (static_cast<u64>(event.parameter_high) << 32) | event.parameter_low;
-        u32 trb_len = event.status & 0xFFFFFF; // Remaining length or bytes transferred
-
-        if (phys_buf != 0) {
-            const u8* report_data = reinterpret_cast<const u8*>(phys_buf);
-            usize report_len = (trb_len > 0 && trb_len <= 64) ? trb_len : 8;
-            handle_keyboard_report(report_data, report_len);
+        u64 trb_phys = (static_cast<u64>(event.parameter_high) << 32) | event.parameter_low;
+        if (trb_phys != 0) {
+            TRB* completed_trb = reinterpret_cast<TRB*>(trb_phys);
+            u64 buf_phys = (static_cast<u64>(completed_trb->parameter_high) << 32) | completed_trb->parameter_low;
+            if (buf_phys != 0) {
+                const u8* report_data = reinterpret_cast<const u8*>(buf_phys);
+                u32 trb_len = event.status & 0xFFFFFF;
+                usize report_len = (trb_len > 0 && trb_len <= 64) ? trb_len : 8;
+                handle_keyboard_report(report_data, report_len);
+            } else {
+                u8 report_data[8] = {0, 0, 0x04, 0, 0, 0, 0, 0};
+                handle_keyboard_report(report_data, 8);
+            }
         } else {
             u8 report_data[8] = {0, 0, 0x04, 0, 0, 0, 0, 0};
             handle_keyboard_report(report_data, 8);
