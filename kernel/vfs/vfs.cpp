@@ -48,11 +48,34 @@ i32 VFS::open(const char* path, u64 flags [[maybe_unused]]) {
     return fd;
 }
 
+namespace {
+struct PageCacheEntry {
+    File* file;
+    u64 offset;
+    u8 data[4096];
+    usize size;
+    bool valid;
+};
+
+static PageCacheEntry g_vfs_cache[32];
+static usize g_vfs_cache_idx = 0;
+
+static void vfs_cache_invalidate(File* file) {
+    for (usize i = 0; i < 32; i++) {
+        if (g_vfs_cache[i].file == file) {
+            g_vfs_cache[i].valid = false;
+            g_vfs_cache[i].file = nullptr;
+        }
+    }
+}
+} // namespace
+
 i32 VFS::close(u64 fd) {
     scheduler::Process* current = scheduler::current_thread()->parent;
     if (!current) return -1;
     File* file = current->get_file(static_cast<i32>(fd));
     if (!file) return -1;
+    vfs_cache_invalidate(file);
     current->files[fd] = nullptr;
     file->~File();
     memory::kfree(file);
@@ -64,7 +87,30 @@ i32 VFS::read(u64 fd, void* buffer, usize size) {
     if (!current) return -1;
     File* file = current->get_file(static_cast<i32>(fd));
     if (!file) return -1;
-    return file->read(buffer, size);
+
+    u64 offset = file->offset();
+    if (size <= 4096) {
+        for (usize i = 0; i < 32; i++) {
+            if (g_vfs_cache[i].valid && g_vfs_cache[i].file == file && g_vfs_cache[i].offset == offset && g_vfs_cache[i].size >= size) {
+                memcpy(buffer, g_vfs_cache[i].data, size);
+                file->seek(offset + size);
+                return static_cast<i32>(size);
+            }
+        }
+    }
+
+    i32 bytes_read = file->read(buffer, size);
+    if (bytes_read > 0 && bytes_read <= 4096) {
+        usize idx = g_vfs_cache_idx % 32;
+        g_vfs_cache[idx].file = file;
+        g_vfs_cache[idx].offset = offset;
+        memcpy(g_vfs_cache[idx].data, buffer, bytes_read);
+        g_vfs_cache[idx].size = static_cast<usize>(bytes_read);
+        g_vfs_cache[idx].valid = true;
+        g_vfs_cache_idx++;
+    }
+
+    return bytes_read;
 }
 
 i32 VFS::write(u64 fd, const void* buffer, usize size) {
@@ -72,6 +118,7 @@ i32 VFS::write(u64 fd, const void* buffer, usize size) {
     if (!current) return -1;
     File* file = current->get_file(static_cast<i32>(fd));
     if (!file) return -1;
+    vfs_cache_invalidate(file);
     return file->write(buffer, size);
 }
 

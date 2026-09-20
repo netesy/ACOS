@@ -7,6 +7,15 @@ Socket::Socket() {
     m_handle = syscall(sys::SyscallNum::SocketCreate);
 }
 
+i32 Socket::set_option(u32 level, u32 option, const void* val, usize len) {
+    return (i32)syscall(sys::SyscallNum::SocketSetOpt, m_handle, level, option, reinterpret_cast<u64>(val), len);
+}
+
+i32 Socket::set_window_scale(u8 scale_shift) {
+    u32 shift_val = scale_shift;
+    return set_option(1, 10 /* TCP_WINDOW_SCALE */, &shift_val, sizeof(shift_val));
+}
+
 Socket::~Socket() {
     close();
 }

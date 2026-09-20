@@ -12,6 +12,8 @@ public:
     i32 connect(const char* ip, u16 port);
     i32 send(const void* buf, usize size);
     i32 receive(void* buf, usize size);
+    i32 set_option(u32 level, u32 option, const void* val, usize len);
+    i32 set_window_scale(u8 scale_shift);
     i32 close();
 
     u64 handle() const { return m_handle; }

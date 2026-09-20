@@ -97,16 +97,26 @@ void Compositor::mark_dirty(u32 x, u32 y, u32 w, u32 h) {
 void Compositor::compose() {
     if (!m_has_damage && !m_always_dirty) return;
 
-    // Draw desktop background first
+    u32 fb_width = m_fb->width();
+    u32 fb_height = m_fb->height();
+
+    // Clamp dirty bounding region to screen boundaries
+    u32 clip_x = (m_dirty_x < fb_width) ? m_dirty_x : 0;
+    u32 clip_y = (m_dirty_y < fb_height) ? m_dirty_y : 0;
+    u32 clip_w = (m_dirty_x + m_dirty_w <= fb_width) ? m_dirty_w : (fb_width - clip_x);
+    u32 clip_h = (m_dirty_y + m_dirty_h <= fb_height) ? m_dirty_h : (fb_height - clip_y);
+
+    if (m_always_dirty || clip_w == 0 || clip_h == 0) {
+        clip_x = 0; clip_y = 0;
+        clip_w = fb_width; clip_h = fb_height;
+    }
+
+    // Draw desktop background bounded by dirty damage area
     if (m_desktop_draw) {
         m_desktop_draw(&m_renderer);
     } else {
-        // Default: Asade Synthetic background
-        m_fb->clear(0xFF0A0A0B);
+        m_renderer.fill_rect(clip_x, clip_y, clip_w, clip_h, 0xFF0A0A0B);
     }
-
-    u32 fb_width = m_fb->width();
-    u32 fb_height = m_fb->height();
 
     for (usize i = 0; i < m_window_count; i++) {
         Window* win = m_windows[i];
@@ -120,9 +130,19 @@ void Compositor::compose() {
         u32 win_w = win->width();
         u32 win_h = win->height();
 
-        for (u32 y = 0; y < win_h; y++) {
+        // Intersect window bounds with the dirty damage region
+        u32 start_x = (clip_x > win_x) ? (clip_x - win_x) : 0;
+        u32 start_y = (clip_y > win_y) ? (clip_y - win_y) : 0;
+
+        u32 end_x = (clip_x + clip_w > win_x) ? (clip_x + clip_w - win_x) : 0;
+        u32 end_y = (clip_y + clip_h > win_y) ? (clip_y + clip_h - win_y) : 0;
+
+        if (end_x > win_w) end_x = win_w;
+        if (end_y > win_h) end_y = win_h;
+
+        for (u32 y = start_y; y < end_y; y++) {
             if (win_y + y >= fb_height) break;
-            for (u32 x = 0; x < win_w; x++) {
+            for (u32 x = start_x; x < end_x; x++) {
                 if (win_x + x >= fb_width) break;
 
                 u32 color = surface->buffer[y * win_w + x];
@@ -131,7 +151,6 @@ void Compositor::compose() {
                 if (alpha == 255) {
                     m_fb->put_pixel(win_x + x, win_y + y, color);
                 } else if (alpha > 0) {
-                    // Alpha blend with what's already in the framebuffer
                     u32 bg = m_fb->get_pixel(win_x + x, win_y + y);
 
                     u32 rb = (color & 0xFF00FF) * alpha + (bg & 0xFF00FF) * (255 - alpha);

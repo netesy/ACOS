@@ -179,6 +179,29 @@ void schedule() {
     }
 
     if (!next) {
+        // Work-stealing: Attempt to steal a runnable thread from another CPU
+        u32 total_cpus = smp::Cpu::count();
+        for (u32 target = 0; target < total_cpus && target < 64; target++) {
+            if (target == cpu_id) continue;
+            if (g_run_queues[target].count > 1) {
+                hal::ScopedLock target_lock(g_queue_locks[target]);
+                if (g_run_queues[target].head && g_run_queues[target].head->next) {
+                    Thread* stolen = g_run_queues[target].head->next;
+                    g_run_queues[target].head->next = stolen->next;
+                    if (!g_run_queues[target].head->next) {
+                        g_run_queues[target].tail = g_run_queues[target].head;
+                    }
+                    g_run_queues[target].count--;
+
+                    stolen->next = nullptr;
+                    next = stolen;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (!next) {
         // No runnable threads — release lock and return.
         // Caller (idle loop) should hlt to avoid spinning.
         g_queue_locks[cpu_id].unlock();
@@ -274,9 +297,23 @@ Thread* current_thread() {
 
 void wake_thread(Thread* thread) {
     if (!thread) return;
-    // Mark thread as ready to run before enqueueing
     thread->state = ThreadState::Ready;
-    enqueue_thread(0, thread);
+
+    // Distribute thread to the CPU with the shortest runqueue
+    u32 total_cpus = smp::Cpu::count();
+    if (total_cpus == 0) total_cpus = 1;
+
+    u32 best_cpu = 0;
+    usize min_count = g_run_queues[0].count;
+
+    for (u32 i = 1; i < total_cpus && i < 64; i++) {
+        if (g_run_queues[i].count < min_count) {
+            min_count = g_run_queues[i].count;
+            best_cpu = i;
+        }
+    }
+
+    enqueue_thread(best_cpu, thread);
 }
 
 void block_thread(Thread* thread) {
