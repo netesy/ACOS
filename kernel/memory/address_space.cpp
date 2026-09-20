@@ -104,7 +104,13 @@ bool AddressSpace::map(u64 virt, u64 phys, u64 flags) {
     if (!pt) return false;
 
     pt->entries[pt_idx] = phys | flags | 1;
-    __asm__ volatile("mov %%cr3, %%rax\n\tmov %%rax, %%cr3" : : : "rax", "memory");
+
+    // Only invalidate TLB if this address space is currently active
+    u64 current_cr3;
+    __asm__ volatile("mov %%cr3, %0" : "=r"(current_cr3));
+    if ((current_cr3 & ~0xFFFULL) == m_pml4_phys) {
+        __asm__ volatile("invlpg (%0)" : : "r"(virt) : "memory");
+    }
     return true;
 }
 
@@ -147,59 +153,78 @@ AddressSpace* AddressSpace::clone() {
     AddressSpace* child = new AddressSpace();
     if (!child) return nullptr;
 
+    auto alloc_table_clean = []() -> PageTable* {
+        u64 phys = pmm_alloc();
+        if (phys == 0) return nullptr;
+        PageTable* pt = reinterpret_cast<PageTable*>(phys);
+        for (int idx = 0; idx < 512; idx++) pt->entries[idx] = 0;
+        return pt;
+    };
+
     // Walk the user-space portion of the PML4 (indices 0 to 255)
     for (int i = 0; i < 256; i++) {
-        if (!(m_pml4_virt->entries[i] & 1)) continue;
-        if (!(m_pml4_virt->entries[i] & 4)) continue; // Ensure user page table
+        u64 pml4e = m_pml4_virt->entries[i];
+        if (!(pml4e & 1) || !(pml4e & 4)) continue;
 
-        u64 pdpt_phys = m_pml4_virt->entries[i] & ~0xFFFULL;
-        PageTable* pdpt = reinterpret_cast<PageTable*>(pdpt_phys);
+        PageTable* parent_pdpt = reinterpret_cast<PageTable*>(pml4e & ~0xFFFULL);
+        PageTable* child_pdpt = nullptr;
 
         for (int j = 0; j < 512; j++) {
-            if (!(pdpt->entries[j] & 1)) continue;
-            if (!(pdpt->entries[j] & 4)) continue;
+            u64 pdpte = parent_pdpt->entries[j];
+            if (!(pdpte & 1) || !(pdpte & 4) || (pdpte & 0x80)) continue;
 
-            if (pdpt->entries[j] & 0x80) continue;
-
-            u64 pd_phys = pdpt->entries[j] & ~0xFFFULL;
-            PageTable* pd = reinterpret_cast<PageTable*>(pd_phys);
+            PageTable* parent_pd = reinterpret_cast<PageTable*>(pdpte & ~0xFFFULL);
+            PageTable* child_pd = nullptr;
 
             for (int k = 0; k < 512; k++) {
-                if (!(pd->entries[k] & 1)) continue;
-                if (!(pd->entries[k] & 4)) continue;
+                u64 pde = parent_pd->entries[k];
+                if (!(pde & 1) || !(pde & 4) || (pde & 0x80)) continue;
 
-                if (pd->entries[k] & 0x80) continue;
-
-                u64 pt_phys = pd->entries[k] & ~0xFFFULL;
-                PageTable* pt = reinterpret_cast<PageTable*>(pt_phys);
+                PageTable* parent_pt = reinterpret_cast<PageTable*>(pde & ~0xFFFULL);
+                PageTable* child_pt = nullptr;
 
                 for (int l = 0; l < 512; l++) {
-                    if (!(pt->entries[l] & 1)) continue;
-                    if (!(pt->entries[l] & 4)) continue;
+                    u64 entry = parent_pt->entries[l];
+                    if (!(entry & 1) || !(entry & 4)) continue;
 
-                    u64 entry = pt->entries[l];
                     u64 phys = entry & ~0xFFFULL & ~0xFFF0000000000000ULL;
 
                     if (entry & 2) { // Writable
                         entry &= ~2ULL; // Clear Writable
                         entry |= (1ULL << 9); // Set COW bit
-                        pt->entries[l] = entry;
+                        parent_pt->entries[l] = entry;
                     }
 
-                    u64 virt = (static_cast<u64>(i) << 39) |
-                               (static_cast<u64>(j) << 30) |
-                               (static_cast<u64>(k) << 21) |
-                               (static_cast<u64>(l) << 12);
-                    child->map(virt, phys, (entry & 0xFFFULL) | 1); // Ensure Present is 1
+                    // Lazily construct child page table hierarchy directly
+                    if (!child_pdpt) {
+                        child_pdpt = alloc_table_clean();
+                        if (!child_pdpt) return nullptr;
+                        child->m_pml4_virt->entries[i] = reinterpret_cast<u64>(child_pdpt) | (pml4e & 0xFFFULL);
+                    }
+                    if (!child_pd) {
+                        child_pd = alloc_table_clean();
+                        if (!child_pd) return nullptr;
+                        child_pdpt->entries[j] = reinterpret_cast<u64>(child_pd) | (pdpte & 0xFFFULL);
+                    }
+                    if (!child_pt) {
+                        child_pt = alloc_table_clean();
+                        if (!child_pt) return nullptr;
+                        child_pd->entries[k] = reinterpret_cast<u64>(child_pt) | (pde & 0xFFFULL);
+                    }
 
+                    child_pt->entries[l] = entry;
                     pmm_inc_ref_count(phys / 4096);
                 }
             }
         }
     }
 
-    // Flush TLB by re-writing CR3
-    __asm__ volatile("mov %%cr3, %%rax\n\tmov %%rax, %%cr3" : : : "rax", "memory");
+    // Flush TLB for current active CR3
+    u64 current_cr3;
+    __asm__ volatile("mov %%cr3, %0" : "=r"(current_cr3));
+    if ((current_cr3 & ~0xFFFULL) == m_pml4_phys) {
+        __asm__ volatile("mov %0, %%cr3" : : "r"(current_cr3) : "memory");
+    }
 
     return child;
 }
